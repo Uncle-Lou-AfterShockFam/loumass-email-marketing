@@ -6,14 +6,14 @@ export interface Reply {
     id: string
     name: string
     email: string
-    avatar?: string | null
+    avatar: string | null
   }
-  campaign?: {
+  campaign: {
     id: string
     name: string
     subject: string
   } | null
-  sequence?: {
+  sequence: {
     id: string
     name: string
     step: number
@@ -28,7 +28,7 @@ export interface Reply {
   receivedAt: Date
   threadId: string
   tags: string[]
-  assignedTo?: {
+  assignedTo: {
     id: string
     name: string
     email: string

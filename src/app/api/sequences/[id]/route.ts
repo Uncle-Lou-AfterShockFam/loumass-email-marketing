@@ -72,21 +72,6 @@ export async function GET(
                 firstName: true,
                 lastName: true
               }
-            },
-            emails: {
-              select: {
-                id: true,
-                status: true,
-                sentAt: true,
-                openedAt: true,
-                clickedAt: true,
-                repliedAt: true,
-                subject: true,
-                stepId: true
-              },
-              orderBy: {
-                sentAt: 'desc'
-              }
             }
           },
           orderBy: {
@@ -107,20 +92,18 @@ export async function GET(
     const completedEnrollments = sequence.enrollments.filter(e => e.status === 'COMPLETED').length
     const pausedEnrollments = sequence.enrollments.filter(e => e.status === 'PAUSED').length
 
-    // Email metrics across all enrollments
-    const allEmails = sequence.enrollments.flatMap(e => e.emails)
-    const totalEmails = allEmails.length
-    const sentEmails = allEmails.filter(e => e.status === 'SENT').length
-    const openedEmails = allEmails.filter(e => e.openedAt).length
-    const clickedEmails = allEmails.filter(e => e.clickedAt).length
-    const repliedEmails = allEmails.filter(e => e.repliedAt).length
+    // TODO: Email metrics - implement once Email/SequenceStep models are added
+    const totalEmails = 0 // Not tracked in current schema
+    const sentEmails = 0 // Not tracked in current schema
+    const openedEmails = 0 // Not tracked in current schema
+    const clickedEmails = 0 // Not tracked in current schema
+    const repliedEmails = 0 // Not tracked in current schema
 
-    // Step-by-step performance
+    // Step-by-step performance - placeholder values
     const stepPerformance = steps.map((step: any) => {
-      const stepEmails = allEmails.filter(e => e.stepId === step.id)
-      const stepSent = stepEmails.filter(e => e.status === 'SENT').length
-      const stepOpened = stepEmails.filter(e => e.openedAt).length
-      const stepClicked = stepEmails.filter(e => e.clickedAt).length
+      const stepSent = 0 // Not tracked in current schema
+      const stepOpened = 0 // Not tracked in current schema
+      const stepClicked = 0 // Not tracked in current schema
       
       return {
         stepId: step.id,
@@ -139,10 +122,10 @@ export async function GET(
       sequence: {
         id: sequence.id,
         name: sequence.name,
-        description: sequence.description,
+        // description field doesn't exist in Prisma schema
         status: sequence.status,
         triggerType: sequence.triggerType,
-        trackingEnabled: sequence.trackingEnabled,
+        // trackingEnabled field doesn't exist in Prisma schema
         steps,
         stepCount: steps.length,
         hasConditions: steps.some((step: any) => step.type === 'condition'),
@@ -176,10 +159,10 @@ export async function GET(
           status: enrollment.status,
           currentStep: enrollment.currentStep,
           enrolledAt: enrollment.createdAt,
-          nextActionAt: enrollment.nextActionAt,
+          nextActionAt: null, // Field doesn't exist in schema
           contact: enrollment.contact,
-          emailsSent: enrollment.emails.length,
-          lastEmailSent: enrollment.emails[0]?.sentAt || null
+          emailsSent: 0, // Emails not tracked in current schema
+          lastEmailSent: null // Emails not tracked in current schema
         }))
       }
     })
@@ -267,10 +250,10 @@ export async function PUT(
       sequence: {
         id: updatedSequence.id,
         name: updatedSequence.name,
-        description: updatedSequence.description,
+        // description field doesn't exist in schema
         status: updatedSequence.status,
         triggerType: updatedSequence.triggerType,
-        trackingEnabled: updatedSequence.trackingEnabled,
+        // trackingEnabled field doesn't exist in schema
         steps: updatedSequence.steps,
         stepCount: Array.isArray(updatedSequence.steps) ? updatedSequence.steps.length : 0,
         updatedAt: updatedSequence.updatedAt

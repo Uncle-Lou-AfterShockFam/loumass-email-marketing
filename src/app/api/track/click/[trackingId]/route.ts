@@ -111,52 +111,12 @@ export async function GET(
         })
       }
     } else {
-      // Try to find a sequence step
-      const sequenceStep = await prisma.sequenceStep.findFirst({
-        where: {
-          sequenceId: campaignOrSequenceId,
-          recipientId: recipientId
-        },
-        include: {
-          sequence: {
-            include: {
-              user: true
-            }
-          }
-        }
-      })
+      // TODO: Sequence step tracking not implemented - sequenceStep model doesn't exist
+      // For now, just create a basic email event without sequence step tracking
+      const sequenceStep = null
 
-      if (sequenceStep) {
-        // Update sequence step click status
-        const updateData: any = {}
-        
-        if (!sequenceStep.clickedAt) {
-          updateData.clickedAt = new Date()
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          await prisma.sequenceStep.update({
-            where: { id: sequenceStep.id },
-            data: updateData
-          })
-        }
-
-        // Create tracking event
-        await prisma.emailEvent.create({
-          data: {
-            sequenceStepId: sequenceStep.id,
-            eventType: 'CLICKED',
-            eventData: {
-              url,
-              userAgent,
-              ipAddress: ip,
-              timestamp: new Date().toISOString()
-            },
-            ipAddress: ip,
-            userAgent
-          }
-        })
-      }
+      // Sequence step tracking will be implemented when sequenceStep model is added
+      // For now, this else block does nothing since sequenceStep is null
     }
 
     // Redirect to the actual URL

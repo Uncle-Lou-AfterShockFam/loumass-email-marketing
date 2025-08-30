@@ -12,7 +12,7 @@ const createContactSchema = z.object({
   company: z.string().optional(),
   phone: z.string().optional(),
   tags: z.array(z.string()).optional().default([]),
-  variables: z.record(z.string()).optional().default({})
+  variables: z.record(z.string(), z.any()).optional().default({})
 })
 
 export async function POST(request: NextRequest) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       )
     }
@@ -114,7 +114,10 @@ export async function GET(request: NextRequest) {
 
     // Transform contacts to include computed fields
     const contacts = rawContacts.map(contact => 
-      createContactWithStats(contact, {
+      createContactWithStats({
+        ...contact,
+        variables: contact.variables as Record<string, any> | null
+      }, {
         totalCampaigns: 0, // TODO: Calculate from campaign relationships
         totalOpened: 0, // TODO: Calculate from email events
         totalClicked: 0, // TODO: Calculate from email events

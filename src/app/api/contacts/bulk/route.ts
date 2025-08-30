@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const { action, contactIds, options } = validationResult.data
 
     // For most actions, verify contacts belong to the user
-    let contacts = []
+    let contacts: any[] = []
     if (contactIds && contactIds.length > 0) {
       contacts = await prisma.contact.findMany({
         where: {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let results = []
+    let results: any = []
 
     switch (action) {
       case 'delete':

@@ -242,43 +242,46 @@ export class SequenceService {
   }
 
   async scheduleNextSteps() {
+    // TODO: Temporarily commented out until sequenceStep model is added back
     // This would be called by a cron job to process scheduled sequence steps
-    const now = new Date()
+    console.log('Schedule next steps functionality not yet implemented - requires sequenceStep model')
     
-    const activeEnrollments = await prisma.sequenceEnrollment.findMany({
-      where: {
-        status: EnrollmentStatus.ACTIVE
-      },
-      include: {
-        sequence: true
-      }
-    })
+    // const now = new Date()
+    
+    // const activeEnrollments = await prisma.sequenceEnrollment.findMany({
+    //   where: {
+    //     status: EnrollmentStatus.ACTIVE
+    //   },
+    //   include: {
+    //     sequence: true
+    //   }
+    // })
 
-    for (const enrollment of activeEnrollments) {
-      const steps = enrollment.sequence.steps as any[] // JSON array of steps
-      const currentStep = steps[enrollment.currentStep]
+    // for (const enrollment of activeEnrollments) {
+    //   const steps = enrollment.sequence.steps as any[] // JSON array of steps
+    //   const currentStep = steps[enrollment.currentStep]
       
-      if (!currentStep) continue
+    //   if (!currentStep) continue
 
-      // Calculate when this step should be sent
-      const lastSequenceStep = await prisma.sequenceStep.findFirst({
-        where: {
-          enrollmentId: enrollment.id
-        },
-        orderBy: { createdAt: 'desc' }
-      })
+    //   // Calculate when this step should be sent
+    //   const lastSequenceStep = await prisma.sequenceStep.findFirst({
+    //     where: {
+    //       enrollmentId: enrollment.id
+    //     },
+    //     orderBy: { createdAt: 'desc' }
+    //   })
 
-      if (lastSequenceStep && lastSequenceStep.sentAt) {
-        const delayMs = (currentStep.delayDays || 0) * 24 * 60 * 60 * 1000 + (currentStep.delayHours || 0) * 60 * 60 * 1000
-        const shouldSendAt = new Date(lastSequenceStep.sentAt.getTime() + delayMs)
+    //   if (lastSequenceStep && lastSequenceStep.sentAt) {
+    //     const delayMs = (currentStep.delayDays || 0) * 24 * 60 * 60 * 1000 + (currentStep.delayHours || 0) * 60 * 60 * 1000
+    //     const shouldSendAt = new Date(lastSequenceStep.sentAt.getTime() + delayMs)
 
-        if (now >= shouldSendAt) {
-          await this.processSequenceStep(enrollment.id)
-        }
-      } else {
-        // First email in sequence, send immediately
-        await this.processSequenceStep(enrollment.id)
-      }
-    }
+    //     if (now >= shouldSendAt) {
+    //       await this.processSequenceStep(enrollment.id)
+    //     }
+    //   } else {
+    //     // First email in sequence, send immediately
+    //     await this.processSequenceStep(enrollment.id)
+    //   }
+    // }
   }
 }

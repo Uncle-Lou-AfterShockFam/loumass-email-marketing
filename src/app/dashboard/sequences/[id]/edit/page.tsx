@@ -53,8 +53,8 @@ export default async function SequenceEditPage({ params }: SequenceEditPageProps
         <h1 className="text-3xl font-bold text-gray-900">Edit Sequence</h1>
         <div className="flex items-center gap-4 mt-2">
           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            sequence.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
             sequence.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-800' :
+            sequence.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
             'bg-gray-100 text-gray-800'
           }`}>
             {sequence.status}

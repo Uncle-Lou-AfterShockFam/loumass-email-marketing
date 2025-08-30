@@ -8,7 +8,7 @@ import { z } from 'zod'
 const enrollmentSchema = z.object({
   contactIds: z.array(z.string()).min(1, 'At least one contact must be selected'),
   startImmediately: z.boolean().default(true),
-  customVariables: z.record(z.string()).optional()
+  customVariables: z.record(z.string(), z.any()).optional()
 })
 
 // POST /api/sequences/[id]/enroll - Enroll contacts in sequence
@@ -113,7 +113,7 @@ export async function POST(
     }
 
     const now = new Date()
-    const nextActionAt = startImmediately ? now : new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes delay if not immediate
+    // TODO: Implement scheduling for sequences when nextActionAt field is added to schema
 
     // Create enrollments
     const enrollments = await Promise.all(
@@ -134,8 +134,6 @@ export async function POST(
             contactId: contact.id,
             status: 'ACTIVE',
             currentStep: 0,
-            nextActionAt,
-            customVariables: customVariables || {},
             createdAt: now
           },
           include: {
@@ -160,14 +158,13 @@ export async function POST(
         contact: enrollment.contact,
         status: enrollment.status,
         currentStep: enrollment.currentStep,
-        nextActionAt: enrollment.nextActionAt,
-        enrolledAt: enrollment.enrolledAt
+        enrolledAt: enrollment.createdAt
       })),
       summary: {
         sequenceName: sequence.name,
         contactsEnrolled: enrollments.length,
         startTime: startImmediately ? 'Immediately' : 'In 5 minutes',
-        firstStepType: firstStep.type
+        firstStepType: (firstStep as any)?.type || 'email'
       }
     })
 

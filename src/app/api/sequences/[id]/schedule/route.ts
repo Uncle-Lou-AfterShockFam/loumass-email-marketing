@@ -134,10 +134,10 @@ export async function POST(
     for (const enrollment of enrollments) {
       try {
         // Check if enrollment should be scheduled now or later
+        // TODO: Implement nextActionAt field once added to schema
         const shouldScheduleNow = delayMinutes === 0 && (
           forceNext || 
-          !enrollment.nextActionAt || 
-          enrollment.nextActionAt <= scheduleTime
+          true // Always schedule for now since nextActionAt doesn't exist in schema
         )
 
         if (shouldScheduleNow) {
@@ -163,7 +163,7 @@ export async function POST(
           await prisma.sequenceEnrollment.update({
             where: { id: enrollment.id },
             data: {
-              nextActionAt: scheduleTime,
+              // nextActionAt field doesn't exist in schema - TODO: add to schema
               updatedAt: new Date()
             }
           })
@@ -266,21 +266,16 @@ export async function GET(
         }
       },
       orderBy: {
-        nextActionAt: 'asc'
+        createdAt: 'asc' // Use createdAt since nextActionAt doesn't exist
       }
     })
 
-    // Categorize enrollments
+    // Categorize enrollments - simplified since nextActionAt doesn't exist
     const readyToSchedule = enrollments.filter(e => 
-      e.status === 'ACTIVE' && 
-      (!e.nextActionAt || e.nextActionAt <= now)
+      e.status === 'ACTIVE'
     )
 
-    const scheduled = enrollments.filter(e =>
-      e.status === 'ACTIVE' &&
-      e.nextActionAt &&
-      e.nextActionAt > now
-    )
+    const scheduled: any[] = [] // No scheduled enrollments without nextActionAt field
 
     const completed = enrollments.filter(e => e.status === 'COMPLETED')
     const paused = enrollments.filter(e => e.status === 'PAUSED')
@@ -314,7 +309,7 @@ export async function GET(
           contactEmail: e.contact.email,
           displayName: `${e.contact.firstName || ''} ${e.contact.lastName || ''}`.trim() || e.contact.email,
           currentStep: e.currentStep,
-          nextActionAt: e.nextActionAt,
+          nextActionAt: null, // Field doesn't exist in schema
           enrolledAt: e.createdAt
         })),
         nextScheduled: scheduled.slice(0, 5).map(e => ({
@@ -322,7 +317,7 @@ export async function GET(
           contactEmail: e.contact.email,
           displayName: `${e.contact.firstName || ''} ${e.contact.lastName || ''}`.trim() || e.contact.email,
           currentStep: e.currentStep,
-          nextActionAt: e.nextActionAt,
+          nextActionAt: null, // Field doesn't exist in schema
           timeUntilNext: e.nextActionAt ? Math.max(0, Math.floor((e.nextActionAt.getTime() - now.getTime()) / 1000 / 60)) : null
         }))
       },

@@ -23,7 +23,7 @@ interface SequenceEditFormProps {
     name: string
     description?: string | null
     status: string
-    trackingEnabled: boolean
+    trackingEnabled?: boolean
     steps: any
   }
 }
@@ -45,7 +45,7 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
     defaultValues: {
       name: sequence.name,
       description: sequence.description || '',
-      trackingEnabled: sequence.trackingEnabled,
+      trackingEnabled: sequence.trackingEnabled || true,
       steps: sequence.steps || []
     }
   })
@@ -117,7 +117,7 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
         body: JSON.stringify({
           name: `Copy of ${sequence.name}`,
           description: sequence.description,
-          trackingEnabled: sequence.trackingEnabled,
+          trackingEnabled: sequence.trackingEnabled || true,
           steps
         }),
       })

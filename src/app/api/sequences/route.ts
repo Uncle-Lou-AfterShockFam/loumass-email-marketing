@@ -84,10 +84,8 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.user.id,
         name,
-        description: description || '',
         status,
         triggerType: triggerType.toLowerCase(),
-        trackingEnabled,
         steps: steps // Store steps as JSON
       }
     })
@@ -98,10 +96,8 @@ export async function POST(request: NextRequest) {
       sequence: {
         id: sequence.id,
         name: sequence.name,
-        description: sequence.description,
         status: sequence.status,
         triggerType: sequence.triggerType,
-        trackingEnabled: sequence.trackingEnabled,
         stepCount: steps.length,
         createdAt: sequence.createdAt,
         updatedAt: sequence.updatedAt
@@ -170,10 +166,8 @@ export async function GET(request: NextRequest) {
       return {
         id: sequence.id,
         name: sequence.name,
-        description: sequence.description,
         status: sequence.status,
         triggerType: sequence.triggerType,
-        trackingEnabled: sequence.trackingEnabled,
         totalEnrollments: sequence._count.enrollments,
         activeEnrollments: sequence.enrollments.length,
         stepCount: steps.length,

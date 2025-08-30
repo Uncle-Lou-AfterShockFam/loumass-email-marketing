@@ -23,19 +23,35 @@ interface SequenceStep {
 }
 
 interface SequenceBuilderProps {
-  userId: string
+  userId?: string
+  steps?: any[]
+  onChange?: (steps: any[]) => void
+  trackingEnabled?: boolean
 }
 
-export default function SequenceBuilder({ userId }: SequenceBuilderProps) {
+export default function SequenceBuilder({ 
+  userId, 
+  steps: initialSteps, 
+  onChange, 
+  trackingEnabled: trackingProp 
+}: SequenceBuilderProps) {
   const router = useRouter()
   const [sequenceName, setSequenceName] = useState('')
   const [description, setDescription] = useState('')
   const [triggerType, setTriggerType] = useState<'MANUAL' | 'ON_SIGNUP' | 'ON_EVENT'>('MANUAL')
-  const [trackingEnabled, setTrackingEnabled] = useState(true)
-  const [steps, setSteps] = useState<SequenceStep[]>([])
+  const [trackingEnabled, setTrackingEnabled] = useState(trackingProp ?? true)
+  const [steps, setSteps] = useState<SequenceStep[]>(initialSteps || [])
   const [selectedStep, setSelectedStep] = useState<SequenceStep | null>(null)
   const [isTestMode, setIsTestMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Helper to update steps and call onChange if provided
+  const updateStepsState = (newSteps: SequenceStep[]) => {
+    setSteps(newSteps)
+    if (onChange) {
+      onChange(newSteps)
+    }
+  }
 
   const addStep = (type: SequenceStep['type']) => {
     const newStep: SequenceStep = {
@@ -63,12 +79,12 @@ export default function SequenceBuilder({ userId }: SequenceBuilderProps) {
       }
     }
 
-    setSteps([...steps, newStep])
+    updateStepsState([...steps, newStep])
     setSelectedStep(newStep)
   }
 
   const updateStep = (stepId: string, updates: Partial<SequenceStep>) => {
-    setSteps(steps.map(step => 
+    updateStepsState(steps.map(step => 
       step.id === stepId ? { ...step, ...updates } : step
     ))
     if (selectedStep?.id === stepId) {
@@ -77,14 +93,14 @@ export default function SequenceBuilder({ userId }: SequenceBuilderProps) {
   }
 
   const deleteStep = (stepId: string) => {
-    setSteps(steps.filter(step => step.id !== stepId))
+    updateStepsState(steps.filter(step => step.id !== stepId))
     if (selectedStep?.id === stepId) {
       setSelectedStep(null)
     }
   }
 
   const connectSteps = (fromId: string, toId: string) => {
-    setSteps(steps.map(step => 
+    updateStepsState(steps.map(step => 
       step.id === fromId ? { ...step, nextStepId: toId } : step
     ))
   }
@@ -440,7 +456,8 @@ export default function SequenceBuilder({ userId }: SequenceBuilderProps) {
                   onChange={(e) => updateStep(selectedStep.id, { 
                     delay: { 
                       ...selectedStep.delay, 
-                      days: parseInt(e.target.value) || 0 
+                      days: parseInt(e.target.value) || 0,
+                      hours: selectedStep.delay?.hours || 0
                     } 
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -459,7 +476,8 @@ export default function SequenceBuilder({ userId }: SequenceBuilderProps) {
                   onChange={(e) => updateStep(selectedStep.id, { 
                     delay: { 
                       ...selectedStep.delay, 
-                      hours: parseInt(e.target.value) || 0 
+                      hours: parseInt(e.target.value) || 0,
+                      days: selectedStep.delay?.days || 0
                     } 
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"

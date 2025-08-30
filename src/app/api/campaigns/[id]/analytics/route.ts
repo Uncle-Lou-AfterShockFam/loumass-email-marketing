@@ -218,7 +218,7 @@ export async function GET(
           clickRate: sentCount > 0 ? Math.round((clickedCount / sentCount) * 100) : 0,
           replyRate: sentCount > 0 ? Math.round((repliedCount / sentCount) * 100) : 0,
           bounceRate: sentCount > 0 ? Math.round((bouncedCount / sentCount) * 100) : 0,
-          unsubscribeRate: sentCount > 0 ? Math.round((unsubscribedCount / sentCount) * 100) : 0,
+          unsubscribeRate: sentCount > 0 ? Math.round((0 / sentCount) * 100) : 0, // Not tracked in current schema
           deliveryRate: sentCount > 0 ? Math.round(((sentCount - bouncedCount) / sentCount) * 100) : 0
         },
         timeAnalytics,

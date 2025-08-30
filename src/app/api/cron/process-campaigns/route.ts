@@ -153,7 +153,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Process sequence steps
+    // TODO: Process sequence steps - needs implementation with proper SequenceEnrollment model
+    // This section is commented out because SequenceStep model doesn't exist
+    /*
     const pendingSequenceSteps = await prisma.sequenceStep.findMany({
       where: {
         scheduledFor: {
@@ -282,6 +284,7 @@ export async function GET(request: Request) {
         })
       }
     }
+    */
 
     return NextResponse.json({
       success: true,

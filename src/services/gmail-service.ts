@@ -360,7 +360,7 @@ export class GmailService {
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = 'https://track.aftershockfam.org'
+    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://click.aftershockfam.org'
     
     console.log('Base URL for tracking:', baseUrl)
     

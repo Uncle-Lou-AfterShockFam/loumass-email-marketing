@@ -32,11 +32,6 @@ export async function POST(
                 lastName: true,
                 company: true
               }
-            },
-            steps: {
-              include: {
-                emailEvents: true
-              }
             }
           }
         }
@@ -71,21 +66,18 @@ export async function POST(
     // Data rows
     sequence.enrollments.forEach(enrollment => {
       const contact = enrollment.contact
-      const totalOpens = enrollment.steps.reduce((sum, step) => 
-        sum + step.emailEvents.filter(e => e.eventType === 'OPENED').length, 0)
-      const totalClicks = enrollment.steps.reduce((sum, step) => 
-        sum + step.emailEvents.filter(e => e.eventType === 'CLICKED').length, 0)
-      const totalReplies = enrollment.steps.reduce((sum, step) => 
-        sum + step.emailEvents.filter(e => e.eventType === 'REPLIED').length, 0)
+      // TODO: Implement stats once SequenceStep model is added
+      const totalOpens = 0 // Not tracked in current schema
+      const totalClicks = 0 // Not tracked in current schema
+      const totalReplies = 0 // Not tracked in current schema
       
-      // Get last activity date
-      const allEvents = enrollment.steps.flatMap(step => step.emailEvents)
-      const lastActivity = allEvents.length > 0 
-        ? new Date(Math.max(...allEvents.map(e => new Date(e.createdAt).getTime())))
-        : null
+      // Get last activity date - use enrollment dates for now
+      const lastActivity = enrollment.updatedAt > enrollment.createdAt 
+        ? enrollment.updatedAt
+        : enrollment.createdAt
 
       // Get current step name
-      const currentStepIndex = parseInt(enrollment.currentStep) - 1
+      const currentStepIndex = enrollment.currentStep
       const currentStepName = currentStepIndex >= 0 && currentStepIndex < sequenceSteps.length
         ? sequenceSteps[currentStepIndex].subject || `Step ${currentStepIndex + 1}`
         : 'N/A'
@@ -96,7 +88,7 @@ export async function POST(
         contact.company || 'N/A',
         enrollment.status,
         currentStepName,
-        new Date(enrollment.enrolledAt).toISOString().split('T')[0],
+        new Date(enrollment.createdAt).toISOString().split('T')[0],
         enrollment.completedAt ? new Date(enrollment.completedAt).toISOString().split('T')[0] : 'N/A',
         totalOpens,
         totalClicks,

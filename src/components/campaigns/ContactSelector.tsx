@@ -96,7 +96,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
 
   const handleBulkImport = () => {
     // TODO: Implement CSV import modal
-    toast.info('CSV import feature coming soon!')
+    toast('CSV import feature coming soon!', { icon: 'ℹ️' })
   }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)

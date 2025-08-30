@@ -22,7 +22,7 @@ const editCampaignSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
   subject: z.string().min(1, 'Email subject is required'),
   content: z.string().min(1, 'Email content is required'),
-  trackingEnabled: z.boolean().default(true),
+  trackingEnabled: z.boolean(),
   contactIds: z.array(z.string()).min(1, 'At least one contact is required'),
   scheduledFor: z.string().optional(),
   trackingDomainId: z.string().optional()

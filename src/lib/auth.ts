@@ -58,6 +58,56 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt'
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Allow OAuth sign-in to create/link accounts automatically
+      if (account?.provider === 'google') {
+        const email = user.email
+        if (!email) return false
+        
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email }
+        })
+        
+        if (!existingUser) {
+          // Create new user if doesn't exist
+          await prisma.user.create({
+            data: {
+              email,
+              name: user.name || email.split('@')[0],
+              emailVerified: new Date()
+            }
+          })
+        }
+        
+        // Check if account is already linked
+        const existingAccount = await prisma.account.findFirst({
+          where: {
+            provider: account.provider,
+            providerAccountId: account.providerAccountId
+          }
+        })
+        
+        if (!existingAccount && existingUser) {
+          // Link the account if not already linked
+          await prisma.account.create({
+            data: {
+              userId: existingUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              refresh_token: account.refresh_token,
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token
+            }
+          })
+        }
+      }
+      return true
+    },
     async session({ session, token }) {
       if (session?.user && token.sub) {
         session.user.id = token.sub

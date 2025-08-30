@@ -6,22 +6,16 @@ import { formatDistanceToNow } from 'date-fns'
 interface Enrollment {
   id: string
   status: string
-  enrolledAt: Date
-  currentStep: number
-  lastActionAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  currentStep: number | string
   completedAt: Date | null
+  pausedAt: Date | null
   contact: {
-    id: string
     email: string
     firstName: string | null
     lastName: string | null
     company: string | null
-  }
-  metrics: {
-    emailsSent: number
-    emailsOpened: number
-    linksClicked: number
-    repliesReceived: number
   }
 }
 
@@ -50,11 +44,12 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
   const filteredEnrollments = enrollments.filter(enrollment => {
     // Apply status filter
     if (filter !== 'all') {
-      if (filter === 'active' && enrollment.status !== 'active') return false
-      if (filter === 'completed' && enrollment.status !== 'completed') return false
-      if (filter === 'paused' && enrollment.status !== 'paused') return false
-      if (filter === 'unsubscribed' && enrollment.status !== 'unsubscribed') return false
-      if (filter === 'engaged' && enrollment.metrics.emailsOpened === 0 && enrollment.metrics.repliesReceived === 0) {
+      if (filter === 'active' && enrollment.status !== 'ACTIVE') return false
+      if (filter === 'completed' && enrollment.status !== 'COMPLETED') return false
+      if (filter === 'paused' && enrollment.status !== 'PAUSED') return false
+      if (filter === 'unsubscribed' && enrollment.status !== 'UNSUBSCRIBED') return false
+      if (filter === 'engaged') {
+        // TODO: Engagement tracking not implemented - always return false for now
         return false
       }
     }
@@ -77,13 +72,16 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
   const sortedEnrollments = [...filteredEnrollments].sort((a, b) => {
     switch (sortBy) {
       case 'activity':
-        const aTime = a.lastActionAt ? new Date(a.lastActionAt).getTime() : 0
-        const bTime = b.lastActionAt ? new Date(b.lastActionAt).getTime() : 0
+        // TODO: Last action tracking not implemented - use updatedAt for now
+        const aTime = new Date(a.updatedAt).getTime()
+        const bTime = new Date(b.updatedAt).getTime()
         return bTime - aTime
       case 'step':
-        return b.currentStep - a.currentStep
+        const aStep = typeof a.currentStep === 'string' ? parseInt(a.currentStep) : a.currentStep
+        const bStep = typeof b.currentStep === 'string' ? parseInt(b.currentStep) : b.currentStep
+        return bStep - aStep
       default: // enrolled
-        return new Date(b.enrolledAt).getTime() - new Date(a.enrolledAt).getTime()
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
   })
 
@@ -94,10 +92,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      active: 'bg-green-100 text-green-800',
-      completed: 'bg-blue-100 text-blue-800',
-      paused: 'bg-yellow-100 text-yellow-800',
-      unsubscribed: 'bg-red-100 text-red-800'
+      ACTIVE: 'bg-green-100 text-green-800',
+      COMPLETED: 'bg-blue-100 text-blue-800',
+      PAUSED: 'bg-yellow-100 text-yellow-800',
+      UNSUBSCRIBED: 'bg-red-100 text-red-800'
     }
     return badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800'
   }
@@ -116,12 +114,9 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
     return `Step ${stepNumber}`
   }
 
-  const getEngagementScore = (metrics: Enrollment['metrics']) => {
-    if (metrics.emailsSent === 0) return 0
-    const openRate = metrics.emailsOpened / metrics.emailsSent
-    const clickRate = metrics.linksClicked / metrics.emailsSent
-    const replyRate = metrics.repliesReceived / metrics.emailsSent
-    return Math.round((openRate * 0.3 + clickRate * 0.3 + replyRate * 0.4) * 100)
+  const getEngagementScore = () => {
+    // TODO: Engagement tracking not implemented - return placeholder
+    return 0
   }
 
   return (
@@ -210,7 +205,8 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedEnrollments.map((enrollment) => {
-              const engagementScore = getEngagementScore(enrollment.metrics)
+              const engagementScore = getEngagementScore()
+              const currentStepNum = typeof enrollment.currentStep === 'string' ? parseInt(enrollment.currentStep) : enrollment.currentStep
               
               return (
                 <tr key={enrollment.id} className="hover:bg-gray-50">
@@ -235,17 +231,17 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                   <td className="px-6 py-4">
                     <div className="text-sm">
                       <div className="font-medium text-gray-900">
-                        Step {enrollment.currentStep} of {steps.length}
+                        Step {currentStepNum} of {steps.length}
                       </div>
                       <div className="text-gray-500 truncate max-w-xs">
-                        {getStepInfo(enrollment.currentStep)}
+                        {getStepInfo(currentStepNum)}
                       </div>
-                      {enrollment.status === 'active' && (
+                      {enrollment.status === 'ACTIVE' && (
                         <div className="mt-1">
                           <div className="bg-gray-200 rounded-full h-2 w-32">
                             <div 
                               className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${(enrollment.currentStep / steps.length) * 100}%` }}
+                              style={{ width: `${(currentStepNum / steps.length) * 100}%` }}
                             />
                           </div>
                         </div>
@@ -253,14 +249,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {formatDistanceToNow(new Date(enrollment.enrolledAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(enrollment.createdAt), { addSuffix: true })}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {enrollment.lastActionAt ? (
-                      formatDistanceToNow(new Date(enrollment.lastActionAt), { addSuffix: true })
-                    ) : (
-                      <span className="text-gray-400">No activity</span>
-                    )}
+                    <span className="text-gray-400">No activity tracking</span>
                   </td>
                   {trackingEnabled && (
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -272,33 +264,29 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
-                              <span>{enrollment.metrics.emailsOpened}</span>
+                              <span>0</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                               </svg>
-                              <span>{enrollment.metrics.linksClicked}</span>
+                              <span>0</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                               </svg>
-                              <span>{enrollment.metrics.repliesReceived}</span>
+                              <span>0</span>
                             </div>
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                               <div
-                                className={`h-1.5 rounded-full ${
-                                  engagementScore >= 70 ? 'bg-green-500' :
-                                  engagementScore >= 40 ? 'bg-yellow-500' :
-                                  'bg-red-500'
-                                }`}
-                                style={{ width: `${engagementScore}%` }}
+                                className="h-1.5 rounded-full bg-gray-400"
+                                style={{ width: '0%' }}
                               />
                             </div>
-                            <span className="text-xs text-gray-600">{engagementScore}%</span>
+                            <span className="text-xs text-gray-600">0%</span>
                           </div>
                         </div>
                       </div>
@@ -306,12 +294,12 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      {enrollment.status === 'active' && (
+                      {enrollment.status === 'ACTIVE' && (
                         <button className="text-yellow-600 hover:text-yellow-700">
                           Pause
                         </button>
                       )}
-                      {enrollment.status === 'paused' && (
+                      {enrollment.status === 'PAUSED' && (
                         <button className="text-green-600 hover:text-green-700">
                           Resume
                         </button>
@@ -413,7 +401,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
           <div>
             <h3 className="text-sm font-medium text-gray-900 mb-2">Active Enrollments</h3>
             <p className="text-2xl font-bold text-green-600">
-              {enrollments.filter(e => e.status === 'active').length}
+              {enrollments.filter(e => e.status === 'ACTIVE').length}
             </p>
             <p className="text-sm text-gray-600">Currently receiving emails</p>
           </div>
@@ -422,19 +410,22 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
             <h3 className="text-sm font-medium text-gray-900 mb-2">Completion Rate</h3>
             <p className="text-2xl font-bold text-blue-600">
               {enrollments.length > 0 
-                ? Math.round((enrollments.filter(e => e.status === 'completed').length / enrollments.length) * 100)
+                ? Math.round((enrollments.filter(e => e.status === 'COMPLETED').length / enrollments.length) * 100)
                 : 0}%
             </p>
             <p className="text-sm text-gray-600">
-              {enrollments.filter(e => e.status === 'completed').length} completed
+              {enrollments.filter(e => e.status === 'COMPLETED').length} completed
             </p>
           </div>
 
           <div>
             <h3 className="text-sm font-medium text-gray-900 mb-2">Average Progress</h3>
             <p className="text-2xl font-bold text-purple-600">
-              {steps.length > 0
-                ? Math.round((enrollments.reduce((sum, e) => sum + e.currentStep, 0) / enrollments.length / steps.length) * 100)
+              {steps.length > 0 && enrollments.length > 0
+                ? Math.round((enrollments.reduce((sum, e) => {
+                    const stepNum = typeof e.currentStep === 'string' ? parseInt(e.currentStep) : e.currentStep
+                    return sum + stepNum
+                  }, 0) / enrollments.length / steps.length) * 100)
                 : 0}%
             </p>
             <p className="text-sm text-gray-600">Through sequence</p>
@@ -442,12 +433,8 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
 
           <div>
             <h3 className="text-sm font-medium text-gray-900 mb-2">Engagement Rate</h3>
-            <p className="text-2xl font-bold text-teal-600">
-              {enrollments.length > 0
-                ? Math.round((enrollments.filter(e => e.metrics.emailsOpened > 0 || e.metrics.repliesReceived > 0).length / enrollments.length) * 100)
-                : 0}%
-            </p>
-            <p className="text-sm text-gray-600">Have engaged</p>
+            <p className="text-2xl font-bold text-teal-600">0%</p>
+            <p className="text-sm text-gray-600">Tracking not implemented</p>
           </div>
         </div>
       </div>

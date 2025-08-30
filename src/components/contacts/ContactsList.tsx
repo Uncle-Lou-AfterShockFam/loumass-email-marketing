@@ -296,7 +296,7 @@ export default function ContactsList({ contacts, tags }: ContactsListProps) {
                     </div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {contact.totalOpens} opens • {contact.totalClicks} clicks
+                    {contact.totalOpened} opens • {contact.totalClicked} clicks
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
