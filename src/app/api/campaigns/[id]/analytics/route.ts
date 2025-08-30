@@ -163,7 +163,8 @@ export async function GET(
     campaign.emailEvents
       .filter(event => event.eventType === 'CLICKED')
       .forEach(event => {
-        const url = event.eventData?.url || 'Unknown URL'
+        const eventData = event.eventData as { url?: string } | null
+        const url = eventData?.url || 'Unknown URL'
         linkClicks.set(url, (linkClicks.get(url) || 0) + 1)
       })
     
