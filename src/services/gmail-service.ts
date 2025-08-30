@@ -414,11 +414,15 @@ export class GmailService {
     }
     
     // STEP 3: Insert pixel before closing body tag
+    console.log('Before pixel insertion:', trackedHtml)
     if (trackedHtml.includes('</body>')) {
+      console.log('Found </body> tag, inserting pixel before it')
       trackedHtml = trackedHtml.replace('</body>', `${pixelHtml}</body>`)
     } else {
+      console.log('No </body> tag found, appending pixel to end')
       trackedHtml = trackedHtml + pixelHtml
     }
+    console.log('After pixel insertion:', trackedHtml)
     
     // STEP 4: Replace all HTML links for click tracking
     const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
