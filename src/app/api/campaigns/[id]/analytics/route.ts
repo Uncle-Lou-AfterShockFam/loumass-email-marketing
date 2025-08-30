@@ -55,7 +55,7 @@ export async function GET(
     const clickedCount = campaign.recipients.filter(r => r.clickedAt).length
     const repliedCount = campaign.recipients.filter(r => r.repliedAt).length
     const bouncedCount = campaign.recipients.filter(r => r.bouncedAt).length
-    const unsubscribedCount = campaign.recipients.filter(r => r.unsubscribedAt).length
+    // Note: unsubscribed tracking not implemented in current schema
 
     // Calculate time-based analytics (hourly opens/clicks for first 48 hours)
     const timeAnalytics = []
