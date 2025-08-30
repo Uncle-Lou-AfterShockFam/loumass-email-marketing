@@ -212,7 +212,7 @@ export async function GET(
           clickedCount,
           repliedCount,
           bouncedCount,
-          unsubscribedCount,
+          unsubscribedCount: 0, // Not tracked in current schema
           deliveredCount: sentCount - bouncedCount,
           openRate: sentCount > 0 ? Math.round((openedCount / sentCount) * 100) : 0,
           clickRate: sentCount > 0 ? Math.round((clickedCount / sentCount) * 100) : 0,
