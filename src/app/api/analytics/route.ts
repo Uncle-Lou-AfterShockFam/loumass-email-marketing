@@ -173,7 +173,9 @@ export async function GET(request: NextRequest) {
     // Get recent activity
     const recentActivity = await prisma.emailEvent.findMany({
       where: {
-        userId: session.user.id,
+        campaign: {
+          userId: session.user.id
+        },
         createdAt: {
           gte: startDate,
           lte: endDate
