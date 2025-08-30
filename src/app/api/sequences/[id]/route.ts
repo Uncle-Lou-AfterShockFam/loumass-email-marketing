@@ -41,16 +41,15 @@ const updateSequenceSchema = z.object({
 // GET /api/sequences/[id] - Get sequence details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { id } = params
 
     // Fetch sequence with enrollment data and metrics
     const sequence = await prisma.sequence.findFirst({
@@ -196,7 +195,7 @@ export async function GET(
 // PUT /api/sequences/[id] - Update sequence
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -205,7 +204,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     // Validate request data
@@ -289,7 +288,7 @@ export async function PUT(
 // DELETE /api/sequences/[id] - Delete sequence
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -298,7 +297,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Check sequence exists and belongs to user
     const sequence = await prisma.sequence.findFirst({
