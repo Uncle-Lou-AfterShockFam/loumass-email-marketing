@@ -177,47 +177,47 @@ export class GmailService {
   }
 
   private encodeQuotedPrintable(text: string): string {
-    // First handle non-ASCII characters
-    let encoded = text.replace(/[^\x00-\x7F]/g, (char) => {
-      return char
-        .split('')
-        .map(c => '=' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
-        .join('')
-    })
+    // For HTML content, we should use base64 encoding instead
+    // Gmail handles HTML better with base64
+    // But for now, let's simplify the quoted-printable encoding
     
-    // Handle special characters that need encoding
-    encoded = encoded.replace(/[=\r\n]/g, (char) => {
-      return '=' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')
-    })
+    // Replace non-ASCII characters
+    let encoded = ''
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i]
+      const code = char.charCodeAt(0)
+      
+      // Keep printable ASCII characters except =
+      if (code >= 32 && code <= 126 && char !== '=') {
+        encoded += char
+      } else if (char === '\n') {
+        encoded += '\r\n'
+      } else if (char === '\r') {
+        // Skip carriage returns (we add them with \n)
+        continue
+      } else {
+        // Encode as =XX
+        encoded += '=' + code.toString(16).toUpperCase().padStart(2, '0')
+      }
+    }
     
-    // Add soft line breaks at safe positions (avoiding breaking URLs and HTML attributes)
-    // Split into lines but avoid breaking inside href="..." or src="..." attributes
+    // Add soft line breaks for long lines
+    const maxLineLength = 76
     const lines = []
     let currentLine = ''
-    let insideQuotes = false
-    let quoteChar = ''
     
     for (let i = 0; i < encoded.length; i++) {
-      const char = encoded[i]
-      const prevChar = encoded[i - 1]
+      currentLine += encoded[i]
       
-      // Track if we're inside quotes
-      if ((char === '"' || char === "'") && prevChar !== '\\') {
-        if (!insideQuotes) {
-          insideQuotes = true
-          quoteChar = char
-        } else if (char === quoteChar) {
-          insideQuotes = false
-          quoteChar = ''
-        }
-      }
-      
-      currentLine += char
-      
-      // Add soft line break if line is getting long and we're not inside quotes
-      if (currentLine.length >= 72 && !insideQuotes && char === ' ') {
-        lines.push(currentLine.trim())
-        currentLine = ''
+      // Check if we need a soft line break
+      if (currentLine.length >= maxLineLength - 1) {
+        // Find a good break point (space or after punctuation)
+        let breakPoint = currentLine.lastIndexOf(' ')
+        if (breakPoint === -1) breakPoint = currentLine.lastIndexOf('>')
+        if (breakPoint === -1) breakPoint = maxLineLength - 2
+        
+        lines.push(currentLine.substring(0, breakPoint) + '=')
+        currentLine = currentLine.substring(breakPoint)
       }
     }
     
@@ -226,7 +226,7 @@ export class GmailService {
       lines.push(currentLine)
     }
     
-    return lines.join('=\r\n') // Soft line break with =
+    return lines.join('\r\n')
   }
 
   async sendBulkCampaign(
@@ -394,35 +394,61 @@ export class GmailService {
     console.log('Converting plain text URLs to HTML links...')
     let trackedHtml = html
     
-    // Convert HTTP/HTTPS URLs that are not already inside HTML tags
-    const urlRegex = /(?<!<[^>]*)(https?:\/\/[^\s<>'"]+)/gi
-    let urlsConverted = 0
-    const convertedUrls: string[] = []
+    // Check if content is plain text (no HTML tags)
+    const hasHtmlTags = /<[^>]+>/.test(html)
     
-    trackedHtml = trackedHtml.replace(urlRegex, (match) => {
-      urlsConverted++
-      convertedUrls.push(`URL ${urlsConverted}: ${match} -> <a href="${match}">${match}</a>`)
-      return `<a href="${match}">${match}</a>`
-    })
-    
-    console.log(`Converted ${urlsConverted} plain text URLs to HTML links`)
-    convertedUrls.forEach(url => console.log(url))
-    
-    // STEP 2: Ensure HTML has proper structure
-    if (!trackedHtml.includes('<html') && !trackedHtml.includes('<body')) {
-      trackedHtml = `<html><body>${trackedHtml}</body></html>`
-    }
-    
-    // STEP 3: Insert pixel before closing body tag
-    console.log('Before pixel insertion:', trackedHtml)
-    if (trackedHtml.includes('</body>')) {
-      console.log('Found </body> tag, inserting pixel before it')
-      trackedHtml = trackedHtml.replace('</body>', `${pixelHtml}</body>`)
+    if (!hasHtmlTags) {
+      console.log('Content appears to be plain text, converting to HTML...')
+      // Convert plain text to HTML with proper structure
+      // First, escape any HTML special characters except URLs
+      trackedHtml = trackedHtml
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+      
+      // Then convert URLs to links
+      trackedHtml = trackedHtml.replace(/(https?:\/\/[^\s<>'"]+)/gi, '<a href="$1">$1</a>')
+      
+      // Wrap in proper HTML structure
+      trackedHtml = `<html><body>${trackedHtml}${pixelHtml}</body></html>`
+      
+      console.log('Converted plain text to HTML with pixel')
     } else {
-      console.log('No </body> tag found, appending pixel to end')
-      trackedHtml = trackedHtml + pixelHtml
+      // Content already has HTML, process normally
+      console.log('Content already has HTML tags')
+      
+      // Convert HTTP/HTTPS URLs that are not already inside HTML tags
+      const urlRegex = /(?<!<[^>]*)(https?:\/\/[^\s<>'"]+)/gi
+      let urlsConverted = 0
+      const convertedUrls: string[] = []
+      
+      trackedHtml = trackedHtml.replace(urlRegex, (match) => {
+        urlsConverted++
+        convertedUrls.push(`URL ${urlsConverted}: ${match} -> <a href="${match}">${match}</a>`)
+        return `<a href="${match}">${match}</a>`
+      })
+      
+      console.log(`Converted ${urlsConverted} plain text URLs to HTML links`)
+      convertedUrls.forEach(url => console.log(url))
+      
+      // STEP 2: Ensure HTML has proper structure
+      if (!trackedHtml.includes('<html') && !trackedHtml.includes('<body')) {
+        trackedHtml = `<html><body>${trackedHtml}</body></html>`
+      }
+      
+      // STEP 3: Insert pixel before closing body tag
+      console.log('Before pixel insertion:', trackedHtml)
+      if (trackedHtml.includes('</body>')) {
+        console.log('Found </body> tag, inserting pixel before it')
+        trackedHtml = trackedHtml.replace('</body>', `${pixelHtml}</body>`)
+      } else {
+        console.log('No </body> tag found, appending pixel to end')
+        trackedHtml = trackedHtml + pixelHtml
+      }
+      console.log('After pixel insertion:', trackedHtml)
     }
-    console.log('After pixel insertion:', trackedHtml)
     
     // STEP 4: Replace all HTML links for click tracking
     const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
