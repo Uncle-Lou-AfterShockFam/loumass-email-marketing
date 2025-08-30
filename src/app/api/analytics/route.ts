@@ -140,43 +140,35 @@ export async function GET(request: NextRequest) {
       where: { userId: session.user.id },
       include: {
         enrollments: {
-          include: {
-            emails: {
-              where: {
-                sentAt: {
-                  gte: startDate,
-                  lte: endDate
-                }
-              }
-            }
+          select: {
+            id: true,
+            status: true,
+            createdAt: true
           }
         }
       },
-      take: 10
+      take: 10,
+      orderBy: {
+        createdAt: 'desc'
+      }
     })
 
     const topSequences = sequences.map(sequence => {
-      const allEmails = sequence.enrollments.flatMap(e => e.emails)
-      const sent = allEmails.filter(e => e.status === 'SENT').length
-      const opened = allEmails.filter(e => e.openedAt).length
-      const clicked = allEmails.filter(e => e.clickedAt).length
-      const replied = allEmails.filter(e => e.repliedAt).length
+      const activeEnrollments = sequence.enrollments.filter(e => e.status === 'ACTIVE').length
+      const completedEnrollments = sequence.enrollments.filter(e => e.status === 'COMPLETED').length
+      const pausedEnrollments = sequence.enrollments.filter(e => e.status === 'PAUSED').length
 
       return {
         id: sequence.id,
         name: sequence.name,
         status: sequence.status,
-        enrollments: sequence.enrollments.length,
-        activeEnrollments: sequence.enrollments.filter(e => e.status === 'ACTIVE').length,
-        emailsSent: sent,
-        opened,
-        clicked,
-        replied,
-        openRate: sent > 0 ? Math.round((opened / sent) * 100) : 0,
-        clickRate: sent > 0 ? Math.round((clicked / sent) * 100) : 0,
-        replyRate: sent > 0 ? Math.round((replied / sent) * 100) : 0
+        totalEnrollments: sequence.enrollments.length,
+        activeEnrollments,
+        completedEnrollments,
+        pausedEnrollments,
+        createdAt: sequence.createdAt
       }
-    }).sort((a, b) => b.openRate - a.openRate)
+    }).sort((a, b) => b.totalEnrollments - a.totalEnrollments)
 
     // Get recent activity
     const recentActivity = await prisma.emailEvent.findMany({
