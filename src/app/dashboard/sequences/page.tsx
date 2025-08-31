@@ -38,13 +38,29 @@ export default async function SequencesPage() {
 
   // Calculate metrics for each sequence
   const sequencesWithMetrics = sequences.map(sequence => {
-    const steps = Array.isArray(sequence.steps) ? sequence.steps : []
+    let steps = []
+    try {
+      // Handle both array and JSON string formats
+      if (typeof sequence.steps === 'string') {
+        steps = JSON.parse(sequence.steps)
+      } else if (Array.isArray(sequence.steps)) {
+        steps = sequence.steps
+      } else if (sequence.steps && typeof sequence.steps === 'object') {
+        // If it's already an object but not an array, wrap it
+        steps = [sequence.steps]
+      }
+    } catch (error) {
+      console.error('Error parsing sequence steps:', error, sequence.id)
+      steps = []
+    }
+    
     return {
       ...sequence,
+      steps, // Include parsed steps
       totalEnrollments: sequence._count.enrollments,
       activeEnrollments: sequence.enrollments.length,
       stepCount: steps.length,
-      hasConditions: steps.some((step: any) => step.type === 'condition')
+      hasConditions: steps.some((step: any) => step?.type === 'condition')
     }
   })
 
