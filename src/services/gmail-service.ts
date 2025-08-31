@@ -364,8 +364,10 @@ export class GmailService {
     
     console.log('Base URL for tracking:', baseUrl)
     
-    // Add open tracking pixel
-    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}`
+    // Add open tracking pixel with cache-busting parameter
+    // Adding a random parameter to prevent Gmail from caching the pixel
+    const cacheBuster = Math.random().toString(36).substring(7)
+    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}?cb=${cacheBuster}`
     const pixelHtml = `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`
     
     console.log('Pixel URL:', pixelUrl)

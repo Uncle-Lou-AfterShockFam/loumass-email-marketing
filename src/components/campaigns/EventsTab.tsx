@@ -26,7 +26,7 @@ interface EventsTabProps {
 export default function EventsTab({ campaignId }: EventsTabProps) {
   const [events, setEvents] = useState<EmailEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'opens' | 'clicks'>('all')
+  const [filter, setFilter] = useState<'all' | 'opens' | 'clicks' | 'replies'>('all')
   const [userIp, setUserIp] = useState<string>('')
 
   useEffect(() => {
@@ -72,6 +72,7 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
     if (filter === 'all') return true
     if (filter === 'opens') return event.eventType === 'OPENED'
     if (filter === 'clicks') return event.eventType === 'CLICKED'
+    if (filter === 'replies') return event.eventType === 'REPLIED'
     return true
   })
 
@@ -90,6 +91,12 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         )
+      case 'REPLIED':
+        return (
+          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+        )
       default:
         return null
     }
@@ -101,6 +108,44 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
     const userOctets = userIp.split('.').slice(0, 3).join('.')
     const eventOctets = eventIp.split('.').slice(0, 3).join('.')
     return userOctets === eventOctets
+  }
+
+  const isGmailProxy = (ip?: string) => {
+    if (!ip) return false
+    // Gmail proxy IPs typically start with 66.102, 66.249, 209.85, etc.
+    const gmailRanges = ['66.102', '66.249', '209.85', '172.217', '142.250', '142.251']
+    const ipPrefix = ip.split('.').slice(0, 2).join('.')
+    return gmailRanges.includes(ipPrefix)
+  }
+
+  const isSecurityScanner = (ip?: string, userAgent?: string) => {
+    if (!ip) return false
+    
+    // Known security scanner IP ranges
+    const scannerRanges = [
+      '23.228', '63.88', '64.15', // Common corporate security scanners
+      '52.', '54.', '35.', // AWS ranges (often used by security services)
+      '104.', '40.', // Azure/Microsoft security
+    ]
+    
+    // Check if it's a quick click (within first few seconds) - likely automated
+    // This would need timestamp comparison logic
+    
+    // Check IP patterns
+    for (const range of scannerRanges) {
+      if (ip.startsWith(range)) {
+        return true
+      }
+    }
+    
+    // Check user agent patterns
+    if (userAgent) {
+      const scannerAgents = ['bot', 'scan', 'security', 'linkcheck', 'preview']
+      const lowerAgent = userAgent.toLowerCase()
+      return scannerAgents.some(pattern => lowerAgent.includes(pattern))
+    }
+    
+    return false
   }
 
   if (loading) {
@@ -154,12 +199,30 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
             >
               Clicks Only
             </button>
+            <button
+              onClick={() => setFilter('replies')}
+              className={`px-3 py-1 text-sm rounded-lg ${
+                filter === 'replies' 
+                  ? 'bg-purple-100 text-purple-700' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Replies Only
+            </button>
           </div>
         </div>
         {userIp && (
-          <p className="text-xs text-gray-500 mt-2">
-            Your IP: {userIp} (events from your IP are marked)
-          </p>
+          <div className="mt-2 space-y-1">
+            <p className="text-xs text-gray-500">
+              Your IP: {userIp} (events from your IP are marked)
+            </p>
+            <p className="text-xs text-gray-500">
+              <span className="inline-block w-3 h-3 bg-purple-100 rounded mr-1"></span>
+              Purple = Gmail proxy (1st is pre-fetch, rest are real) | 
+              <span className="inline-block w-3 h-3 bg-orange-100 rounded mx-1"></span>
+              Orange = Security scanners
+            </p>
+          </div>
         )}
       </div>
 
@@ -198,14 +261,22 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
               filteredEvents.map((event) => (
                 <tr 
                   key={event.id} 
-                  className={isUserIp(event.ipAddress) ? 'bg-yellow-50' : ''}
+                  className={
+                    isUserIp(event.ipAddress) ? 'bg-yellow-50' : 
+                    isGmailProxy(event.ipAddress) ? 'bg-purple-50' : 
+                    isSecurityScanner(event.ipAddress, event.userAgent) ? 'bg-orange-50' : ''
+                  }
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getEventIcon(event.eventType)}
                       <span className="text-sm font-medium text-gray-900">
-                        {event.eventType === 'OPENED' ? 'Opened' : 
+                        {event.eventType === 'OPENED' ? 
+                          (event.eventData?.isPreFetch ? 'Pre-fetch' : 
+                           event.eventData?.openNumber > 1 ? `Opened (#${event.eventData?.openNumber})` : 
+                           'Opened') : 
                          event.eventType === 'CLICKED' ? 'Clicked' : 
+                         event.eventType === 'REPLIED' ? 'Replied' :
                          event.eventType}
                       </span>
                     </div>
@@ -228,10 +299,20 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                           (Your IP)
                         </span>
                       )}
+                      {isGmailProxy(event.ipAddress) && (
+                        <span className="ml-2 text-xs text-purple-600 font-medium">
+                          (Gmail Proxy)
+                        </span>
+                      )}
+                      {isSecurityScanner(event.ipAddress, event.userAgent) && (
+                        <span className="ml-2 text-xs text-orange-600 font-medium">
+                          (Security Scanner)
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <LocationCell ip={event.ipAddress} />
+                    <LocationCell event={event} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
@@ -247,6 +328,12 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                         {event.eventData.url}
                       </a>
                     )}
+                    {event.eventType === 'REPLIED' && event.eventData?.subject && (
+                      <div className="text-xs">
+                        <span className="font-medium">Re: </span>
+                        {event.eventData.subject}
+                      </div>
+                    )}
                     {event.userAgent && (
                       <DeviceInfo userAgent={event.userAgent} />
                     )}
@@ -261,16 +348,26 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
   )
 }
 
-function LocationCell({ ip }: { ip?: string }) {
+function LocationCell({ event }: { event: EmailEvent }) {
+  // Check if location is stored in eventData
+  const eventData = event.eventData as any
+  if (eventData?.location) {
+    const { city, region, country } = eventData.location
+    if (city && region && country) {
+      return <div className="text-sm text-gray-900">{`${city}, ${region}, ${country}`}</div>
+    }
+  }
+  
+  // Fallback to client-side IP lookup for older events
   const [location, setLocation] = useState<string>('Loading...')
 
   useEffect(() => {
-    if (!ip) {
+    if (!event.ipAddress) {
       setLocation('Unknown')
       return
     }
 
-    fetch(`https://ipapi.co/${ip}/json/`)
+    fetch(`https://ipapi.co/${event.ipAddress}/json/`)
       .then(res => res.json())
       .then(data => {
         if (data.city && data.region) {
@@ -280,7 +377,7 @@ function LocationCell({ ip }: { ip?: string }) {
         }
       })
       .catch(() => setLocation('Unknown'))
-  }, [ip])
+  }, [event.ipAddress])
 
   return <div className="text-sm text-gray-900">{location}</div>
 }

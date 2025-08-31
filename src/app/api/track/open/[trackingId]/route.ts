@@ -51,6 +51,38 @@ async function checkIfSenderIp(ip: string | undefined, userId: string): Promise<
   return false
 }
 
+// Helper function to check if IP is a Gmail proxy
+function isGmailProxyIp(ip: string | undefined): boolean {
+  if (!ip) return false
+  
+  // Gmail proxy IP ranges
+  const gmailRanges = ['66.102', '66.249', '209.85', '172.217', '142.250', '142.251']
+  const ipPrefix = ip.split('.').slice(0, 2).join('.')
+  return gmailRanges.includes(ipPrefix)
+}
+
+// Helper to get location from IP
+async function getLocationFromIp(ip: string): Promise<{ city?: string; region?: string; country?: string } | null> {
+  if (!ip) return null
+  
+  try {
+    const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      return {
+        city: data.city,
+        region: data.region,
+        country: data.country_name
+      }
+    }
+  } catch (error) {
+    console.log('Failed to get location for IP:', ip, error)
+  }
+  return null
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trackingId: string }> }
@@ -103,12 +135,49 @@ export async function GET(
     console.log('Found recipient:', recipient ? `ID: ${recipient.id}, Status: ${recipient.status}` : 'Not found')
 
     if (recipient) {
-      // Check if this is the sender's IP (exclude from tracking for sequences)
+      // Check if this is the sender's IP or Gmail proxy
       const isSenderIp = await checkIfSenderIp(ip, recipient.campaign.userId)
+      const isGmailProxy = isGmailProxyIp(ip)
       
-      // Only track if it's not the sender's IP OR if this is just testing
-      if (!isSenderIp || recipient.campaign.status === 'SENT') {
-        // Update recipient open status
+      // Check if this is the first open event for this recipient
+      const previousOpens = await prisma.emailEvent.count({
+        where: {
+          recipientId: recipient.id,
+          eventType: 'OPENED'
+        }
+      })
+      
+      // First Gmail proxy open is pre-fetch, subsequent ones are real
+      const isPreFetch = isGmailProxy && previousOpens === 0
+      const isRealUserOpen = !isPreFetch && (!isSenderIp || recipient.campaign.status === 'SENT')
+      
+      // Get location data from IP
+      const location = ip ? await getLocationFromIp(ip) : null
+      
+      // Always track the event for visibility, but mark the type
+      await prisma.emailEvent.create({
+        data: {
+          campaignId: recipient.campaignId,
+          recipientId: recipient.id,
+          eventType: 'OPENED',
+          eventData: {
+            userAgent,
+            ipAddress: ip,
+            timestamp: new Date().toISOString(),
+            isSenderIp, // Mark if this is from the sender
+            isGmailProxy, // Mark if this is Gmail proxy
+            isPreFetch, // Mark if this is the initial pre-fetch
+            openNumber: previousOpens + 1, // Track which open this is
+            location: location || undefined // Add location data if available
+          },
+          ipAddress: ip,
+          userAgent
+        }
+      })
+
+      // Update recipient status and campaign stats for real opens
+      if (isRealUserOpen) {
+        // Update recipient open status only for real opens
         const updateData: any = {}
         
         if (!recipient.openedAt) {
@@ -123,25 +192,8 @@ export async function GET(
           })
         }
 
-        // Create tracking event (mark if it's from sender)
-        await prisma.emailEvent.create({
-          data: {
-            campaignId: recipient.campaignId,
-            recipientId: recipient.id,
-            eventType: 'OPENED',
-            eventData: {
-              userAgent,
-              ipAddress: ip,
-              timestamp: new Date().toISOString(),
-              isSenderIp // Mark if this is from the sender
-            },
-            ipAddress: ip,
-            userAgent
-          }
-        })
-
-        // Update campaign stats if this is the first open (and not sender for sequences)
-        if (!recipient.openedAt && (!isSenderIp || recipient.campaign.status === 'SENT')) {
+        // Update campaign stats only for first real open
+        if (!recipient.openedAt) {
           await prisma.campaign.update({
             where: { id: recipient.campaignId },
             data: {
@@ -161,14 +213,16 @@ export async function GET(
       // For now, this else block does nothing since sequenceStep is null
     }
 
-    // Return the tracking pixel
+    // Return the tracking pixel with aggressive no-cache headers
     return new NextResponse(PIXEL, {
       status: 200,
       headers: {
         'Content-Type': 'image/gif',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
+        'X-Accel-Expires': '0'
       }
     })
   } catch (error) {

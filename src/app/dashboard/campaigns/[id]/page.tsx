@@ -9,6 +9,7 @@ import RecipientsList from '@/components/campaigns/RecipientsList'
 import EmailPreview from '@/components/campaigns/EmailPreview'
 import SendCampaignButton from '@/components/campaigns/SendCampaignButton'
 import EventsTab from '@/components/campaigns/EventsTab'
+import ReplyTrackingCard from '@/components/campaigns/ReplyTrackingCard'
 
 interface CampaignPageProps {
   params: Promise<{
@@ -58,7 +59,13 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
   // Calculate detailed metrics
   const metrics = {
     sent: campaign.sentCount,
-    delivered: campaign.recipients.filter(r => r.status === 'SENT').length,
+    // Delivered includes all successfully sent emails (SENT, OPENED, CLICKED, REPLIED)
+    delivered: campaign.recipients.filter(r => 
+      r.status === 'SENT' || 
+      r.status === 'OPENED' || 
+      r.status === 'CLICKED' || 
+      r.status === 'REPLIED'
+    ).length,
     opened: campaign.openCount,
     clicked: campaign.clickCount,
     replied: campaign.replyCount,
@@ -228,6 +235,13 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
         subject={campaign.subject}
         content={campaign.content}
       />
+
+      {/* Reply Tracking Card - Show reply tracking setup */}
+      {campaign.status === 'SENT' && (
+        <div className="mt-8">
+          <ReplyTrackingCard />
+        </div>
+      )}
 
       {/* Events Tab - Show all tracking events with IP/Location */}
       {campaign.trackingEnabled && campaign.status === 'SENT' && (

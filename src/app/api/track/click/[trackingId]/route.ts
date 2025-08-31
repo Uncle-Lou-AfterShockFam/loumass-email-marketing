@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 
+// Helper to get location from IP
+async function getLocationFromIp(ip: string): Promise<{ city?: string; region?: string; country?: string } | null> {
+  if (!ip) return null
+  
+  try {
+    const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      return {
+        city: data.city,
+        region: data.region,
+        country: data.country_name
+      }
+    }
+  } catch (error) {
+    console.log('Failed to get location for IP:', ip, error)
+  }
+  return null
+}
+
 // Helper function to decode tracking ID
 function decodeTrackingId(trackingId: string): { campaignOrSequenceId: string; recipientId: string; timestamp: string } | null {
   try {
@@ -82,6 +104,9 @@ export async function GET(
         })
       }
 
+      // Get location data from IP
+      const location = ip ? await getLocationFromIp(ip) : null
+
       // Create tracking event
       await prisma.emailEvent.create({
         data: {
@@ -92,15 +117,26 @@ export async function GET(
             url,
             userAgent,
             ipAddress: ip,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            location: location || undefined // Add location data if available
           },
           ipAddress: ip,
           userAgent
         }
       })
 
-      // Update campaign stats if this is the first click
+      // Update recipient click status and campaign stats
       if (!recipient.clickedAt) {
+        // Update recipient with first click timestamp
+        await prisma.recipient.update({
+          where: { id: recipient.id },
+          data: {
+            clickedAt: new Date(),
+            status: 'CLICKED' as const
+          }
+        })
+        
+        // Update campaign stats
         await prisma.campaign.update({
           where: { id: recipient.campaignId },
           data: {

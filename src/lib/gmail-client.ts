@@ -36,7 +36,18 @@ export class GmailClient {
   }
 
   async saveTokens(userId: string, tokens: any, email: string) {
-    const expiresAt = new Date(Date.now() + (tokens.expiry_date || tokens.expires_in * 1000))
+    // Calculate proper expiry time
+    let expiresAt: Date
+    if (tokens.expiry_date) {
+      // If expiry_date is provided, it's a timestamp in milliseconds
+      expiresAt = new Date(tokens.expiry_date)
+    } else if (tokens.expires_in) {
+      // If expires_in is provided, it's duration in seconds
+      expiresAt = new Date(Date.now() + tokens.expires_in * 1000)
+    } else {
+      // Default to 1 hour from now
+      expiresAt = new Date(Date.now() + 3600 * 1000)
+    }
     
     return await prisma.gmailToken.upsert({
       where: {
@@ -105,11 +116,20 @@ export class GmailClient {
 
     const { credentials } = await this.oauth2Client.refreshAccessToken()
     
+    // Calculate proper expiry time for refreshed token
+    let expiresAt: Date
+    if (credentials.expiry_date) {
+      expiresAt = new Date(credentials.expiry_date)
+    } else {
+      // Default to 1 hour from now (OAuth2 access tokens typically expire in 1 hour)
+      expiresAt = new Date(Date.now() + 3600 * 1000)
+    }
+    
     await prisma.gmailToken.update({
       where: { id: gmailToken.id },
       data: {
         accessToken: credentials.access_token!,
-        expiresAt: new Date(credentials.expiry_date!)
+        expiresAt
       }
     })
   }

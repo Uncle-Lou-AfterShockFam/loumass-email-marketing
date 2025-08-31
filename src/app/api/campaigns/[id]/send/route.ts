@@ -28,6 +28,7 @@ export async function POST(
           include: {
             contact: {
               select: {
+                id: true,
                 email: true,
                 firstName: true,
                 lastName: true
@@ -87,11 +88,40 @@ export async function POST(
       sentBy: session.user.email
     })
 
-    // Process email sending in background
-    // In production, this should be moved to a proper job queue like Bull/BullMQ
-    processEmailSending(id, gmailToken.email, session.user.id).catch(error => {
-      console.error(`Campaign ${id} processing failed:`, error)
-    })
+    // Process first batch of emails immediately (up to 5 to avoid timeout)
+    // Then process remaining in background
+    const IMMEDIATE_BATCH_SIZE = 5
+    const recipientsToProcess = campaign.recipients.slice(0, IMMEDIATE_BATCH_SIZE)
+    const remainingRecipients = campaign.recipients.slice(IMMEDIATE_BATCH_SIZE)
+    
+    // Process immediate batch
+    if (recipientsToProcess.length > 0) {
+      try {
+        const gmailService = new GmailService()
+        const contacts = recipientsToProcess.map(recipient => ({
+          id: recipient.contact.id,
+          email: recipient.contact.email,
+          firstName: recipient.contact.firstName || undefined,
+          lastName: recipient.contact.lastName || undefined,
+        }))
+        
+        await gmailService.sendBulkCampaign(
+          session.user.id,
+          gmailToken.email,
+          id,
+          contacts
+        )
+      } catch (error) {
+        console.error('Immediate batch processing failed:', error)
+      }
+    }
+    
+    // Process remaining in background if any
+    if (remainingRecipients.length > 0) {
+      processRemainingEmails(id, gmailToken.email, session.user.id, IMMEDIATE_BATCH_SIZE).catch(error => {
+        console.error(`Campaign ${id} background processing failed:`, error)
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -112,7 +142,60 @@ export async function POST(
   }
 }
 
-// Background email processing function
+// Process remaining emails after immediate batch
+async function processRemainingEmails(campaignId: string, gmailEmail: string, userId: string, skipCount: number) {
+  const gmailService = new GmailService()
+  
+  try {
+    // Get campaign with remaining recipients
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: {
+        recipients: {
+          skip: skipCount,
+          include: {
+            contact: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                company: true,
+                variables: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!campaign || campaign.recipients.length === 0) {
+      return
+    }
+
+    // Prepare contact data for bulk sending
+    const contacts = campaign.recipients.map(recipient => ({
+      id: recipient.contact.id,
+      email: recipient.contact.email,
+      firstName: recipient.contact.firstName || undefined,
+      lastName: recipient.contact.lastName || undefined,
+      company: recipient.contact.company || undefined,
+      customFields: recipient.contact.variables as any
+    }))
+
+    // Send emails via Gmail API
+    await gmailService.sendBulkCampaign(
+      userId,
+      gmailEmail,
+      campaignId,
+      contacts
+    )
+  } catch (error) {
+    console.error(`Campaign ${campaignId} background processing failed:`, error)
+  }
+}
+
+// Original background email processing function (kept for compatibility)
 async function processEmailSending(campaignId: string, gmailEmail: string, userId: string) {
   const gmailService = new GmailService()
   
