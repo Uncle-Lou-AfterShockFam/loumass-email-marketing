@@ -16,9 +16,9 @@ const sequenceStepSchema = z.object({
   }).optional(),
   condition: z.object({
     type: z.enum(['opened', 'clicked', 'replied', 'not_opened', 'not_clicked']),
-    referenceStep: z.string(),
-    trueBranch: z.array(z.string()),
-    falseBranch: z.array(z.string())
+    referenceStep: z.string().optional(), // Optional during building, will validate later
+    trueBranch: z.array(z.string()).optional(),
+    falseBranch: z.array(z.string()).optional()
   }).optional(),
   replyToThread: z.boolean(),
   trackingEnabled: z.boolean(),
@@ -222,12 +222,20 @@ export async function PUT(
         }, { status: 400 })
       }
 
-      // Check that condition reference steps exist
+      // Check that condition steps are properly configured
       for (const step of steps.filter(s => s.type === 'condition')) {
-        if (step.condition?.referenceStep && 
-            !steps.find(s => s.id === step.condition?.referenceStep)) {
+        // For active sequences, conditions must have a reference step
+        if (status === 'ACTIVE' && !step.condition?.referenceStep) {
           return NextResponse.json({
-            error: `Invalid reference step in condition: ${step.condition.referenceStep}`
+            error: `Condition step must reference an email step to check`
+          }, { status: 400 })
+        }
+        
+        // If referenceStep is provided, it must exist and be an email
+        if (step.condition?.referenceStep && 
+            !steps.find(s => s.id === step.condition?.referenceStep && s.type === 'email')) {
+          return NextResponse.json({
+            error: `Condition references invalid or non-email step: ${step.condition.referenceStep}`
           }, { status: 400 })
         }
       }

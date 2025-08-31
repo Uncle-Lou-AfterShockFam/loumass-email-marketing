@@ -12,9 +12,9 @@ interface SequenceStep {
   delay?: { days: number; hours: number }
   condition?: {
     type: 'opened' | 'clicked' | 'replied' | 'not_opened' | 'not_clicked'
-    referenceStep: string
-    trueBranch: string[]
-    falseBranch: string[]
+    referenceStep?: string  // Optional during building
+    trueBranch?: string[]   // Optional during building
+    falseBranch?: string[]  // Optional during building
   }
   replyToThread: boolean
   trackingEnabled: boolean
@@ -80,10 +80,8 @@ export default function SequenceBuilder({
       newStep.delay = { days: 1, hours: 0 }
     } else if (type === 'condition') {
       newStep.condition = {
-        type: 'opened',
-        referenceStep: '',
-        trueBranch: [],
-        falseBranch: []
+        type: 'opened'
+        // referenceStep, trueBranch, and falseBranch will be set when configured
       }
       // Initialize nextStepId to maintain flow
       newStep.nextStepId = undefined
@@ -147,16 +145,25 @@ export default function SequenceBuilder({
       setIsSaving(true)
       
       try {
+        // Check if all condition steps have reference steps
+        const hasIncompleteConditions = steps.some(
+          step => step.type === 'condition' && !step.condition?.referenceStep
+        )
+        
         const payload = {
           name: sequenceName,
           description,
           triggerType,
           trackingEnabled,
           steps: steps,
-          status: 'ACTIVE'
+          status: hasIncompleteConditions ? 'DRAFT' : 'ACTIVE'
         }
         
         console.log('Sending sequence data:', payload)
+        
+        if (hasIncompleteConditions) {
+          console.warn('Sequence has incomplete condition steps, saving as DRAFT')
+        }
         
         const response = await fetch('/api/sequences', {
           method: 'POST',
