@@ -122,10 +122,10 @@ export async function GET(
       sequence: {
         id: sequence.id,
         name: sequence.name,
-        // description field doesn't exist in Prisma schema
+        description: sequence.description,
         status: sequence.status,
         triggerType: sequence.triggerType,
-        // trackingEnabled field doesn't exist in Prisma schema
+        trackingEnabled: sequence.trackingEnabled,
         steps,
         stepCount: steps.length,
         hasConditions: steps.some((step: any) => step.type === 'condition'),
@@ -250,10 +250,10 @@ export async function PUT(
       sequence: {
         id: updatedSequence.id,
         name: updatedSequence.name,
-        // description field doesn't exist in schema
+        description: updatedSequence.description,
         status: updatedSequence.status,
         triggerType: updatedSequence.triggerType,
-        // trackingEnabled field doesn't exist in schema
+        trackingEnabled: updatedSequence.trackingEnabled,
         steps: updatedSequence.steps,
         stepCount: Array.isArray(updatedSequence.steps) ? updatedSequence.steps.length : 0,
         updatedAt: updatedSequence.updatedAt

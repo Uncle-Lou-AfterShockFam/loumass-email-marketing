@@ -211,6 +211,10 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
           steps={steps}
           onChange={handleStepsChange}
           trackingEnabled={watch('trackingEnabled')}
+          editMode={true}
+          sequenceId={sequence.id}
+          sequenceName={watch('name')}
+          sequenceDescription={watch('description')}
         />
       </div>
 

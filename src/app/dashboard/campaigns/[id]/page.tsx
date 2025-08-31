@@ -10,6 +10,7 @@ import EmailPreview from '@/components/campaigns/EmailPreview'
 import SendCampaignButton from '@/components/campaigns/SendCampaignButton'
 import EventsTab from '@/components/campaigns/EventsTab'
 import ReplyTrackingCard from '@/components/campaigns/ReplyTrackingCard'
+import UpdateReplyBodiesButton from '@/components/campaigns/UpdateReplyBodiesButton'
 
 interface CampaignPageProps {
   params: Promise<{
@@ -238,8 +239,9 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
 
       {/* Reply Tracking Card - Show reply tracking setup */}
       {campaign.status === 'SENT' && (
-        <div className="mt-8">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           <ReplyTrackingCard />
+          <UpdateReplyBodiesButton />
         </div>
       )}
 

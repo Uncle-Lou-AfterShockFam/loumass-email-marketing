@@ -166,8 +166,10 @@ model Sequence {
   id               String               @id @default(cuid())
   userId           String
   name             String
+  description      String?
   triggerType      String               @default("manual")
   steps            Json
+  trackingEnabled  Boolean              @default(true)
   status           SequenceStatus       @default(DRAFT)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt

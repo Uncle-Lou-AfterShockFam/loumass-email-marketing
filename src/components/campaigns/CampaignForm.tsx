@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import SequenceSelector from './SequenceSelector'
 
 // Dynamic import for rich text editor (to avoid SSR issues)
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { 
@@ -63,6 +64,7 @@ export default function CampaignForm({
   const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
   const [scheduledFor, setScheduledFor] = useState('')
   const [testEmail, setTestEmail] = useState('')
+  const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null)
 
   // Contact selection
   const [showContactModal, setShowContactModal] = useState(false)
@@ -138,7 +140,8 @@ export default function CampaignForm({
         },
         recipients: selectedContacts,
         scheduledFor: action === 'schedule' ? scheduledFor : null,
-        trackingDomainId: trackingDomain?.id
+        trackingDomainId: trackingDomain?.id,
+        sequenceId: selectedSequenceId
       }
 
       const response = await fetch(campaign ? `/api/campaigns/${campaign.id}` : '/api/campaigns', {
@@ -287,6 +290,13 @@ export default function CampaignForm({
           </div>
         )}
       </div>
+
+      {/* Sequence Integration */}
+      <SequenceSelector
+        selectedSequenceId={selectedSequenceId}
+        onSelect={setSelectedSequenceId}
+        disabled={isSubmitting}
+      />
 
       {/* Tracking Settings */}
       <div className="bg-white rounded-lg shadow p-6">

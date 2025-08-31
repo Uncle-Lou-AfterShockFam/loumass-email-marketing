@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import ReplyModal from './ReplyModal'
 
 interface EmailEvent {
   id: string
@@ -28,6 +29,8 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'opens' | 'clicks' | 'replies'>('all')
   const [userIp, setUserIp] = useState<string>('')
+  const [selectedReply, setSelectedReply] = useState<EmailEvent | null>(null)
+  const [replyModalOpen, setReplyModalOpen] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -146,6 +149,13 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
     }
     
     return false
+  }
+
+  const openReplyModal = (event: EmailEvent) => {
+    if (event.eventType === 'REPLIED') {
+      setSelectedReply(event)
+      setReplyModalOpen(true)
+    }
   }
 
   if (loading) {
@@ -328,10 +338,24 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                         {event.eventData.url}
                       </a>
                     )}
-                    {event.eventType === 'REPLIED' && event.eventData?.subject && (
-                      <div className="text-xs">
-                        <span className="font-medium">Re: </span>
-                        {event.eventData.subject}
+                    {event.eventType === 'REPLIED' && (
+                      <div>
+                        {event.eventData?.subject && (
+                          <div className="text-xs">
+                            <span className="font-medium">Re: </span>
+                            {event.eventData.subject}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => openReplyModal(event)}
+                          className="mt-1 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Reply
+                        </button>
                       </div>
                     )}
                     {event.userAgent && (
@@ -344,6 +368,33 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Reply Modal */}
+      <ReplyModal
+        isOpen={replyModalOpen}
+        onClose={() => {
+          setReplyModalOpen(false)
+          setSelectedReply(null)
+        }}
+        replyData={
+          selectedReply
+            ? {
+                subject: selectedReply.eventData?.subject,
+                fromEmail: selectedReply.eventData?.fromEmail,
+                date: selectedReply.eventData?.date,
+                messageBody: selectedReply.eventData?.messageBody,
+                gmailMessageId: selectedReply.eventData?.gmailMessageId,
+                gmailThreadId: selectedReply.eventData?.gmailThreadId,
+                inReplyTo: selectedReply.eventData?.inReplyTo,
+                references: selectedReply.eventData?.references,
+                contactName: selectedReply.recipient.contact.firstName
+                  ? `${selectedReply.recipient.contact.firstName} ${selectedReply.recipient.contact.lastName || ''}`
+                  : undefined,
+                campaignName: (selectedReply as any).campaign?.name,
+              }
+            : null
+        }
+      />
     </div>
   )
 }

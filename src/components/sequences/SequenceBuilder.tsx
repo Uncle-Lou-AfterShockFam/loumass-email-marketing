@@ -27,17 +27,25 @@ interface SequenceBuilderProps {
   steps?: any[]
   onChange?: (steps: any[]) => void
   trackingEnabled?: boolean
+  editMode?: boolean
+  sequenceId?: string
+  sequenceName?: string
+  sequenceDescription?: string
 }
 
 export default function SequenceBuilder({ 
   userId, 
   steps: initialSteps, 
   onChange, 
-  trackingEnabled: trackingProp 
+  trackingEnabled: trackingProp,
+  editMode = false,
+  sequenceId,
+  sequenceName: initialName,
+  sequenceDescription: initialDescription
 }: SequenceBuilderProps) {
   const router = useRouter()
-  const [sequenceName, setSequenceName] = useState('')
-  const [description, setDescription] = useState('')
+  const [sequenceName, setSequenceName] = useState(initialName || '')
+  const [description, setDescription] = useState(initialDescription || '')
   const [triggerType, setTriggerType] = useState<'MANUAL' | 'ON_SIGNUP' | 'ON_EVENT'>('MANUAL')
   const [trackingEnabled, setTrackingEnabled] = useState(trackingProp ?? true)
   const [steps, setSteps] = useState<SequenceStep[]>(initialSteps || [])
@@ -115,7 +123,8 @@ export default function SequenceBuilder({
   }
 
   const saveSequence = async () => {
-    if (!sequenceName) {
+    // In edit mode, we don't validate name since it's handled by parent
+    if (!editMode && !sequenceName) {
       alert('Please enter a sequence name')
       return
     }
@@ -125,32 +134,41 @@ export default function SequenceBuilder({
       return
     }
 
-    setIsSaving(true)
-    
-    try {
-      const response = await fetch('/api/sequences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: sequenceName,
-          description,
-          triggerType,
-          trackingEnabled,
-          steps: steps,
-          status: 'ACTIVE'
-        })
-      })
+    // If in edit mode and onChange is provided, just call it
+    if (editMode && onChange) {
+      onChange(steps)
+      return
+    }
 
-      if (response.ok) {
-        const { id } = await response.json()
-        router.push(`/dashboard/sequences/${id}`)
-      } else {
-        throw new Error('Failed to save sequence')
+    // Only handle actual saving in non-edit mode
+    if (!editMode) {
+      setIsSaving(true)
+      
+      try {
+        const response = await fetch('/api/sequences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: sequenceName,
+            description,
+            triggerType,
+            trackingEnabled,
+            steps: steps,
+            status: 'ACTIVE'
+          })
+        })
+
+        if (response.ok) {
+          const { id } = await response.json()
+          router.push(`/dashboard/sequences/${id}`)
+        } else {
+          throw new Error('Failed to save sequence')
+        }
+      } catch (error) {
+        alert('Failed to save sequence. Please try again.')
+      } finally {
+        setIsSaving(false)
       }
-    } catch (error) {
-      alert('Failed to save sequence. Please try again.')
-    } finally {
-      setIsSaving(false)
     }
   }
 
@@ -179,67 +197,69 @@ export default function SequenceBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Sequence Settings */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Settings</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sequence Name *
-            </label>
-            <input
-              type="text"
-              value={sequenceName}
-              onChange={(e) => setSequenceName(e.target.value)}
-              placeholder="e.g., Welcome Series"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Trigger Type
-            </label>
-            <select
-              value={triggerType}
-              onChange={(e) => setTriggerType(e.target.value as typeof triggerType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="MANUAL">Manual Enrollment</option>
-              <option value="ON_SIGNUP">On Contact Signup</option>
-              <option value="ON_EVENT">On Custom Event</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what this sequence does..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="flex items-center">
+      {/* Sequence Settings - Only show when not in edit mode */}
+      {!editMode && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Settings</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sequence Name *
+              </label>
               <input
-                type="checkbox"
-                checked={trackingEnabled}
-                onChange={(e) => setTrackingEnabled(e.target.checked)}
-                className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                type="text"
+                value={sequenceName}
+                onChange={(e) => setSequenceName(e.target.value)}
+                placeholder="e.g., Welcome Series"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <span className="text-sm text-gray-700">
-                Enable open and click tracking for this sequence
-              </span>
-            </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Trigger Type
+              </label>
+              <select
+                value={triggerType}
+                onChange={(e) => setTriggerType(e.target.value as typeof triggerType)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="MANUAL">Manual Enrollment</option>
+                <option value="ON_SIGNUP">On Contact Signup</option>
+                <option value="ON_EVENT">On Custom Event</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what this sequence does..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={trackingEnabled}
+                  onChange={(e) => setTrackingEnabled(e.target.checked)}
+                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">
+                  Enable open and click tracking for this sequence
+                </span>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Step Builder Toolbar */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -559,31 +579,33 @@ export default function SequenceBuilder({
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex justify-between">
-        <button
-          onClick={() => router.push('/dashboard/sequences')}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-        >
-          Cancel
-        </button>
-
-        <div className="flex gap-3">
+      {/* Action Buttons - Only show when not in edit mode */}
+      {!editMode && (
+        <div className="flex justify-between">
           <button
-            onClick={() => alert('Preview mode coming soon!')}
+            onClick={() => router.push('/dashboard/sequences')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
           >
-            Preview
+            Cancel
           </button>
-          <button
-            onClick={saveSequence}
-            disabled={isSaving || !sequenceName || steps.length === 0}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save & Activate'}
-          </button>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => alert('Preview mode coming soon!')}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            >
+              Preview
+            </button>
+            <button
+              onClick={saveSequence}
+              disabled={isSaving || !sequenceName || steps.length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save & Activate'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

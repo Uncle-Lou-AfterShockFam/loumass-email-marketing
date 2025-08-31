@@ -52,10 +52,11 @@ export async function POST(request: NextRequest) {
       if (!message.id) continue
       
       try {
-        // Get full message details
+        // Get full message details with metadata
         const fullMessage = await gmail.users.messages.get({
           userId: 'me',
-          id: message.id
+          id: message.id,
+          format: 'full'
         })
         
         const headers = fullMessage.data.payload?.headers || []
@@ -65,6 +66,48 @@ export async function POST(request: NextRequest) {
         const from = headers.find((h: any) => h.name === 'From')?.value
         const subject = headers.find((h: any) => h.name === 'Subject')?.value
         const date = headers.find((h: any) => h.name === 'Date')?.value
+        const messageId = headers.find((h: any) => h.name === 'Message-ID')?.value
+        
+        // Extract message body
+        let messageBody = ''
+        const extractBody = (payload: any): string => {
+          if (payload.body?.data) {
+            return Buffer.from(payload.body.data, 'base64').toString('utf-8')
+          }
+          if (payload.parts) {
+            for (const part of payload.parts) {
+              if (part.mimeType === 'text/plain' && part.body?.data) {
+                return Buffer.from(part.body.data, 'base64').toString('utf-8')
+              }
+              if (part.parts) {
+                const nestedBody = extractBody(part)
+                if (nestedBody) return nestedBody
+              }
+            }
+            // If no text/plain, try text/html
+            for (const part of payload.parts) {
+              if (part.mimeType === 'text/html' && part.body?.data) {
+                return Buffer.from(part.body.data, 'base64').toString('utf-8')
+              }
+            }
+          }
+          return ''
+        }
+        
+        messageBody = extractBody(fullMessage.data.payload)
+        
+        // Log for debugging
+        if (messageBody) {
+          console.log('Extracted message body length:', messageBody.length)
+          console.log('First 200 chars:', messageBody.substring(0, 200))
+        } else {
+          console.log('No message body extracted for message:', message.id)
+          console.log('Payload structure:', JSON.stringify(fullMessage.data.payload?.parts?.map((p: any) => ({ 
+            mimeType: p.mimeType, 
+            hasBody: !!p.body?.data,
+            bodySize: p.body?.size 
+          })), null, 2))
+        }
         
         if (!from || !threadId) continue
         
@@ -116,9 +159,13 @@ export async function POST(request: NextRequest) {
               eventData: {
                 gmailMessageId: message.id,
                 gmailThreadId: threadId,
+                gmailMessageIdHeader: messageId,
                 subject,
                 fromEmail,
                 date,
+                messageBody,
+                inReplyTo,
+                references,
                 timestamp: new Date().toISOString()
               }
             }
@@ -129,7 +176,9 @@ export async function POST(request: NextRequest) {
             campaignId: recipient.campaignId,
             recipientId: recipient.id,
             fromEmail,
-            subject
+            subject,
+            hasMessageBody: !!messageBody,
+            messageBodyLength: messageBody?.length || 0
           })
           
           // Update recipient status if this is their first reply
