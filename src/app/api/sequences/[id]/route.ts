@@ -16,7 +16,7 @@ const sequenceStepSchema = z.object({
   }).optional(),
   condition: z.object({
     type: z.enum(['opened', 'clicked', 'replied', 'not_opened', 'not_clicked']),
-    referenceStep: z.string().optional(), // Optional during building, will validate later
+    referenceStep: z.string().optional(),
     trueBranch: z.array(z.string()).optional(),
     falseBranch: z.array(z.string()).optional()
   }).optional(),
@@ -41,28 +41,31 @@ const updateSequenceSchema = z.object({
 // GET /api/sequences/[id] - Get sequence details
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
-  const { id } = await params
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id } = params
+    
+    console.log('Fetching sequence with ID:', id)
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
+      console.log('No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch sequence with enrollment data and metrics
+    console.log('User ID:', session.user.id)
+
+    // Fetch sequence with enrollment data
     const sequence = await prisma.sequence.findFirst({
       where: {
         id,
         userId: session.user.id
       },
       include: {
-        _count: {
-          select: {
-            enrollments: true
-          }
-        },
         enrollments: {
           include: {
             contact: {
@@ -70,7 +73,8 @@ export async function GET(
                 id: true,
                 email: true,
                 firstName: true,
-                lastName: true
+                lastName: true,
+                company: true
               }
             }
           },
@@ -82,43 +86,13 @@ export async function GET(
     })
 
     if (!sequence) {
+      console.log('Sequence not found for ID:', id, 'and user:', session.user.id)
       return NextResponse.json({ error: 'Sequence not found' }, { status: 404 })
     }
 
-    // Calculate detailed metrics
-    const steps = Array.isArray(sequence.steps) ? sequence.steps : []
-    const totalEnrollments = sequence._count.enrollments
-    const activeEnrollments = sequence.enrollments.filter(e => e.status === 'ACTIVE').length
-    const completedEnrollments = sequence.enrollments.filter(e => e.status === 'COMPLETED').length
-    const pausedEnrollments = sequence.enrollments.filter(e => e.status === 'PAUSED').length
-
-    // TODO: Email metrics - implement once Email/SequenceStep models are added
-    const totalEmails = 0 // Not tracked in current schema
-    const sentEmails = 0 // Not tracked in current schema
-    const openedEmails = 0 // Not tracked in current schema
-    const clickedEmails = 0 // Not tracked in current schema
-    const repliedEmails = 0 // Not tracked in current schema
-
-    // Step-by-step performance - placeholder values
-    const stepPerformance = steps.map((step: any) => {
-      const stepSent = 0 // Not tracked in current schema
-      const stepOpened = 0 // Not tracked in current schema
-      const stepClicked = 0 // Not tracked in current schema
-      
-      return {
-        stepId: step.id,
-        stepType: step.type,
-        subject: step.subject || 'No subject',
-        sent: stepSent,
-        opened: stepOpened,
-        clicked: stepClicked,
-        openRate: stepSent > 0 ? (stepOpened / stepSent * 100) : 0,
-        clickRate: stepSent > 0 ? (stepClicked / stepSent * 100) : 0
-      }
-    }).filter(step => step.stepType === 'email') // Only email steps have metrics
+    console.log('Found sequence:', sequence.name)
 
     return NextResponse.json({
-      success: true,
       sequence: {
         id: sequence.id,
         name: sequence.name,
@@ -126,44 +100,10 @@ export async function GET(
         status: sequence.status,
         triggerType: sequence.triggerType,
         trackingEnabled: sequence.trackingEnabled,
-        steps,
-        stepCount: steps.length,
-        hasConditions: steps.some((step: any) => step.type === 'condition'),
+        steps: sequence.steps,
         createdAt: sequence.createdAt,
         updatedAt: sequence.updatedAt,
-        
-        // Enrollment metrics
-        metrics: {
-          enrollments: {
-            total: totalEnrollments,
-            active: activeEnrollments,
-            completed: completedEnrollments,
-            paused: pausedEnrollments
-          },
-          emails: {
-            total: totalEmails,
-            sent: sentEmails,
-            opened: openedEmails,
-            clicked: clickedEmails,
-            replied: repliedEmails,
-            openRate: sentEmails > 0 ? (openedEmails / sentEmails * 100) : 0,
-            clickRate: sentEmails > 0 ? (clickedEmails / sentEmails * 100) : 0,
-            replyRate: sentEmails > 0 ? (repliedEmails / sentEmails * 100) : 0
-          },
-          stepPerformance
-        },
-        
-        // Recent enrollments with contact info
-        recentEnrollments: sequence.enrollments.slice(0, 10).map(enrollment => ({
-          id: enrollment.id,
-          status: enrollment.status,
-          currentStep: enrollment.currentStep,
-          enrolledAt: enrollment.createdAt,
-          nextActionAt: null, // Field doesn't exist in schema
-          contact: enrollment.contact,
-          emailsSent: 0, // Emails not tracked in current schema
-          lastEmailSent: null // Emails not tracked in current schema
-        }))
+        enrollments: sequence.enrollments
       }
     })
 
@@ -178,16 +118,19 @@ export async function GET(
 // PUT /api/sequences/[id] - Update sequence
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id } = params
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
     const body = await request.json()
     
     // Validate request data
@@ -222,21 +165,21 @@ export async function PUT(
         }, { status: 400 })
       }
 
-      // Check that condition steps are properly configured
-      for (const step of steps.filter(s => s.type === 'condition')) {
-        // For active sequences, conditions must have a reference step
-        if (status === 'ACTIVE' && !step.condition?.referenceStep) {
-          return NextResponse.json({
-            error: `Condition step must reference an email step to check`
-          }, { status: 400 })
-        }
-        
-        // If referenceStep is provided, it must exist and be an email
-        if (step.condition?.referenceStep && 
-            !steps.find(s => s.id === step.condition?.referenceStep && s.type === 'email')) {
-          return NextResponse.json({
-            error: `Condition references invalid or non-email step: ${step.condition.referenceStep}`
-          }, { status: 400 })
+      // Check that condition steps are properly configured for active sequences
+      if (status === 'ACTIVE') {
+        for (const step of steps.filter(s => s.type === 'condition')) {
+          if (!step.condition?.referenceStep) {
+            return NextResponse.json({
+              error: `Condition step must reference an email step to check`
+            }, { status: 400 })
+          }
+          
+          // Verify referenceStep exists and is an email
+          if (!steps.find(s => s.id === step.condition?.referenceStep && s.type === 'email')) {
+            return NextResponse.json({
+              error: `Condition references invalid or non-email step: ${step.condition.referenceStep}`
+            }, { status: 400 })
+          }
         }
       }
     }
@@ -279,16 +222,18 @@ export async function PUT(
 // DELETE /api/sequences/[id] - Delete sequence
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id } = params
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { id } = await params
 
     // Check sequence exists and belongs to user
     const sequence = await prisma.sequence.findFirst({

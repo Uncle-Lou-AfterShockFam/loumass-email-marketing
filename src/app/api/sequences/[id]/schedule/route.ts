@@ -21,16 +21,18 @@ const scheduleSchema = z.object({
 // POST /api/sequences/[id]/schedule - Schedule next steps for sequence enrollments
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id: sequenceId } = params
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { id: sequenceId } = await params
     const body = await request.json()
     
     // Validate request data
@@ -210,16 +212,18 @@ export async function POST(
 // GET /api/sequences/[id]/schedule - Get scheduling status and ready enrollments
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id: sequenceId } = params
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { id: sequenceId } = await params
 
     // Check sequence exists and belongs to user
     const sequence = await prisma.sequence.findFirst({

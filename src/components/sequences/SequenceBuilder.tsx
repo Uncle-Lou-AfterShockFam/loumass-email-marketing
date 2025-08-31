@@ -140,31 +140,48 @@ export default function SequenceBuilder({
       return
     }
 
-    // Only handle actual saving in non-edit mode
-    if (!editMode) {
-      setIsSaving(true)
+    setIsSaving(true)
+    
+    try {
+      // Check if all condition steps have reference steps
+      const hasIncompleteConditions = steps.some(
+        step => step.type === 'condition' && !step.condition?.referenceStep
+      )
       
-      try {
-        // Check if all condition steps have reference steps
-        const hasIncompleteConditions = steps.some(
-          step => step.type === 'condition' && !step.condition?.referenceStep
-        )
-        
-        const payload = {
-          name: sequenceName,
-          description,
-          triggerType,
-          trackingEnabled,
-          steps: steps,
-          status: hasIncompleteConditions ? 'DRAFT' : 'ACTIVE'
+      const payload = {
+        name: sequenceName,
+        description,
+        triggerType,
+        trackingEnabled,
+        steps: steps,
+        status: hasIncompleteConditions ? 'DRAFT' : 'ACTIVE'
+      }
+      
+      console.log('Sending sequence data:', payload)
+      
+      if (hasIncompleteConditions) {
+        console.warn('Sequence has incomplete condition steps, saving as DRAFT')
+      }
+      
+      // Handle saving based on mode
+      if (editMode && sequenceId) {
+        // Update existing sequence
+        const response = await fetch(`/api/sequences/${sequenceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          router.push(`/dashboard/sequences/${sequenceId}`)
+        } else {
+          const errorData = await response.json()
+          console.error('Sequence update error:', errorData)
+          throw new Error(errorData.error || 'Failed to update sequence')
         }
-        
-        console.log('Sending sequence data:', payload)
-        
-        if (hasIncompleteConditions) {
-          console.warn('Sequence has incomplete condition steps, saving as DRAFT')
-        }
-        
+      } else {
+        // Create new sequence
         const response = await fetch('/api/sequences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -179,12 +196,12 @@ export default function SequenceBuilder({
           console.error('Sequence save error:', errorData)
           throw new Error(errorData.error || 'Failed to save sequence')
         }
-      } catch (error) {
-        console.error('Error saving sequence:', error)
-        alert(error instanceof Error ? error.message : 'Failed to save sequence. Please try again.')
-      } finally {
-        setIsSaving(false)
       }
+    } catch (error) {
+      console.error('Error saving sequence:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save sequence. Please try again.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -213,10 +230,9 @@ export default function SequenceBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Sequence Settings - Only show when not in edit mode */}
-      {!editMode && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Settings</h2>
+      {/* Sequence Settings */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Settings</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -228,7 +244,7 @@ export default function SequenceBuilder({
                 value={sequenceName}
                 onChange={(e) => setSequenceName(e.target.value)}
                 placeholder="e.g., Welcome Series"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -239,7 +255,8 @@ export default function SequenceBuilder({
               <select
                 value={triggerType}
                 onChange={(e) => setTriggerType(e.target.value as typeof triggerType)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Trigger Type"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="MANUAL">Manual Enrollment</option>
                 <option value="ON_SIGNUP">On Contact Signup</option>
@@ -256,7 +273,7 @@ export default function SequenceBuilder({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what this sequence does..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -275,7 +292,6 @@ export default function SequenceBuilder({
             </div>
           </div>
         </div>
-      )}
 
       {/* Step Builder Toolbar */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -450,7 +466,7 @@ export default function SequenceBuilder({
                   value={selectedStep.subject || ''}
                   onChange={(e) => updateStep(selectedStep.id, { subject: e.target.value })}
                   placeholder="Enter email subject..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -463,7 +479,7 @@ export default function SequenceBuilder({
                   onChange={(e) => updateStep(selectedStep.id, { content: e.target.value })}
                   placeholder="Write your email content... Use {{firstName}}, {{lastName}}, {{company}} for personalization"
                   rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -508,7 +524,7 @@ export default function SequenceBuilder({
                       hours: selectedStep.delay?.hours || 0
                     } 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -528,7 +544,7 @@ export default function SequenceBuilder({
                       days: selectedStep.delay?.days || 0
                     } 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
                 />
               </div>
             </div>
@@ -556,7 +572,8 @@ export default function SequenceBuilder({
                       }
                     })
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  aria-label="Condition Type"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
                 >
                   <option value="opened">If email was opened</option>
                   <option value="not_opened">If email was NOT opened</option>
@@ -586,7 +603,8 @@ export default function SequenceBuilder({
                       }
                     })
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  aria-label="Reference Step"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
                 >
                   <option value="">Select a previous email step...</option>
                   {steps
@@ -654,9 +672,8 @@ export default function SequenceBuilder({
         </div>
       )}
 
-      {/* Action Buttons - Only show when not in edit mode */}
-      {!editMode && (
-        <div className="flex justify-between">
+      {/* Action Buttons */}
+      <div className="flex justify-between">
           <button
             onClick={() => router.push('/dashboard/sequences')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
@@ -676,11 +693,10 @@ export default function SequenceBuilder({
               disabled={isSaving || !sequenceName || steps.length === 0}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
             >
-              {isSaving ? 'Saving...' : 'Save & Activate'}
+              {isSaving ? 'Saving...' : (editMode ? 'Update Sequence' : 'Save & Activate')}
             </button>
           </div>
         </div>
-      )}
     </div>
   )
 }

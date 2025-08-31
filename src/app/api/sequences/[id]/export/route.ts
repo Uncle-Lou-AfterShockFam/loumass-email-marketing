@@ -5,10 +5,13 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
-  const { id } = await params
   try {
+    // Handle both sync and async params
+    const params = 'then' in context.params ? await context.params : context.params
+    const { id } = params
+    
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
