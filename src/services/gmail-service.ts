@@ -469,8 +469,6 @@ export class GmailService {
     
     // Write final result to debug log
     const finalDebug = [
-      `URLs converted to HTML links: ${urlsConverted}`,
-      ...convertedUrls,
       `HTML links replaced with tracking: ${linkCount}`,
       ...replacedLinks,
       `Final HTML length: ${trackedHtml.length}`,
