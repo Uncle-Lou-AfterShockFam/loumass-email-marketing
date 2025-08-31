@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           if (existingReply) continue
           
           // Create reply event
-          await prisma.emailEvent.create({
+          const replyEvent = await prisma.emailEvent.create({
             data: {
               campaignId: recipient.campaignId,
               recipientId: recipient.id,
@@ -122,6 +122,14 @@ export async function POST(request: NextRequest) {
                 timestamp: new Date().toISOString()
               }
             }
+          })
+          
+          console.log('Created reply event:', {
+            eventId: replyEvent.id,
+            campaignId: recipient.campaignId,
+            recipientId: recipient.id,
+            fromEmail,
+            subject
           })
           
           // Update recipient status if this is their first reply

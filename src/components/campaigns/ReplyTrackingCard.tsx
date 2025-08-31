@@ -63,6 +63,13 @@ export default function ReplyTrackingCard() {
       if (response.ok) {
         setLastChecked(new Date())
         setCheckResult(data)
+        
+        // Refresh the page after a short delay to show the new reply events
+        if (data.repliesFound > 0) {
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        }
       } else {
         setError(data.error || 'Failed to check for replies')
       }
