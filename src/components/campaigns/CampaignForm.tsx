@@ -293,7 +293,7 @@ export default function CampaignForm({
 
       {/* Sequence Integration */}
       <SequenceSelector
-        selectedSequenceId={selectedSequenceId}
+        selectedSequenceId={selectedSequenceId || undefined}
         onSelect={setSelectedSequenceId}
         disabled={isSubmitting}
       />
