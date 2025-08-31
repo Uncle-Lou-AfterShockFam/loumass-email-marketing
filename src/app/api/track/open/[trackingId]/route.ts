@@ -19,6 +19,38 @@ function decodeTrackingId(trackingId: string): { campaignOrSequenceId: string; r
   }
 }
 
+// Helper function to check if IP belongs to the sender
+async function checkIfSenderIp(ip: string | undefined, userId: string): Promise<boolean> {
+  if (!ip) return false
+  
+  // Get user's known IPs from their recent login sessions or stored preferences
+  // For now, we'll check recent events from the same user
+  const recentSenderEvents = await prisma.emailEvent.findFirst({
+    where: {
+      campaign: {
+        userId: userId
+      },
+      eventData: {
+        path: ['isSenderIp'],
+        equals: true
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+  
+  // Compare IP addresses (first 3 octets to handle dynamic IPs)
+  if (recentSenderEvents?.ipAddress) {
+    const storedOctets = recentSenderEvents.ipAddress.split('.').slice(0, 3).join('.')
+    const currentOctets = ip.split('.').slice(0, 3).join('.')
+    return storedOctets === currentOctets
+  }
+  
+  // First time - we'll mark it as sender IP if they're testing their own campaign
+  return false
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trackingId: string }> }
@@ -71,47 +103,54 @@ export async function GET(
     console.log('Found recipient:', recipient ? `ID: ${recipient.id}, Status: ${recipient.status}` : 'Not found')
 
     if (recipient) {
-      // Update recipient open status
-      const updateData: any = {}
+      // Check if this is the sender's IP (exclude from tracking for sequences)
+      const isSenderIp = await checkIfSenderIp(ip, recipient.campaign.userId)
       
-      if (!recipient.openedAt) {
-        updateData.openedAt = new Date()
-        updateData.status = 'OPENED' as const
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await prisma.recipient.update({
-          where: { id: recipient.id },
-          data: updateData
-        })
-      }
-
-      // Create tracking event
-      await prisma.emailEvent.create({
-        data: {
-          campaignId: recipient.campaignId,
-          recipientId: recipient.id,
-          eventType: 'OPENED',
-          eventData: {
-            userAgent,
-            ipAddress: ip,
-            timestamp: new Date().toISOString()
-          },
-          ipAddress: ip,
-          userAgent
+      // Only track if it's not the sender's IP OR if this is just testing
+      if (!isSenderIp || recipient.campaign.status === 'SENT') {
+        // Update recipient open status
+        const updateData: any = {}
+        
+        if (!recipient.openedAt) {
+          updateData.openedAt = new Date()
+          updateData.status = 'OPENED' as const
         }
-      })
 
-      // Update campaign stats if this is the first open
-      if (!recipient.openedAt) {
-        await prisma.campaign.update({
-          where: { id: recipient.campaignId },
+        if (Object.keys(updateData).length > 0) {
+          await prisma.recipient.update({
+            where: { id: recipient.id },
+            data: updateData
+          })
+        }
+
+        // Create tracking event (mark if it's from sender)
+        await prisma.emailEvent.create({
           data: {
-            openCount: {
-              increment: 1
-            }
+            campaignId: recipient.campaignId,
+            recipientId: recipient.id,
+            eventType: 'OPENED',
+            eventData: {
+              userAgent,
+              ipAddress: ip,
+              timestamp: new Date().toISOString(),
+              isSenderIp // Mark if this is from the sender
+            },
+            ipAddress: ip,
+            userAgent
           }
         })
+
+        // Update campaign stats if this is the first open (and not sender for sequences)
+        if (!recipient.openedAt && (!isSenderIp || recipient.campaign.status === 'SENT')) {
+          await prisma.campaign.update({
+            where: { id: recipient.campaignId },
+            data: {
+              openCount: {
+                increment: 1
+              }
+            }
+          })
+        }
       }
     } else {
       // TODO: Sequence step tracking not implemented - sequenceStep model doesn't exist

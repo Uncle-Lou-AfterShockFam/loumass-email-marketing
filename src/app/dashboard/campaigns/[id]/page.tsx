@@ -8,6 +8,7 @@ import CampaignMetrics from '@/components/campaigns/CampaignMetrics'
 import RecipientsList from '@/components/campaigns/RecipientsList'
 import EmailPreview from '@/components/campaigns/EmailPreview'
 import SendCampaignButton from '@/components/campaigns/SendCampaignButton'
+import EventsTab from '@/components/campaigns/EventsTab'
 
 interface CampaignPageProps {
   params: Promise<{
@@ -227,6 +228,13 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
         subject={campaign.subject}
         content={campaign.content}
       />
+
+      {/* Events Tab - Show all tracking events with IP/Location */}
+      {campaign.trackingEnabled && campaign.status === 'SENT' && (
+        <div className="mt-8">
+          <EventsTab campaignId={campaign.id} />
+        </div>
+      )}
 
       {/* Recipients List */}
       <RecipientsList 
