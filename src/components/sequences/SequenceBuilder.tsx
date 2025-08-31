@@ -85,6 +85,8 @@ export default function SequenceBuilder({
         trueBranch: [],
         falseBranch: []
       }
+      // Initialize nextStepId to maintain flow
+      newStep.nextStepId = undefined
     }
 
     updateStepsState([...steps, newStep])
@@ -357,12 +359,24 @@ export default function SequenceBuilder({
                   <p className="font-medium text-gray-900">
                     {step.type === 'email' && (step.subject || 'Email Step')}
                     {step.type === 'delay' && `Wait ${step.delay?.days || 0}d ${step.delay?.hours || 0}h`}
-                    {step.type === 'condition' && `If ${step.condition?.type || 'condition'}`}
+                    {step.type === 'condition' && (
+                      <>
+                        If {step.condition?.type?.replace('_', ' ') || 'condition'}
+                        {step.condition?.referenceStep && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            (checking step)
+                          </span>
+                        )}
+                      </>
+                    )}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Step {index + 1}
                     {step.replyToThread && ' • In Thread'}
                     {step.trackingEnabled && ' • Tracking On'}
+                    {step.type === 'condition' && !step.condition?.referenceStep && (
+                      <span className="text-amber-600"> • ⚠️ Needs reference</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -514,12 +528,20 @@ export default function SequenceBuilder({
                 </label>
                 <select
                   value={selectedStep.condition?.type || 'opened'}
-                  onChange={(e) => updateStep(selectedStep.id, {
-                    condition: {
-                      ...selectedStep.condition!,
-                      type: e.target.value as any
+                  onChange={(e) => {
+                    const currentCondition = selectedStep.condition || {
+                      type: 'opened',
+                      referenceStep: '',
+                      trueBranch: [],
+                      falseBranch: []
                     }
-                  })}
+                    updateStep(selectedStep.id, {
+                      condition: {
+                        ...currentCondition,
+                        type: e.target.value as any
+                      }
+                    })
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
                   <option value="opened">If email was opened</option>
@@ -536,12 +558,20 @@ export default function SequenceBuilder({
                 </label>
                 <select
                   value={selectedStep.condition?.referenceStep || ''}
-                  onChange={(e) => updateStep(selectedStep.id, {
-                    condition: {
-                      ...selectedStep.condition!,
-                      referenceStep: e.target.value
+                  onChange={(e) => {
+                    const currentCondition = selectedStep.condition || {
+                      type: 'opened',
+                      referenceStep: '',
+                      trueBranch: [],
+                      falseBranch: []
                     }
-                  })}
+                    updateStep(selectedStep.id, {
+                      condition: {
+                        ...currentCondition,
+                        referenceStep: e.target.value
+                      }
+                    })
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
                   <option value="">Select a previous email step...</option>
@@ -553,25 +583,56 @@ export default function SequenceBuilder({
                       </option>
                     ))}
                 </select>
+                {!selectedStep.condition?.referenceStep && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ Please select which email to check for the condition
+                  </p>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-green-700 mb-1">
-                    True Branch (condition met)
-                  </label>
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800">Continue to next step →</p>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    How Condition Branches Work
+                  </h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• <strong>True Branch:</strong> If the condition is met, the sequence continues to the next step</li>
+                    <li>• <strong>False Branch:</strong> If the condition is not met, the sequence also continues (or can be configured to end)</li>
+                    <li>• Both branches will execute the same following steps by default</li>
+                    <li>• Use multiple conditions to create complex workflows</li>
+                  </ul>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-green-700 mb-1">
+                      ✓ True Branch (condition met)
+                    </label>
+                    <div className="p-3 bg-green-50 border-2 border-green-300 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium">Continue to next step →</p>
+                      <p className="text-xs text-green-600 mt-1">
+                        When {selectedStep.condition?.type || 'condition'} is true
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-red-700 mb-1">
+                      ✗ False Branch (condition not met)
+                    </label>
+                    <div className="p-3 bg-red-50 border-2 border-red-300 rounded-lg">
+                      <p className="text-sm text-red-800 font-medium">Also continue →</p>
+                      <p className="text-xs text-red-600 mt-1">
+                        When {selectedStep.condition?.type || 'condition'} is false
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-red-700 mb-1">
-                    False Branch (condition not met)
-                  </label>
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">Skip or alternate path →</p>
-                  </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-600">
+                    <strong>Note:</strong> Advanced branching with different paths for true/false conditions will be available in a future update. Currently, conditions are used for tracking and analytics purposes.
+                  </p>
                 </div>
               </div>
             </div>
