@@ -150,6 +150,28 @@ export async function POST(
       })
     )
 
+    // If starting immediately, trigger the first step for each enrollment
+    if (startImmediately) {
+      const { SequenceService } = await import('@/services/sequence-service')
+      const sequenceService = new SequenceService()
+      
+      // Process first step for each enrollment
+      const processingResults = await Promise.allSettled(
+        enrollments.map(enrollment => 
+          sequenceService.processSequenceStep(enrollment.id)
+        )
+      )
+
+      // Log any processing errors
+      processingResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Failed to process first step for enrollment ${enrollments[index].id}:`, result.reason)
+        } else if (!result.value.success) {
+          console.warn(`First step processing failed for enrollment ${enrollments[index].id}:`, result.value.reason)
+        }
+      })
+    }
+
     return NextResponse.json({
       success: true,
       message: `Successfully enrolled ${enrollments.length} contacts in sequence`,
