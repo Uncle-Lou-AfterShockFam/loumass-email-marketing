@@ -1,68 +1,99 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SequencesTable from '@/components/sequences/SequencesTable'
+import { toast } from 'react-hot-toast'
 
-export default async function SequencesPage() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session?.user?.id) {
-    redirect('/auth/signin')
+interface Sequence {
+  id: string
+  name: string
+  description?: string
+  status: string
+  triggerType: string
+  steps: any
+  trackingEnabled: boolean
+  totalEnrollments: number
+  activeEnrollments: number
+  stepCount: number
+  hasConditions: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export default function SequencesPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [sequences, setSequences] = useState<Sequence[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!session?.user?.id) {
+      router.push('/auth/signin')
+      return
+    }
+
+    fetchSequences()
+  }, [session, status, router])
+
+  const fetchSequences = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/sequences')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch sequences')
+      }
+
+      const data = await response.json()
+      
+      // Process sequences with metrics
+      const sequencesWithMetrics = (data.sequences || []).map((sequence: any) => {
+        let steps = []
+        try {
+          if (typeof sequence.steps === 'string') {
+            steps = JSON.parse(sequence.steps)
+          } else if (Array.isArray(sequence.steps)) {
+            steps = sequence.steps
+          } else if (sequence.steps && typeof sequence.steps === 'object') {
+            steps = [sequence.steps]
+          }
+        } catch (error) {
+          console.error('Error parsing steps for sequence:', sequence.id, error)
+          steps = []
+        }
+
+        return {
+          ...sequence,
+          steps,
+          totalEnrollments: sequence.totalEnrollments || 0,
+          activeEnrollments: sequence.activeEnrollments || 0,
+          stepCount: steps.length,
+          hasConditions: steps.some((step: any) => step?.type === 'condition'),
+          createdAt: sequence.createdAt || new Date().toISOString(),
+          updatedAt: sequence.updatedAt || new Date().toISOString()
+        }
+      })
+
+      setSequences(sequencesWithMetrics)
+    } catch (error) {
+      console.error('Error loading sequences:', error)
+      toast.error('Failed to load sequences')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const sequences = await prisma.sequence.findMany({
-    where: {
-      userId: session.user.id
-    },
-    include: {
-      _count: {
-        select: {
-          enrollments: true
-        }
-      },
-      enrollments: {
-        where: {
-          status: 'ACTIVE'
-        },
-        select: {
-          id: true
-        }
-      }
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  })
-
-  // Calculate metrics for each sequence
-  const sequencesWithMetrics = sequences.map(sequence => {
-    let steps = []
-    try {
-      // Handle both array and JSON string formats
-      if (typeof sequence.steps === 'string') {
-        steps = JSON.parse(sequence.steps)
-      } else if (Array.isArray(sequence.steps)) {
-        steps = sequence.steps
-      } else if (sequence.steps && typeof sequence.steps === 'object') {
-        // If it's already an object but not an array, wrap it
-        steps = [sequence.steps]
-      }
-    } catch (error) {
-      console.error('Error parsing sequence steps:', error, sequence.id)
-      steps = []
-    }
-    
-    return {
-      ...sequence,
-      steps, // Include parsed steps
-      totalEnrollments: sequence._count.enrollments,
-      activeEnrollments: sequence.enrollments.length,
-      stepCount: steps.length,
-      hasConditions: steps.some((step: any) => step?.type === 'condition')
-    }
-  })
+  if (status === 'loading' || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -84,7 +115,7 @@ export default async function SequencesPage() {
         </Link>
       </div>
 
-      {sequencesWithMetrics.length === 0 ? (
+      {sequences.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -104,7 +135,7 @@ export default async function SequencesPage() {
           </Link>
         </div>
       ) : (
-        <SequencesTable sequences={sequencesWithMetrics} />
+        <SequencesTable sequences={sequences} />
       )}
     </div>
   )

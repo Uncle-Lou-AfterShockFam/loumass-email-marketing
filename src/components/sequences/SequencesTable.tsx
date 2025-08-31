@@ -15,8 +15,8 @@ interface Sequence {
   activeEnrollments: number
   stepCount: number
   hasConditions: boolean
-  createdAt: Date
-  updatedAt: Date
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 interface SequencesTableProps {
