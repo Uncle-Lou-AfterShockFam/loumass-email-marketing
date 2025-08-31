@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,12 +11,6 @@ import { toast } from 'react-hot-toast'
 import CampaignEditor from '@/components/campaigns/CampaignEditor'
 import ContactSelector from '@/components/campaigns/ContactSelector'
 import ScheduleSelector from '@/components/campaigns/ScheduleSelector'
-
-interface CampaignPageProps {
-  params: {
-    id: string
-  }
-}
 
 const editCampaignSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
@@ -49,9 +43,10 @@ interface Campaign {
   }[]
 }
 
-export default function EditCampaignPage({ params }: CampaignPageProps) {
+export default function EditCampaignPage() {
   const { data: session } = useSession()
   const router = useRouter()
+  const params = useParams()
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

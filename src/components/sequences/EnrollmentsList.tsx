@@ -38,7 +38,96 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'enrolled' | 'activity' | 'step'>('enrolled')
   const [currentPage, setCurrentPage] = useState(1)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const itemsPerPage = 10
+
+  const handlePauseResume = async (enrollmentId: string, action: 'pause' | 'resume') => {
+    setActionLoading(enrollmentId)
+    try {
+      const response = await fetch(`/api/sequences/enrollments/${enrollmentId}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Failed to ${action} enrollment`)
+      }
+      
+      // Refresh the page to show updated status
+      window.location.reload()
+    } catch (error) {
+      console.error(`Error ${action}ing enrollment:`, error)
+      alert(error instanceof Error ? error.message : `Failed to ${action} enrollment`)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRemove = async (enrollmentId: string, contactEmail: string) => {
+    if (!confirm(`Are you sure you want to remove ${contactEmail} from this sequence? This action cannot be undone.`)) {
+      return
+    }
+
+    setActionLoading(enrollmentId)
+    try {
+      const response = await fetch(`/api/sequences/enrollments/${enrollmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove enrollment')
+      }
+      
+      // Refresh the page to show updated list
+      window.location.reload()
+    } catch (error) {
+      console.error('Error removing enrollment:', error)
+      alert(error instanceof Error ? error.message : 'Failed to remove enrollment')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      const csvContent = [
+        // Headers
+        ['Email', 'Name', 'Company', 'Status', 'Current Step', 'Enrolled Date', 'Last Updated'].join(','),
+        // Data rows
+        ...filteredEnrollments.map(enrollment => [
+          enrollment.contact.email,
+          `${enrollment.contact.firstName || ''} ${enrollment.contact.lastName || ''}`.trim(),
+          enrollment.contact.company || '',
+          enrollment.status,
+          typeof enrollment.currentStep === 'string' ? enrollment.currentStep : enrollment.currentStep.toString(),
+          new Date(enrollment.createdAt).toLocaleDateString(),
+          new Date(enrollment.updatedAt).toLocaleDateString()
+        ].join(','))
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `sequence_enrollments_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Error exporting CSV:', error)
+      alert('Failed to export CSV')
+    }
+  }
 
   // Filter enrollments
   const filteredEnrollments = enrollments.filter(enrollment => {
@@ -167,7 +256,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
           </select>
 
           {/* Export */}
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+          <button 
+            onClick={handleExportCsv}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+          >
             Export CSV
           </button>
         </div>
@@ -295,20 +387,32 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       {enrollment.status === 'ACTIVE' && (
-                        <button className="text-yellow-600 hover:text-yellow-700">
-                          Pause
+                        <button 
+                          onClick={() => handlePauseResume(enrollment.id, 'pause')}
+                          disabled={actionLoading === enrollment.id}
+                          className="text-yellow-600 hover:text-yellow-700 disabled:opacity-50"
+                        >
+                          {actionLoading === enrollment.id ? 'Pausing...' : 'Pause'}
                         </button>
                       )}
                       {enrollment.status === 'PAUSED' && (
-                        <button className="text-green-600 hover:text-green-700">
-                          Resume
+                        <button 
+                          onClick={() => handlePauseResume(enrollment.id, 'resume')}
+                          disabled={actionLoading === enrollment.id}
+                          className="text-green-600 hover:text-green-700 disabled:opacity-50"
+                        >
+                          {actionLoading === enrollment.id ? 'Resuming...' : 'Resume'}
                         </button>
                       )}
                       <button className="text-blue-600 hover:text-blue-700">
                         View
                       </button>
-                      <button className="text-red-600 hover:text-red-700">
-                        Remove
+                      <button 
+                        onClick={() => handleRemove(enrollment.id, enrollment.contact.email)}
+                        disabled={actionLoading === enrollment.id}
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {actionLoading === enrollment.id ? 'Removing...' : 'Remove'}
                       </button>
                     </div>
                   </td>

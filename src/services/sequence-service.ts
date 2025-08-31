@@ -48,12 +48,94 @@ export class SequenceService {
       return { success: false, reason: 'Enrollment not active' }
     }
 
-    const nextStepIndex = enrollment.currentStep
     const steps = enrollment.sequence.steps as any[] // JSON array of steps
-    const nextStep = steps[nextStepIndex]
+    const currentStepId = steps[enrollment.currentStep]?.id
+    
+    // Find current step by ID or index
+    let nextStep: any
+    let nextStepIndex: number
+    
+    if (currentStepId) {
+      // If we have a step ID, find the next step based on flow
+      const currentStep = steps.find((s: any) => s.id === currentStepId)
+      if (currentStep?.nextStepId) {
+        nextStep = steps.find((s: any) => s.id === currentStep.nextStepId)
+        nextStepIndex = steps.findIndex((s: any) => s.id === currentStep.nextStepId)
+      } else {
+        // No explicit next step, use sequential order
+        const currentIndex = steps.findIndex((s: any) => s.id === currentStepId)
+        nextStepIndex = currentIndex + 1
+        nextStep = steps[nextStepIndex]
+      }
+    } else {
+      // Fall back to index-based navigation
+      nextStepIndex = enrollment.currentStep
+      nextStep = steps[nextStepIndex]
+    }
 
     if (!nextStep) {
       // Sequence completed
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollmentId },
+        data: {
+          status: EnrollmentStatus.COMPLETED,
+          completedAt: new Date()
+        }
+      })
+      return { success: true, completed: true }
+    }
+
+    // Handle different step types
+    if (nextStep.type === 'delay') {
+      // Schedule next action after delay
+      const delayHours = (nextStep.delay?.days || 0) * 24 + (nextStep.delay?.hours || 0)
+      const nextActionAt = new Date(Date.now() + delayHours * 60 * 60 * 1000)
+      
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollmentId },
+        data: {
+          currentStep: nextStepIndex + 1,
+          // nextActionAt field doesn't exist in schema yet
+          updatedAt: nextActionAt
+        }
+      })
+      
+      return { success: true, reason: `Delayed for ${delayHours} hours` }
+    }
+    
+    if (nextStep.type === 'condition') {
+      // Evaluate condition and choose branch
+      const conditionMet = await this.evaluateCondition(
+        nextStep.condition,
+        enrollment.contactId,
+        enrollment.sequenceId
+      )
+      
+      // Determine next step based on condition result
+      let branchStepId: string | undefined
+      if (conditionMet && nextStep.condition?.trueBranch?.[0]) {
+        branchStepId = nextStep.condition.trueBranch[0]
+      } else if (!conditionMet && nextStep.condition?.falseBranch?.[0]) {
+        branchStepId = nextStep.condition.falseBranch[0]
+      } else {
+        // No branch defined, continue to next step
+        branchStepId = nextStep.nextStepId || steps[nextStepIndex + 1]?.id
+      }
+      
+      if (branchStepId) {
+        const branchStepIndex = steps.findIndex((s: any) => s.id === branchStepId)
+        await prisma.sequenceEnrollment.update({
+          where: { id: enrollmentId },
+          data: {
+            currentStep: branchStepIndex >= 0 ? branchStepIndex : nextStepIndex + 1
+          }
+        })
+        
+        // Process the branch step immediately
+        return this.processSequenceStep(enrollmentId)
+      }
+      
+      // No valid branch, complete sequence
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {
@@ -239,6 +321,95 @@ export class SequenceService {
     })
     
     return trackedHtml
+  }
+
+  private async evaluateCondition(
+    condition: any,
+    contactId: string,
+    sequenceId: string
+  ): Promise<boolean> {
+    if (!condition || !condition.type) {
+      return false
+    }
+
+    // Check for email events based on condition type
+    switch (condition.type) {
+      case 'opened':
+        return await this.hasContactOpened(contactId, sequenceId)
+      
+      case 'clicked':
+        return await this.hasContactClicked(contactId, sequenceId)
+      
+      case 'replied':
+        return await this.hasContactReplied(contactId, sequenceId)
+      
+      case 'time_elapsed':
+        return this.evaluateTimeCondition(condition, contactId)
+      
+      case 'custom_field':
+        return await this.evaluateCustomFieldCondition(condition, contactId)
+      
+      default:
+        console.warn(`Unknown condition type: ${condition.type}`)
+        return false
+    }
+  }
+
+  private async hasContactOpened(contactId: string, sequenceId: string): Promise<boolean> {
+    // TODO: Implement email event tracking for sequences
+    // For now, return false since sequence email events aren't implemented yet
+    return false
+  }
+
+  private async hasContactClicked(contactId: string, sequenceId: string): Promise<boolean> {
+    // TODO: Implement email event tracking for sequences
+    // For now, return false since sequence email events aren't implemented yet
+    return false
+  }
+
+  private async hasContactReplied(contactId: string, sequenceId: string): Promise<boolean> {
+    // TODO: Implement reply tracking for sequences
+    // For now, return false since sequence reply tracking isn't implemented yet
+    return false
+  }
+
+  private evaluateTimeCondition(condition: any, contactId: string): boolean {
+    // Check if specified time has elapsed since enrollment or last step
+    const timeValue = condition.timeValue || 0
+    const timeUnit = condition.timeUnit || 'hours' // hours, days, weeks
+    
+    // This would need enrollment start time or last step time
+    // For now, return true (condition met) as placeholder
+    return true
+  }
+
+  private async evaluateCustomFieldCondition(condition: any, contactId: string): Promise<boolean> {
+    const contact = await prisma.contact.findUnique({
+      where: { id: contactId }
+    })
+    
+    if (!contact || !contact.variables) {
+      return false
+    }
+    
+    const fieldValue = (contact.variables as any)[condition.fieldName]
+    const expectedValue = condition.fieldValue
+    const operator = condition.operator || 'equals'
+    
+    switch (operator) {
+      case 'equals':
+        return fieldValue === expectedValue
+      case 'not_equals':
+        return fieldValue !== expectedValue
+      case 'contains':
+        return String(fieldValue).includes(String(expectedValue))
+      case 'greater_than':
+        return Number(fieldValue) > Number(expectedValue)
+      case 'less_than':
+        return Number(fieldValue) < Number(expectedValue)
+      default:
+        return false
+    }
   }
 
   async scheduleNextSteps() {

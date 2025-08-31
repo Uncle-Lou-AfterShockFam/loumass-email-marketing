@@ -2,16 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { toast } from 'react-hot-toast'
-
-interface AnalyticsPageProps {
-  params: {
-    id: string
-  }
-}
 
 interface CampaignAnalytics {
   campaign: {
@@ -82,9 +76,10 @@ interface CampaignAnalytics {
   }>
 }
 
-export default function CampaignAnalyticsPage({ params }: AnalyticsPageProps) {
+export default function CampaignAnalyticsPage() {
   const { data: session } = useSession()
   const router = useRouter()
+  const params = useParams()
   const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'segments' | 'activity'>('overview')

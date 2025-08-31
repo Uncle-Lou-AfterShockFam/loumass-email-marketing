@@ -21,12 +21,10 @@ const scheduleSchema = z.object({
 // POST /api/sequences/[id]/schedule - Schedule next steps for sequence enrollments
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Handle both sync and async params
-    const params = 'then' in context.params ? await context.params : context.params
-    const { id: sequenceId } = params
+    const { id: sequenceId } = await params
     
     const session = await getServerSession(authOptions)
     
@@ -212,12 +210,10 @@ export async function POST(
 // GET /api/sequences/[id]/schedule - Get scheduling status and ready enrollments
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Handle both sync and async params
-    const params = 'then' in context.params ? await context.params : context.params
-    const { id: sequenceId } = params
+    const { id: sequenceId } = await params
     
     const session = await getServerSession(authOptions)
     

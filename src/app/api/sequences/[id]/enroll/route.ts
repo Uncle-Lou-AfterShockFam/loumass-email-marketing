@@ -14,12 +14,10 @@ const enrollmentSchema = z.object({
 // POST /api/sequences/[id]/enroll - Enroll contacts in sequence
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Handle both sync and async params
-    const params = 'then' in context.params ? await context.params : context.params
-    const { id: sequenceId } = params
+    const { id: sequenceId } = await params
     
     const session = await getServerSession(authOptions)
     
@@ -181,12 +179,10 @@ export async function POST(
 // GET /api/sequences/[id]/enroll - Get enrollable contacts
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Handle both sync and async params
-    const params = 'then' in context.params ? await context.params : context.params
-    const { id: sequenceId } = params
+    const { id: sequenceId } = await params
     
     const session = await getServerSession(authOptions)
     
@@ -259,6 +255,26 @@ export async function GET(
         enrollment: enrollmentMap.get(contact.id)
       }))
 
+    // Get user campaigns for bulk enrollment
+    const campaigns = await prisma.campaign.findMany({
+      where: {
+        userId: session.user.id
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        _count: {
+          select: {
+            recipients: true
+          }
+        }
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    })
+
     return NextResponse.json({
       success: true,
       sequence: {
@@ -288,6 +304,12 @@ export async function GET(
           updatedAt: contact.enrollment?.updatedAt
         }))
       },
+      campaigns: campaigns.map(campaign => ({
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        recipientCount: campaign._count.recipients
+      })),
       summary: {
         totalContacts: allContacts.length,
         availableForEnrollment: availableContacts.length,

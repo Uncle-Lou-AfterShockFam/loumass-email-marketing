@@ -20,12 +20,20 @@ interface Sequence {
   status: string
 }
 
+interface Campaign {
+  id: string
+  name: string
+  status: string
+  recipientCount: number
+}
+
 interface EnrollData {
   sequence: Sequence
   contacts: {
     available: Contact[]
     enrolled: any[]
   }
+  campaigns: Campaign[]
   summary: {
     totalContacts: number
     availableForEnrollment: number
@@ -43,6 +51,10 @@ export default function EnrollPage() {
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
   const [startImmediately, setStartImmediately] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [enrollmentMode, setEnrollmentMode] = useState<'individual' | 'campaign'>('individual')
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('')
+  const [campaignContacts, setCampaignContacts] = useState<Contact[]>([])
+  const [loadingCampaignContacts, setLoadingCampaignContacts] = useState(false)
 
   useEffect(() => {
     fetchEnrollData()
@@ -112,10 +124,42 @@ export default function EnrollPage() {
   const toggleAll = () => {
     if (!data) return
     
-    if (selectedContacts.length === data.contacts.available.length) {
+    const contactsToUse = enrollmentMode === 'campaign' ? campaignContacts : data.contacts.available
+    
+    if (selectedContacts.length === contactsToUse.length) {
       setSelectedContacts([])
     } else {
-      setSelectedContacts(data.contacts.available.map(c => c.id))
+      setSelectedContacts(contactsToUse.map(c => c.id))
+    }
+  }
+
+  const handleCampaignSelect = async (campaignId: string) => {
+    if (!campaignId) {
+      setCampaignContacts([])
+      setSelectedContacts([])
+      return
+    }
+
+    setSelectedCampaign(campaignId)
+    setLoadingCampaignContacts(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}/contacts`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch campaign contacts')
+      }
+      
+      const campaignData = await response.json()
+      const contacts = campaignData.recipients.map((r: any) => r.contact)
+      
+      setCampaignContacts(contacts)
+      setSelectedContacts([]) // Reset selection
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load campaign contacts')
+      setCampaignContacts([])
+    } finally {
+      setLoadingCampaignContacts(false)
     }
   }
 
@@ -189,6 +233,64 @@ export default function EnrollPage() {
         </div>
       )}
 
+      {/* Enrollment Mode */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4">Enrollment Method</h2>
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="enrollmentMode"
+                value="individual"
+                checked={enrollmentMode === 'individual'}
+                onChange={(e) => setEnrollmentMode(e.target.value as 'individual')}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-gray-700">Select individual contacts</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="enrollmentMode"
+                value="campaign"
+                checked={enrollmentMode === 'campaign'}
+                onChange={(e) => setEnrollmentMode(e.target.value as 'campaign')}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-gray-700">Import from campaign</span>
+            </label>
+          </div>
+
+          {enrollmentMode === 'campaign' && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Campaign
+              </label>
+              <select
+                value={selectedCampaign}
+                onChange={(e) => handleCampaignSelect(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Select campaign"
+              >
+                <option value="">Choose a campaign...</option>
+                {data?.campaigns?.map((campaign) => (
+                  <option key={campaign.id} value={campaign.id}>
+                    {campaign.name} ({campaign.recipientCount} recipients)
+                  </option>
+                ))}
+              </select>
+              {loadingCampaignContacts && (
+                <div className="mt-2 flex items-center text-sm text-gray-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Loading campaign contacts...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Enrollment Settings */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Enrollment Settings</h2>
@@ -212,19 +314,32 @@ export default function EnrollPage() {
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Available Contacts ({data.contacts.available.length})</h2>
-            {data.contacts.available.length > 0 && (
+            <h2 className="text-lg font-semibold">
+              {enrollmentMode === 'campaign' ? 'Campaign Contacts' : 'Available Contacts'} 
+              ({enrollmentMode === 'campaign' ? campaignContacts.length : data.contacts.available.length})
+            </h2>
+            {((enrollmentMode === 'campaign' && campaignContacts.length > 0) || 
+              (enrollmentMode === 'individual' && data.contacts.available.length > 0)) && (
               <button
                 onClick={toggleAll}
                 className="text-sm text-blue-600 hover:text-blue-700"
               >
-                {selectedContacts.length === data.contacts.available.length ? 'Deselect All' : 'Select All'}
+                {selectedContacts.length === (enrollmentMode === 'campaign' ? campaignContacts.length : data.contacts.available.length) 
+                  ? 'Deselect All' : 'Select All'}
               </button>
             )}
           </div>
         </div>
 
-        {data.contacts.available.length === 0 ? (
+        {enrollmentMode === 'campaign' && !selectedCampaign ? (
+          <div className="p-6 text-center">
+            <p className="text-gray-500">Please select a campaign to view its contacts</p>
+          </div>
+        ) : enrollmentMode === 'campaign' && campaignContacts.length === 0 && !loadingCampaignContacts ? (
+          <div className="p-6 text-center">
+            <p className="text-gray-500">No contacts found in the selected campaign</p>
+          </div>
+        ) : (enrollmentMode === 'individual' ? data.contacts.available.length : campaignContacts.length) === 0 ? (
           <div className="p-6 text-center">
             <p className="text-gray-500">No contacts available for enrollment</p>
             <p className="text-sm text-gray-400 mt-1">
@@ -233,7 +348,7 @@ export default function EnrollPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {data.contacts.available.map((contact) => (
+            {(enrollmentMode === 'campaign' ? campaignContacts : data.contacts.available).map((contact) => (
               <div key={contact.id} className="p-4 hover:bg-gray-50">
                 <label className="flex items-center cursor-pointer">
                   <input
@@ -272,11 +387,15 @@ export default function EnrollPage() {
         )}
 
         {/* Actions */}
-        {data.contacts.available.length > 0 && (
+        {((enrollmentMode === 'campaign' && campaignContacts.length > 0) || 
+          (enrollmentMode === 'individual' && data.contacts.available.length > 0)) && (
           <div className="p-6 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
                 {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
+                {enrollmentMode === 'campaign' && selectedCampaign && (
+                  <span className="text-gray-500"> from campaign</span>
+                )}
               </p>
               <div className="flex gap-3">
                 <Link

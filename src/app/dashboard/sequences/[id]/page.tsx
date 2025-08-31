@@ -112,8 +112,8 @@ export default function SequencePage() {
       const completedEnrollments = sequenceData.enrollments?.filter((e: any) => e.status === 'COMPLETED').length || 0
       const pausedEnrollments = sequenceData.enrollments?.filter((e: any) => e.status === 'PAUSED').length || 0
 
-      // Calculate step metrics
-      const calculatedStepMetrics: StepMetric[] = steps.map((step: any, index: number) => {
+      // Calculate step metrics - first pass without dropOff
+      const stepMetricsWithoutDropOff = steps.map((step: any, index: number) => {
         const recipientsAtStep = sequenceData.enrollments?.filter((e: any) => {
           const currentStepIndex = typeof e.currentStep === 'string' ? parseInt(e.currentStep) : e.currentStep
           return currentStepIndex >= index
@@ -136,13 +136,18 @@ export default function SequencePage() {
           opens,
           clicks,
           replies,
-          dropOff: index > 0 ? 
-            ((calculatedStepMetrics[index - 1]?.recipientsAtStep || 0) - recipientsAtStep) : 0,
           openRate: emailsSent > 0 ? Math.round((opens / emailsSent) * 100) : 0,
           clickRate: emailsSent > 0 ? Math.round((clicks / emailsSent) * 100) : 0,
           replyRate: emailsSent > 0 ? Math.round((replies / emailsSent) * 100) : 0
         }
       })
+
+      // Calculate dropOff in second pass
+      const calculatedStepMetrics: StepMetric[] = stepMetricsWithoutDropOff.map((step: any, index: number) => ({
+        ...step,
+        dropOff: index > 0 ? 
+          ((stepMetricsWithoutDropOff[index - 1]?.recipientsAtStep || 0) - step.recipientsAtStep) : 0
+      }))
 
       setStepMetrics(calculatedStepMetrics)
 
