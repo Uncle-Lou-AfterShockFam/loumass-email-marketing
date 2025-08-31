@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     // Validate request data
     const validationResult = createSequenceSchema.safeParse(body)
     if (!validationResult.success) {
+      console.error('Sequence validation failed:', validationResult.error.format())
       return NextResponse.json({ 
         error: 'Invalid data', 
         details: validationResult.error.format() 

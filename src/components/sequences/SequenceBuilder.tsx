@@ -147,27 +147,34 @@ export default function SequenceBuilder({
       setIsSaving(true)
       
       try {
+        const payload = {
+          name: sequenceName,
+          description,
+          triggerType,
+          trackingEnabled,
+          steps: steps,
+          status: 'ACTIVE'
+        }
+        
+        console.log('Sending sequence data:', payload)
+        
         const response = await fetch('/api/sequences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: sequenceName,
-            description,
-            triggerType,
-            trackingEnabled,
-            steps: steps,
-            status: 'ACTIVE'
-          })
+          body: JSON.stringify(payload)
         })
 
         if (response.ok) {
-          const { id } = await response.json()
-          router.push(`/dashboard/sequences/${id}`)
+          const result = await response.json()
+          router.push(`/dashboard/sequences/${result.id || result.sequence?.id}`)
         } else {
-          throw new Error('Failed to save sequence')
+          const errorData = await response.json()
+          console.error('Sequence save error:', errorData)
+          throw new Error(errorData.error || 'Failed to save sequence')
         }
       } catch (error) {
-        alert('Failed to save sequence. Please try again.')
+        console.error('Error saving sequence:', error)
+        alert(error instanceof Error ? error.message : 'Failed to save sequence. Please try again.')
       } finally {
         setIsSaving(false)
       }
