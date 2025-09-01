@@ -6,16 +6,10 @@ export class GmailClient {
   private oauth2Client: OAuth2Client
   
   constructor() {
-    // Ensure no trailing spaces in environment variables
-    const baseUrl = (process.env.NEXTAUTH_URL || '').trim()
-    const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim()
-    const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim()
-    const redirectUri = `${baseUrl}/api/auth/gmail/callback`
-    
     this.oauth2Client = new google.auth.OAuth2(
-      clientId,
-      clientSecret,
-      redirectUri
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
   }
 
@@ -27,12 +21,6 @@ export class GmailClient {
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/userinfo.email'
     ]
-
-    // Debug logging to identify space issue
-    const redirectUri = `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
-    console.log('NEXTAUTH_URL:', JSON.stringify(process.env.NEXTAUTH_URL))
-    console.log('Constructed redirect URI:', JSON.stringify(redirectUri))
-    console.log('Redirect URI length:', redirectUri.length)
 
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
