@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import SequenceBuilderFlow from '@/components/sequences/SequenceBuilderFlow'
+import SequenceBuilderFlow from '@/components/sequences/SequenceBuilderFlowFixed'
 
 export default async function NewSequencePage() {
   const session = await getServerSession(authOptions)

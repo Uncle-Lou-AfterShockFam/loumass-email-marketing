@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import SequenceBuilderFlow from '@/components/sequences/SequenceBuilderFlow'
+import SequenceBuilderFlow from '@/components/sequences/SequenceBuilderFlowFixed'
 
 export default function EditSequencePage() {
   const { data: session, status } = useSession()
