@@ -522,8 +522,11 @@ export default function SequenceBuilderFlow({
       description,
       steps,
       status: 'ACTIVE',
-      triggerType: 'MANUAL'
+      triggerType: 'MANUAL',
+      trackingEnabled: true
     }
+
+    console.log('Saving sequence with payload:', JSON.stringify(payload, null, 2))
 
     try {
       const url = editMode 
@@ -538,7 +541,8 @@ export default function SequenceBuilderFlow({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null)
-        const errorMessage = errorData?.error || `Failed to save sequence (${response.status})`
+        console.error('Save error response:', errorData)
+        const errorMessage = errorData?.error || errorData?.details || `Failed to save sequence (${response.status})`
         throw new Error(errorMessage)
       }
 
@@ -563,14 +567,14 @@ export default function SequenceBuilderFlow({
               placeholder="Sequence Name"
               value={sequenceName}
               onChange={(e) => setSequenceName(e.target.value)}
-              className="text-xl font-semibold w-full px-2 py-1 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+              className="text-xl font-semibold w-full px-2 py-1 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent text-gray-900"
             />
             <input
               type="text"
               placeholder="Add a description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="text-sm text-gray-600 w-full px-2 py-1 mt-1"
+              className="text-sm text-gray-600 w-full px-2 py-1 mt-1 bg-transparent"
             />
           </div>
           
@@ -706,7 +710,7 @@ export default function SequenceBuilderFlow({
                     type="text"
                     value={(selectedNode.data as any).subject || ''}
                     onChange={(e) => updateNodeData(selectedNode.id, { subject: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                     placeholder="Enter email subject..."
                   />
                 </div>
@@ -719,7 +723,7 @@ export default function SequenceBuilderFlow({
                     value={(selectedNode.data as any).content || ''}
                     onChange={(e) => updateNodeData(selectedNode.id, { content: e.target.value })}
                     rows={8}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                     placeholder="Write your email content..."
                   />
                 </div>
@@ -758,14 +762,17 @@ export default function SequenceBuilderFlow({
                     <input
                       type="number"
                       min="0"
-                      value={(selectedNode.data as any).delay?.days || 0}
-                      onChange={(e) => updateNodeData(selectedNode.id, { 
-                        delay: { 
-                          ...(selectedNode.data as any).delay,
-                          days: parseInt(e.target.value) || 0
-                        }
-                      })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      value={(selectedNode.data as any).delay?.days ?? 0}
+                      onChange={(e) => {
+                        const currentDelay = (selectedNode.data as any).delay || { days: 0, hours: 0, minutes: 1 };
+                        updateNodeData(selectedNode.id, { 
+                          delay: { 
+                            ...currentDelay,
+                            days: parseInt(e.target.value) || 0
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
 
@@ -777,14 +784,17 @@ export default function SequenceBuilderFlow({
                       type="number"
                       min="0"
                       max="23"
-                      value={(selectedNode.data as any).delay?.hours || 0}
-                      onChange={(e) => updateNodeData(selectedNode.id, { 
-                        delay: { 
-                          ...(selectedNode.data as any).delay,
-                          hours: parseInt(e.target.value) || 0
-                        }
-                      })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      value={(selectedNode.data as any).delay?.hours ?? 0}
+                      onChange={(e) => {
+                        const currentDelay = (selectedNode.data as any).delay || { days: 0, hours: 0, minutes: 1 };
+                        updateNodeData(selectedNode.id, { 
+                          delay: { 
+                            ...currentDelay,
+                            hours: parseInt(e.target.value) || 0
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
 
@@ -796,14 +806,17 @@ export default function SequenceBuilderFlow({
                       type="number"
                       min="0"
                       max="59"
-                      value={(selectedNode.data as any).delay?.minutes || 0}
-                      onChange={(e) => updateNodeData(selectedNode.id, { 
-                        delay: { 
-                          ...(selectedNode.data as any).delay,
-                          minutes: parseInt(e.target.value) || 0
-                        }
-                      })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      value={(selectedNode.data as any).delay?.minutes ?? 1}
+                      onChange={(e) => {
+                        const currentDelay = (selectedNode.data as any).delay || { days: 0, hours: 0, minutes: 1 };
+                        updateNodeData(selectedNode.id, { 
+                          delay: { 
+                            ...currentDelay,
+                            minutes: parseInt(e.target.value) || 0
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
                 </div>
@@ -824,7 +837,7 @@ export default function SequenceBuilderFlow({
                         type: e.target.value
                       }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900"
                   >
                     <option value="opened">If email was opened</option>
                     <option value="not_opened">If email was NOT opened</option>
@@ -846,7 +859,7 @@ export default function SequenceBuilderFlow({
                         referenceStep: e.target.value
                       }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900"
                   >
                     <option value="">Select an email step...</option>
                     {nodes

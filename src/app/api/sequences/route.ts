@@ -27,7 +27,7 @@ const sequenceStepSchema = z.object({
     x: z.number(),
     y: z.number()
   }),
-  nextStepId: z.string().optional()
+  nextStepId: z.string().nullable().optional()
 })
 
 // Validation schema for sequence creation
