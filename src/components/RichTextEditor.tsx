@@ -178,7 +178,7 @@ export default function RichTextEditor({
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className="min-h-[200px] p-3 border border-t-0 border-gray-300 rounded-b-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="min-h-[200px] p-3 border border-t-0 border-gray-300 rounded-b-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         style={{ lineHeight: '1.6' }}
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}

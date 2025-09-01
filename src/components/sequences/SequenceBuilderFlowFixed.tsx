@@ -425,15 +425,29 @@ function SequenceBuilderFlowInner({
               markerEnd: { type: MarkerType.ArrowClosed }
             })
           }
-        } else if (step.nextStepId) {
-          // Regular sequential connection
+        }
+        
+        // Create edge from previous node to current node (for sequential flow)
+        if (index > 0 && step.type !== 'condition') {
+          const prevStep = data.steps[index - 1]
+          if (prevStep && prevStep.type !== 'condition') {
+            loadedEdges.push({
+              id: `${prevStep.id || `step-${index}`}-${nodeId}`,
+              source: prevStep.id || `step-${index}`,
+              target: nodeId,
+              markerEnd: { type: MarkerType.ArrowClosed }
+            })
+          }
+        }
+        
+        // Also handle nextStepId if it exists
+        if (step.nextStepId) {
           loadedEdges.push({
-            id: `${lastNodeId}-${nodeId}`,
-            source: lastNodeId,
-            target: nodeId,
+            id: `${nodeId}-${step.nextStepId}`,
+            source: nodeId,
+            target: step.nextStepId,
             markerEnd: { type: MarkerType.ArrowClosed }
           })
-          lastNodeId = nodeId
         }
       })
       
@@ -838,7 +852,7 @@ function SequenceBuilderFlowInner({
                       onChange={(e) => updateNodeData(selectedNode.id, { replyToThread: e.target.checked })}
                       className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm">Reply in existing thread</span>
+                    <span className="text-sm text-gray-700">Reply in existing thread</span>
                   </label>
 
                   <label className="flex items-center">
@@ -848,7 +862,7 @@ function SequenceBuilderFlowInner({
                       onChange={(e) => updateNodeData(selectedNode.id, { trackingEnabled: e.target.checked })}
                       className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm">Enable tracking</span>
+                    <span className="text-sm text-gray-700">Enable tracking</span>
                   </label>
                 </div>
               </div>
