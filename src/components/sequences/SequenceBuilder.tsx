@@ -9,7 +9,7 @@ interface SequenceStep {
   type: 'email' | 'delay' | 'condition'
   subject?: string
   content?: string
-  delay?: { days: number; hours: number }
+  delay?: { days: number; hours: number; minutes?: number }
   condition?: {
     type: 'opened' | 'clicked' | 'replied' | 'not_opened' | 'not_clicked'
     referenceStep?: string  // Optional during building
@@ -77,9 +77,9 @@ export default function SequenceBuilder({
       newStep.subject = ''
       newStep.content = ''
       // Also set htmlContent for compatibility
-      (newStep as any).htmlContent = ''
+      ;(newStep as any).htmlContent = ''
     } else if (type === 'delay') {
-      newStep.delay = { days: 1, hours: 0 }
+      newStep.delay = { days: 1, hours: 0, minutes: 0 }
     } else if (type === 'condition') {
       newStep.condition = {
         type: 'opened'
@@ -390,7 +390,7 @@ export default function SequenceBuilder({
                 <div className="text-sm">
                   <p className="font-medium text-gray-900">
                     {step.type === 'email' && (step.subject || 'Email Step')}
-                    {step.type === 'delay' && `Wait ${step.delay?.days || 0}d ${step.delay?.hours || 0}h`}
+                    {step.type === 'delay' && `Wait ${step.delay?.days || 0}d ${step.delay?.hours || 0}h ${step.delay?.minutes || 0}m`}
                     {step.type === 'condition' && (
                       <>
                         If {step.condition?.type?.replace('_', ' ') || 'condition'}
@@ -479,9 +479,7 @@ export default function SequenceBuilder({
                 <textarea
                   value={selectedStep.content || ''}
                   onChange={(e) => updateStep(selectedStep.id, { 
-                    content: e.target.value,
-                    // Also update htmlContent for compatibility with sequence service
-                    htmlContent: e.target.value 
+                    content: e.target.value
                   })}
                   placeholder="Write your email content... Use {{firstName}}, {{lastName}}, {{company}} for personalization"
                   rows={8}
@@ -527,7 +525,8 @@ export default function SequenceBuilder({
                     delay: { 
                       ...selectedStep.delay, 
                       days: parseInt(e.target.value) || 0,
-                      hours: selectedStep.delay?.hours || 0
+                      hours: selectedStep.delay?.hours || 0,
+                      minutes: selectedStep.delay?.minutes || 0
                     } 
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
@@ -547,7 +546,29 @@ export default function SequenceBuilder({
                     delay: { 
                       ...selectedStep.delay, 
                       hours: parseInt(e.target.value) || 0,
-                      days: selectedStep.delay?.days || 0
+                      days: selectedStep.delay?.days || 0,
+                      minutes: selectedStep.delay?.minutes || 0
+                    } 
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Minutes
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={selectedStep.delay?.minutes || 0}
+                  onChange={(e) => updateStep(selectedStep.id, { 
+                    delay: { 
+                      ...selectedStep.delay, 
+                      minutes: parseInt(e.target.value) || 0,
+                      days: selectedStep.delay?.days || 0,
+                      hours: selectedStep.delay?.hours || 0
                     } 
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
@@ -675,7 +696,7 @@ export default function SequenceBuilder({
                         .map(s => (
                           <option key={s.id} value={s.id}>
                             Jump to: {s.type === 'email' ? (s.subject || 'Email Step') : 
-                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h` :
+                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h ${s.delay?.minutes || 0}m` :
                                      'Condition'} (Step {steps.findIndex(st => st.id === s.id) + 1})
                           </option>
                         ))}
@@ -715,7 +736,7 @@ export default function SequenceBuilder({
                         .map(s => (
                           <option key={s.id} value={s.id}>
                             Jump to: {s.type === 'email' ? (s.subject || 'Email Step') : 
-                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h` :
+                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h ${s.delay?.minutes || 0}m` :
                                      'Condition'} (Step {steps.findIndex(st => st.id === s.id) + 1})
                           </option>
                         ))}
