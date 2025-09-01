@@ -169,6 +169,10 @@ const ConditionNode = ({ data, selected }: NodeProps) => {
       case 'clicked': return 'If Clicked'
       case 'not_clicked': return 'If Not Clicked'
       case 'replied': return 'If Replied'
+      case 'not_replied': return 'If Not Replied'
+      case 'opened_no_reply': return 'Opened but NO Reply'
+      case 'opened_no_click': return 'Opened but NO Click'
+      case 'clicked_no_reply': return 'Clicked but NO Reply'
       default: return 'Condition'
     }
   }
@@ -951,6 +955,10 @@ function SequenceBuilderFlowInner({
                     <option value="clicked">If link was clicked</option>
                     <option value="not_clicked">If link was NOT clicked</option>
                     <option value="replied">If recipient replied</option>
+                    <option value="not_replied">If recipient did NOT reply</option>
+                    <option value="opened_no_reply">If opened but NO reply</option>
+                    <option value="opened_no_click">If opened but NO click</option>
+                    <option value="clicked_no_reply">If clicked but NO reply</option>
                   </select>
                 </div>
 

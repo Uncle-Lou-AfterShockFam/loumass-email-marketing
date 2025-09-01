@@ -16,7 +16,7 @@ const sequenceStepSchema = z.object({
     minutes: z.number().min(0).max(59)
   }).optional(),
   condition: z.object({
-    type: z.enum(['opened', 'clicked', 'replied', 'not_opened', 'not_clicked']),
+    type: z.enum(['opened', 'clicked', 'replied', 'not_opened', 'not_clicked', 'not_replied', 'opened_no_reply', 'opened_no_click', 'clicked_no_reply']),
     referenceStep: z.string().optional(),
     trueBranch: z.array(z.string()).optional(),
     falseBranch: z.array(z.string()).optional()
