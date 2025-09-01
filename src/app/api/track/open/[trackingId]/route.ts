@@ -9,11 +9,28 @@ const PIXEL = Buffer.from(
 )
 
 // Helper function to decode tracking ID
-function decodeTrackingId(trackingId: string): { campaignOrSequenceId: string; recipientId: string; timestamp: string } | null {
+function decodeTrackingId(trackingId: string): { campaignOrSequenceId: string; recipientId: string; timestamp: string; isSequence?: boolean; stepIndex?: number } | null {
   try {
     const decoded = Buffer.from(trackingId, 'base64url').toString()
-    const [campaignOrSequenceId, recipientId, timestamp] = decoded.split(':')
-    return { campaignOrSequenceId, recipientId, timestamp }
+    const parts = decoded.split(':')
+    
+    // Format for campaigns: campaignId:recipientId:timestamp
+    // Format for sequences: seq:enrollmentId:stepIndex:timestamp
+    if (parts[0] === 'seq') {
+      return {
+        campaignOrSequenceId: parts[1],
+        recipientId: parts[1], // For sequences, this is enrollment ID
+        timestamp: parts[3],
+        isSequence: true,
+        stepIndex: parseInt(parts[2])
+      }
+    }
+    
+    return {
+      campaignOrSequenceId: parts[0],
+      recipientId: parts[1],
+      timestamp: parts[2]
+    }
   } catch (error) {
     return null
   }
@@ -113,8 +130,9 @@ export async function GET(
       })
     }
 
-    const { campaignOrSequenceId, recipientId } = decoded
-    console.log('Looking for recipient with campaignId:', campaignOrSequenceId, 'and contactId:', recipientId)
+    const { campaignOrSequenceId, recipientId, isSequence, stepIndex } = decoded
+    console.log('Tracking type:', isSequence ? 'Sequence' : 'Campaign')
+    console.log('Looking for recipient with ID:', campaignOrSequenceId, 'and contact/enrollment ID:', recipientId)
 
     // Try to find a campaign recipient first
     let recipient = await prisma.recipient.findFirst({
@@ -204,13 +222,80 @@ export async function GET(
           })
         }
       }
-    } else {
-      // TODO: Sequence step tracking not implemented - sequenceStep model doesn't exist
-      // For now, just create a basic email event without sequence step tracking
-      const sequenceStep = null
+    } else if (decoded.isSequence) {
+      // Handle sequence tracking
+      const enrollment = await prisma.sequenceEnrollment.findUnique({
+        where: { id: recipientId },
+        include: {
+          contact: true,
+          sequence: {
+            include: {
+              user: true
+            }
+          }
+        }
+      })
 
-      // Sequence step tracking will be implemented when sequenceStep model is added
-      // For now, this else block does nothing since sequenceStep is null
+      console.log('Found sequence enrollment:', enrollment ? `ID: ${enrollment.id}, Step: ${stepIndex}` : 'Not found')
+
+      if (enrollment) {
+        // Check if this is the sender's IP or Gmail proxy
+        const isSenderIp = await checkIfSenderIp(ip, enrollment.sequence.userId)
+        const isGmailProxy = isGmailProxyIp(ip)
+        
+        // Check if this is the first open event for this step
+        const previousOpens = await prisma.sequenceEvent.count({
+          where: {
+            enrollmentId: enrollment.id,
+            stepIndex: stepIndex || 0,
+            eventType: 'OPENED'
+          }
+        })
+        
+        // First Gmail proxy open is pre-fetch, subsequent ones are real
+        const isPreFetch = isGmailProxy && previousOpens === 0
+        const isRealUserOpen = !isPreFetch && (!isSenderIp || enrollment.sequence.status === 'ACTIVE')
+        
+        // Get location data from IP
+        const location = ip ? await getLocationFromIp(ip) : null
+        
+        // Always track the event for visibility
+        await prisma.sequenceEvent.create({
+          data: {
+            enrollmentId: enrollment.id,
+            stepIndex: stepIndex || 0,
+            eventType: 'OPENED',
+            eventData: {
+              userAgent,
+              ipAddress: ip,
+              timestamp: new Date().toISOString(),
+              isSenderIp,
+              isGmailProxy,
+              isPreFetch,
+              openNumber: previousOpens + 1,
+              location: location || undefined
+            },
+            ipAddress: ip,
+            userAgent
+          }
+        })
+
+        // Update enrollment stats for real opens
+        if (isRealUserOpen) {
+          const updateData: any = {
+            openCount: { increment: 1 }
+          }
+          
+          if (!enrollment.lastOpenedAt) {
+            updateData.lastOpenedAt = new Date()
+          }
+
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollment.id },
+            data: updateData
+          })
+        }
+      }
     }
 
     // Return the tracking pixel with aggressive no-cache headers

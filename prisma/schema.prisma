@@ -183,17 +183,27 @@ model Sequence {
 }
 
 model SequenceEnrollment {
-  id          String           @id @default(cuid())
-  sequenceId  String
-  contactId   String
-  status      EnrollmentStatus @default(ACTIVE)
-  currentStep Int              @default(0)
-  completedAt DateTime?
-  pausedAt    DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  contact     Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  sequence    Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  id             String           @id @default(cuid())
+  sequenceId     String
+  contactId      String
+  status         EnrollmentStatus @default(ACTIVE)
+  currentStep    Int              @default(0)
+  completedAt    DateTime?
+  pausedAt       DateTime?
+  lastEmailSentAt DateTime?
+  lastOpenedAt   DateTime?
+  lastClickedAt  DateTime?
+  lastRepliedAt  DateTime?
+  openCount      Int              @default(0)
+  clickCount     Int              @default(0)
+  replyCount     Int              @default(0)
+  gmailMessageId String?
+  gmailThreadId  String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  contact        Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sequence       Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceEvents SequenceEvent[]
   @@unique([sequenceId, contactId])
   @@index([sequenceId, status])
 }
@@ -212,6 +222,21 @@ model EmailEvent {
 
   @@index([campaignId, eventType])
   @@index([recipientId, eventType])
+}
+
+model SequenceEvent {
+  id           String              @id @default(cuid())
+  enrollmentId String
+  stepIndex    Int
+  eventType    EventType
+  eventData    Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime            @default(now())
+  enrollment   SequenceEnrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId, eventType])
+  @@index([enrollmentId, stepIndex])
 }
 
 model EmailTemplate {

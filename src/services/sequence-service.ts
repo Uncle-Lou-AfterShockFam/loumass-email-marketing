@@ -228,8 +228,10 @@ export class SequenceService {
       return this.processSequenceStep(enrollmentId)
     }
 
-    // Generate tracking ID
-    const trackingId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Generate tracking ID for sequences
+    // Format: seq:enrollmentId:stepIndex:timestamp
+    const trackingData = `seq:${enrollmentId}:${enrollment.currentStep}:${Date.now()}`
+    const trackingId = Buffer.from(trackingData).toString('base64url')
 
     // Get thread ID for replies (default: same thread for sequences)
     let threadId: string | undefined
@@ -249,7 +251,8 @@ export class SequenceService {
         {
           to: [enrollment.contact.email],
           subject,
-          htmlContent: this.addTrackingToEmail(htmlContent, trackingId),
+          htmlContent: enrollment.sequence.trackingEnabled ? 
+            this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent,
           textContent,
           trackingId,
           sequenceId: enrollment.sequenceId,
@@ -261,7 +264,10 @@ export class SequenceService {
       // Update enrollment
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
-        data: { currentStep: enrollment.currentStep + 1 }
+        data: { 
+          currentStep: enrollment.currentStep + 1,
+          lastEmailSentAt: new Date()
+        }
       })
 
       return { success: true, sentStep: stepToExecuteIndex + 1 }
@@ -370,16 +376,50 @@ export class SequenceService {
       return false
     }
 
+    // Get enrollment for checking events
+    const enrollment = await prisma.sequenceEnrollment.findFirst({
+      where: {
+        sequenceId,
+        contactId
+      }
+    })
+
+    if (!enrollment) return false
+
     // Check for email events based on condition type
     switch (condition.type) {
       case 'opened':
-        return await this.hasContactOpened(contactId, sequenceId)
+        return await this.hasContactOpened(enrollment.id, condition.referenceStep)
       
       case 'clicked':
-        return await this.hasContactClicked(contactId, sequenceId)
+        return await this.hasContactClicked(enrollment.id, condition.referenceStep)
       
       case 'replied':
-        return await this.hasContactReplied(contactId, sequenceId)
+        return await this.hasContactReplied(enrollment.id, condition.referenceStep)
+      
+      case 'not_opened':
+        return !(await this.hasContactOpened(enrollment.id, condition.referenceStep))
+      
+      case 'not_clicked':
+        return !(await this.hasContactClicked(enrollment.id, condition.referenceStep))
+      
+      case 'not_replied':
+        return !(await this.hasContactReplied(enrollment.id, condition.referenceStep))
+      
+      case 'opened_no_reply':
+        const opened = await this.hasContactOpened(enrollment.id, condition.referenceStep)
+        const replied = await this.hasContactReplied(enrollment.id, condition.referenceStep)
+        return opened && !replied
+      
+      case 'opened_no_click':
+        const openedNoClick = await this.hasContactOpened(enrollment.id, condition.referenceStep)
+        const clicked = await this.hasContactClicked(enrollment.id, condition.referenceStep)
+        return openedNoClick && !clicked
+      
+      case 'clicked_no_reply':
+        const clickedNoReply = await this.hasContactClicked(enrollment.id, condition.referenceStep)
+        const repliedAfterClick = await this.hasContactReplied(enrollment.id, condition.referenceStep)
+        return clickedNoReply && !repliedAfterClick
       
       case 'time_elapsed':
         return this.evaluateTimeCondition(condition, contactId)
@@ -393,22 +433,79 @@ export class SequenceService {
     }
   }
 
-  private async hasContactOpened(contactId: string, sequenceId: string): Promise<boolean> {
-    // TODO: Implement email event tracking for sequences
-    // For now, return false since sequence email events aren't implemented yet
-    return false
+  private async hasContactOpened(enrollmentId: string, referenceStep?: string): Promise<boolean> {
+    // Find the step index from the reference step ID
+    const enrollment = await prisma.sequenceEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { sequence: true }
+    })
+    
+    if (!enrollment) return false
+    
+    const steps = enrollment.sequence.steps as any[]
+    const stepIndex = referenceStep ? steps.findIndex((s: any) => s.id === referenceStep) : enrollment.currentStep - 1
+    
+    if (stepIndex < 0) return false
+    
+    const openEvent = await prisma.sequenceEvent.findFirst({
+      where: {
+        enrollmentId,
+        stepIndex,
+        eventType: 'OPENED'
+      }
+    })
+    
+    return !!openEvent
   }
 
-  private async hasContactClicked(contactId: string, sequenceId: string): Promise<boolean> {
-    // TODO: Implement email event tracking for sequences
-    // For now, return false since sequence email events aren't implemented yet
-    return false
+  private async hasContactClicked(enrollmentId: string, referenceStep?: string): Promise<boolean> {
+    // Find the step index from the reference step ID
+    const enrollment = await prisma.sequenceEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { sequence: true }
+    })
+    
+    if (!enrollment) return false
+    
+    const steps = enrollment.sequence.steps as any[]
+    const stepIndex = referenceStep ? steps.findIndex((s: any) => s.id === referenceStep) : enrollment.currentStep - 1
+    
+    if (stepIndex < 0) return false
+    
+    const clickEvent = await prisma.sequenceEvent.findFirst({
+      where: {
+        enrollmentId,
+        stepIndex,
+        eventType: 'CLICKED'
+      }
+    })
+    
+    return !!clickEvent
   }
 
-  private async hasContactReplied(contactId: string, sequenceId: string): Promise<boolean> {
-    // TODO: Implement reply tracking for sequences
-    // For now, return false since sequence reply tracking isn't implemented yet
-    return false
+  private async hasContactReplied(enrollmentId: string, referenceStep?: string): Promise<boolean> {
+    // Find the step index from the reference step ID
+    const enrollment = await prisma.sequenceEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { sequence: true }
+    })
+    
+    if (!enrollment) return false
+    
+    const steps = enrollment.sequence.steps as any[]
+    const stepIndex = referenceStep ? steps.findIndex((s: any) => s.id === referenceStep) : enrollment.currentStep - 1
+    
+    if (stepIndex < 0) return false
+    
+    const replyEvent = await prisma.sequenceEvent.findFirst({
+      where: {
+        enrollmentId,
+        stepIndex,
+        eventType: 'REPLIED'
+      }
+    })
+    
+    return !!replyEvent
   }
 
   private evaluateTimeCondition(condition: any, contactId: string): boolean {

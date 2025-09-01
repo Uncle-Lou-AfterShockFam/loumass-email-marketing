@@ -25,11 +25,37 @@ async function getLocationFromIp(ip: string): Promise<{ city?: string; region?: 
 }
 
 // Helper function to decode tracking ID
-function decodeTrackingId(trackingId: string): { campaignOrSequenceId: string; recipientId: string; timestamp: string } | null {
+function decodeTrackingId(trackingId: string): { 
+  campaignOrSequenceId: string; 
+  recipientId: string; 
+  linkIndex?: number;
+  timestamp: string; 
+  isSequence?: boolean; 
+  stepIndex?: number 
+} | null {
   try {
     const decoded = Buffer.from(trackingId, 'base64url').toString()
-    const [campaignOrSequenceId, recipientId, timestamp] = decoded.split(':')
-    return { campaignOrSequenceId, recipientId, timestamp }
+    const parts = decoded.split(':')
+    
+    // Format for campaigns: campaignId:recipientId:linkIndex:timestamp
+    // Format for sequences: seq:enrollmentId:stepIndex:linkIndex:timestamp
+    if (parts[0] === 'seq') {
+      return {
+        campaignOrSequenceId: parts[1],
+        recipientId: parts[1], // For sequences, this is enrollment ID
+        stepIndex: parseInt(parts[2]),
+        linkIndex: parts[3] ? parseInt(parts[3]) : undefined,
+        timestamp: parts[4] || parts[3],
+        isSequence: true
+      }
+    }
+    
+    return {
+      campaignOrSequenceId: parts[0],
+      recipientId: parts[1],
+      linkIndex: parts[2] ? parseInt(parts[2]) : undefined,
+      timestamp: parts[3] || parts[2]
+    }
   } catch (error) {
     return null
   }
@@ -67,11 +93,13 @@ export async function GET(
       return NextResponse.redirect(url)
     }
 
-    const { campaignOrSequenceId, recipientId } = decoded
-    console.log('Looking for recipient with campaignId:', campaignOrSequenceId, 'and contactId:', recipientId)
+    const { campaignOrSequenceId, recipientId, linkIndex, isSequence, stepIndex } = decoded
+    console.log('Tracking type:', isSequence ? 'Sequence' : 'Campaign')
+    console.log('Looking for recipient with ID:', campaignOrSequenceId, 'and contact/enrollment ID:', recipientId)
 
-    // Try to find a campaign recipient first
-    let recipient = await prisma.recipient.findFirst({
+    // Handle campaign click tracking
+    if (!isSequence) {
+      let recipient = await prisma.recipient.findFirst({
       where: {
         campaignId: campaignOrSequenceId,
         contactId: recipientId
@@ -89,21 +117,6 @@ export async function GET(
     console.log('Found recipient:', recipient ? `ID: ${recipient.id}, Status: ${recipient.status}` : 'Not found')
 
     if (recipient) {
-      // Update recipient click status
-      const updateData: any = {}
-      
-      if (!recipient.clickedAt) {
-        updateData.clickedAt = new Date()
-        updateData.status = 'CLICKED' as const
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await prisma.recipient.update({
-          where: { id: recipient.id },
-          data: updateData
-        })
-      }
-
       // Get location data from IP
       const location = ip ? await getLocationFromIp(ip) : null
 
@@ -115,17 +128,18 @@ export async function GET(
           eventType: 'CLICKED',
           eventData: {
             url,
+            linkIndex,
             userAgent,
             ipAddress: ip,
             timestamp: new Date().toISOString(),
-            location: location || undefined // Add location data if available
+            location: location || undefined
           },
           ipAddress: ip,
           userAgent
         }
       })
 
-      // Update recipient click status and campaign stats
+      // Update recipient click status and campaign stats  
       if (!recipient.clickedAt) {
         // Update recipient with first click timestamp
         // Also mark as opened if not already (clicks imply opens)
@@ -163,13 +177,66 @@ export async function GET(
           data: campaignUpdateData
         })
       }
+    }
     } else {
-      // TODO: Sequence step tracking not implemented - sequenceStep model doesn't exist
-      // For now, just create a basic email event without sequence step tracking
-      const sequenceStep = null
+      // Handle sequence click tracking
+      const enrollment = await prisma.sequenceEnrollment.findUnique({
+        where: { id: recipientId },
+        include: {
+          contact: true,
+          sequence: {
+            include: {
+              user: true
+            }
+          }
+        }
+      })
 
-      // Sequence step tracking will be implemented when sequenceStep model is added
-      // For now, this else block does nothing since sequenceStep is null
+      console.log('Found sequence enrollment:', enrollment ? `ID: ${enrollment.id}, Step: ${stepIndex}` : 'Not found')
+
+      if (enrollment) {
+        // Get location data from IP
+        const location = ip ? await getLocationFromIp(ip) : null
+        
+        // Track the click event
+        await prisma.sequenceEvent.create({
+          data: {
+            enrollmentId: enrollment.id,
+            stepIndex: stepIndex || 0,
+            eventType: 'CLICKED',
+            eventData: {
+              url,
+              linkIndex,
+              userAgent,
+              ipAddress: ip,
+              timestamp: new Date().toISOString(),
+              location: location || undefined
+            },
+            ipAddress: ip,
+            userAgent
+          }
+        })
+
+        // Update enrollment click stats
+        const updateData: any = {
+          clickCount: { increment: 1 }
+        }
+        
+        if (!enrollment.lastClickedAt) {
+          updateData.lastClickedAt = new Date()
+        }
+
+        // Also update open stats if not already opened
+        if (!enrollment.lastOpenedAt) {
+          updateData.lastOpenedAt = new Date()
+          updateData.openCount = { increment: 1 }
+        }
+
+        await prisma.sequenceEnrollment.update({
+          where: { id: enrollment.id },
+          data: updateData
+        })
+      }
     }
 
     // Redirect to the actual URL
