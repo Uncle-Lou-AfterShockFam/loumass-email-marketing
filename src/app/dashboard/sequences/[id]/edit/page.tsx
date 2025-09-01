@@ -176,7 +176,8 @@ export default function EditSequencePage() {
           name: sequence.name,
           description: sequence.description || '',
           steps: Array.isArray(sequence.steps) ? sequence.steps : [],
-          trackingEnabled: sequence.trackingEnabled !== false
+          trackingEnabled: sequence.trackingEnabled !== false,
+          status: sequence.status
         }}
       />
     </div>

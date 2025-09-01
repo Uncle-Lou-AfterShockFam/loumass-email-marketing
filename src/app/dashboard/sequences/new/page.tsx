@@ -10,5 +10,5 @@ export default async function NewSequencePage() {
     redirect('/auth/signin')
   }
 
-  return <SequenceBuilderFlow userId={session.user.id} />
+  return <SequenceBuilderFlow />
 }
