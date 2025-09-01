@@ -177,12 +177,32 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">LOUMASS</h3>
-          <p className="mb-4">Professional Email Marketing Platform</p>
-          <p className="text-sm text-gray-500">
-            Built with Next.js, TypeScript, PostgreSQL, and Redis
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-white mb-4">LOUMASS</h3>
+            <p className="mb-4">Professional Email Marketing Platform</p>
+            <p className="text-sm text-gray-500">
+              Built with Next.js, TypeScript, PostgreSQL, and Redis
+            </p>
+          </div>
+          
+          {/* Footer Links */}
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-wrap justify-center gap-6 text-sm">
+              <Link href="/privacy" className="hover:text-white transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-white transition-colors">
+                Terms of Service
+              </Link>
+              <a href="mailto:ljpiotti@aftershockfam.org" className="hover:text-white transition-colors">
+                Contact Support
+              </a>
+            </div>
+            <p className="text-center text-xs text-gray-500 mt-4">
+              © 2025 LOUMASS. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
