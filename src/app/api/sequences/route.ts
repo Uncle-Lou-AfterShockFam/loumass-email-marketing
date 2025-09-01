@@ -12,7 +12,8 @@ const sequenceStepSchema = z.object({
   content: z.string().optional(),
   delay: z.object({
     days: z.number().min(0),
-    hours: z.number().min(0).max(23)
+    hours: z.number().min(0).max(23),
+    minutes: z.number().min(0).max(59)
   }).optional(),
   condition: z.object({
     type: z.enum(['opened', 'clicked', 'replied', 'not_opened', 'not_clicked']),
@@ -20,8 +21,8 @@ const sequenceStepSchema = z.object({
     trueBranch: z.array(z.string()).optional(),
     falseBranch: z.array(z.string()).optional()
   }).optional(),
-  replyToThread: z.boolean(),
-  trackingEnabled: z.boolean(),
+  replyToThread: z.boolean().optional(),
+  trackingEnabled: z.boolean().optional(),
   position: z.object({
     x: z.number(),
     y: z.number()

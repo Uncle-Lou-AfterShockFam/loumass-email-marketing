@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import SequenceBuilder from '@/components/sequences/SequenceBuilder'
+import SequenceBuilderFlow from '@/components/sequences/SequenceBuilderFlow'
 
 export default function EditSequencePage() {
   const { data: session, status } = useSession()
@@ -169,13 +169,15 @@ export default function EditSequencePage() {
       )}
 
       {/* Sequence Builder */}
-      <SequenceBuilder 
+      <SequenceBuilderFlow 
         sequenceId={sequence.id}
-        sequenceName={sequence.name}
-        sequenceDescription={sequence.description || ''}
-        steps={Array.isArray(sequence.steps) ? sequence.steps : []}
-        trackingEnabled={sequence.trackingEnabled !== false}
         editMode={true}
+        initialData={{
+          name: sequence.name,
+          description: sequence.description || '',
+          steps: Array.isArray(sequence.steps) ? sequence.steps : [],
+          trackingEnabled: sequence.trackingEnabled !== false
+        }}
       />
     </div>
   )
