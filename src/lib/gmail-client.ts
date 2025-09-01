@@ -6,15 +6,10 @@ export class GmailClient {
   private oauth2Client: OAuth2Client
   
   constructor() {
-    // Fix: Ensure no newlines or spaces in environment variables
-    const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim()
-    const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim()
-    const baseUrl = (process.env.NEXTAUTH_URL || '').trim()
-    
     this.oauth2Client = new google.auth.OAuth2(
-      clientId,
-      clientSecret,
-      `${baseUrl}/api/auth/gmail/callback`
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
   }
 
