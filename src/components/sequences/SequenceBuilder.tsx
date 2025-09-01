@@ -76,6 +76,8 @@ export default function SequenceBuilder({
     if (type === 'email') {
       newStep.subject = ''
       newStep.content = ''
+      // Also set htmlContent for compatibility
+      (newStep as any).htmlContent = ''
     } else if (type === 'delay') {
       newStep.delay = { days: 1, hours: 0 }
     } else if (type === 'condition') {
@@ -476,7 +478,11 @@ export default function SequenceBuilder({
                 </label>
                 <textarea
                   value={selectedStep.content || ''}
-                  onChange={(e) => updateStep(selectedStep.id, { content: e.target.value })}
+                  onChange={(e) => updateStep(selectedStep.id, { 
+                    content: e.target.value,
+                    // Also update htmlContent for compatibility with sequence service
+                    htmlContent: e.target.value 
+                  })}
                   placeholder="Write your email content... Use {{firstName}}, {{lastName}}, {{company}} for personalization"
                   rows={8}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
@@ -628,9 +634,9 @@ export default function SequenceBuilder({
                     How Condition Branches Work
                   </h4>
                   <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• <strong>True Branch:</strong> If the condition is met, the sequence continues to the next step</li>
-                    <li>• <strong>False Branch:</strong> If the condition is not met, the sequence also continues (or can be configured to end)</li>
-                    <li>• Both branches will execute the same following steps by default</li>
+                    <li>• <strong>True Branch:</strong> If the condition is met, execute the selected step</li>
+                    <li>• <strong>False Branch:</strong> If the condition is not met, execute the alternative step</li>
+                    <li>• You can connect each branch to different future steps or end the sequence</li>
                     <li>• Use multiple conditions to create complex workflows</li>
                   </ul>
                 </div>
@@ -640,30 +646,86 @@ export default function SequenceBuilder({
                     <label className="block text-sm font-medium text-green-700 mb-1">
                       ✓ True Branch (condition met)
                     </label>
-                    <div className="p-3 bg-green-50 border-2 border-green-300 rounded-lg">
-                      <p className="text-sm text-green-800 font-medium">Continue to next step →</p>
-                      <p className="text-xs text-green-600 mt-1">
-                        When {selectedStep.condition?.type || 'condition'} is true
-                      </p>
-                    </div>
+                    <select
+                      value={selectedStep.condition?.trueBranch?.[0] || ''}
+                      onChange={(e) => {
+                        const currentCondition = selectedStep.condition || {
+                          type: 'opened',
+                          referenceStep: '',
+                          trueBranch: [],
+                          falseBranch: []
+                        }
+                        updateStep(selectedStep.id, {
+                          condition: {
+                            ...currentCondition,
+                            trueBranch: e.target.value ? [e.target.value] : []
+                          }
+                        })
+                      }}
+                      className="w-full px-3 py-2 border border-green-300 bg-green-50 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="">Continue to next step →</option>
+                      <option value="END">End sequence</option>
+                      {steps
+                        .filter(s => {
+                          const currentIndex = steps.findIndex(st => st.id === selectedStep.id)
+                          const stepIndex = steps.findIndex(st => st.id === s.id)
+                          return stepIndex > currentIndex
+                        })
+                        .map(s => (
+                          <option key={s.id} value={s.id}>
+                            Jump to: {s.type === 'email' ? (s.subject || 'Email Step') : 
+                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h` :
+                                     'Condition'} (Step {steps.findIndex(st => st.id === s.id) + 1})
+                          </option>
+                        ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-red-700 mb-1">
                       ✗ False Branch (condition not met)
                     </label>
-                    <div className="p-3 bg-red-50 border-2 border-red-300 rounded-lg">
-                      <p className="text-sm text-red-800 font-medium">Also continue →</p>
-                      <p className="text-xs text-red-600 mt-1">
-                        When {selectedStep.condition?.type || 'condition'} is false
-                      </p>
-                    </div>
+                    <select
+                      value={selectedStep.condition?.falseBranch?.[0] || ''}
+                      onChange={(e) => {
+                        const currentCondition = selectedStep.condition || {
+                          type: 'opened',
+                          referenceStep: '',
+                          trueBranch: [],
+                          falseBranch: []
+                        }
+                        updateStep(selectedStep.id, {
+                          condition: {
+                            ...currentCondition,
+                            falseBranch: e.target.value ? [e.target.value] : []
+                          }
+                        })
+                      }}
+                      className="w-full px-3 py-2 border border-red-300 bg-red-50 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="">Continue to next step →</option>
+                      <option value="END">End sequence</option>
+                      {steps
+                        .filter(s => {
+                          const currentIndex = steps.findIndex(st => st.id === selectedStep.id)
+                          const stepIndex = steps.findIndex(st => st.id === s.id)
+                          return stepIndex > currentIndex
+                        })
+                        .map(s => (
+                          <option key={s.id} value={s.id}>
+                            Jump to: {s.type === 'email' ? (s.subject || 'Email Step') : 
+                                     s.type === 'delay' ? `Wait ${s.delay?.days || 0}d ${s.delay?.hours || 0}h` :
+                                     'Condition'} (Step {steps.findIndex(st => st.id === s.id) + 1})
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   <p className="text-xs text-gray-600">
-                    <strong>Note:</strong> Advanced branching with different paths for true/false conditions will be available in a future update. Currently, conditions are used for tracking and analytics purposes.
+                    <strong>Tip:</strong> Leave a branch empty to continue to the next step in sequence. Select "End sequence" to stop the sequence for that branch, or choose a specific step to jump to.
                   </p>
                 </div>
               </div>

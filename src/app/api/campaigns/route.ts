@@ -17,7 +17,8 @@ const createCampaignSchema = z.object({
   }).optional(),
   recipients: z.array(z.string()).min(0),
   scheduledFor: z.string().nullable().optional(),
-  trackingDomainId: z.string().nullable().optional()
+  trackingDomainId: z.string().nullable().optional(),
+  sequenceId: z.string().nullable().optional()
 })
 
 // GET /api/campaigns - List campaigns for authenticated user
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
           status: data.status,
           trackingEnabled: data.trackingEnabled,
           trackingDomainId: data.trackingDomainId,
+          sequenceId: data.sequenceId,
           scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : null
         }
       })

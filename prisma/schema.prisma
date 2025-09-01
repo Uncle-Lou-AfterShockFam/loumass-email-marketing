@@ -128,10 +128,12 @@ model Campaign {
   failedCount      Int            @default(0)
   trackingEnabled  Boolean        @default(true)
   trackingDomainId String?
+  sequenceId       String?
   errorMessage     String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sequence         Sequence?      @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
   emailEvents      EmailEvent[]
   recipients       Recipient[]
 
@@ -174,6 +176,7 @@ model Sequence {
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns        Campaign[]
   enrollments      SequenceEnrollment[]
 
   @@index([userId])

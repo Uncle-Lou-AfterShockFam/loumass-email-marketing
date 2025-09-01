@@ -49,31 +49,26 @@ export class SequenceService {
     }
 
     const steps = enrollment.sequence.steps as any[] // JSON array of steps
-    const currentStepId = steps[enrollment.currentStep]?.id
     
-    // Find current step by ID or index
-    let nextStep: any
-    let nextStepIndex: number
+    // The currentStep field represents the index of the step to execute NOW
+    // (not the last step executed)
+    let stepToExecute: any
+    let stepToExecuteIndex: number = enrollment.currentStep
     
-    if (currentStepId) {
-      // If we have a step ID, find the next step based on flow
-      const currentStep = steps.find((s: any) => s.id === currentStepId)
-      if (currentStep?.nextStepId) {
-        nextStep = steps.find((s: any) => s.id === currentStep.nextStepId)
-        nextStepIndex = steps.findIndex((s: any) => s.id === currentStep.nextStepId)
-      } else {
-        // No explicit next step, use sequential order
-        const currentIndex = steps.findIndex((s: any) => s.id === currentStepId)
-        nextStepIndex = currentIndex + 1
-        nextStep = steps[nextStepIndex]
+    // Get the step to execute based on current index
+    stepToExecute = steps[stepToExecuteIndex]
+    
+    // If we have a step with an ID and it has a nextStepId, use that for flow control
+    if (stepToExecute?.id && stepToExecute?.nextStepId) {
+      // This step has explicit flow control to another step
+      const nextStepIndex = steps.findIndex((s: any) => s.id === stepToExecute.nextStepId)
+      if (nextStepIndex >= 0) {
+        // We'll update currentStep to this after processing
+        // But for now, we execute the current step
       }
-    } else {
-      // Fall back to index-based navigation
-      nextStepIndex = enrollment.currentStep
-      nextStep = steps[nextStepIndex]
     }
 
-    if (!nextStep) {
+    if (!stepToExecute) {
       // Sequence completed
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
@@ -86,15 +81,15 @@ export class SequenceService {
     }
 
     // Handle different step types
-    if (nextStep.type === 'delay') {
+    if (stepToExecute.type === 'delay') {
       // Schedule next action after delay
-      const delayHours = (nextStep.delay?.days || 0) * 24 + (nextStep.delay?.hours || 0)
+      const delayHours = (stepToExecute.delay?.days || 0) * 24 + (stepToExecute.delay?.hours || 0)
       const nextActionAt = new Date(Date.now() + delayHours * 60 * 60 * 1000)
       
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {
-          currentStep: nextStepIndex + 1,
+          currentStep: stepToExecuteIndex + 1,
           // nextActionAt field doesn't exist in schema yet
           updatedAt: nextActionAt
         }
@@ -103,23 +98,35 @@ export class SequenceService {
       return { success: true, reason: `Delayed for ${delayHours} hours` }
     }
     
-    if (nextStep.type === 'condition') {
+    if (stepToExecute.type === 'condition') {
       // Evaluate condition and choose branch
       const conditionMet = await this.evaluateCondition(
-        nextStep.condition,
+        stepToExecute.condition,
         enrollment.contactId,
         enrollment.sequenceId
       )
       
       // Determine next step based on condition result
       let branchStepId: string | undefined
-      if (conditionMet && nextStep.condition?.trueBranch?.[0]) {
-        branchStepId = nextStep.condition.trueBranch[0]
-      } else if (!conditionMet && nextStep.condition?.falseBranch?.[0]) {
-        branchStepId = nextStep.condition.falseBranch[0]
+      if (conditionMet && stepToExecute.condition?.trueBranch?.[0]) {
+        branchStepId = stepToExecute.condition.trueBranch[0]
+      } else if (!conditionMet && stepToExecute.condition?.falseBranch?.[0]) {
+        branchStepId = stepToExecute.condition.falseBranch[0]
       } else {
         // No branch defined, continue to next step
-        branchStepId = nextStep.nextStepId || steps[nextStepIndex + 1]?.id
+        branchStepId = stepToExecute.nextStepId || steps[stepToExecuteIndex + 1]?.id
+      }
+      
+      // Check if the branch indicates ending the sequence
+      if (branchStepId === 'END') {
+        await prisma.sequenceEnrollment.update({
+          where: { id: enrollmentId },
+          data: {
+            status: EnrollmentStatus.COMPLETED,
+            completedAt: new Date()
+          }
+        })
+        return { success: true, completed: true, reason: 'Sequence ended by condition branch' }
       }
       
       if (branchStepId) {
@@ -127,7 +134,7 @@ export class SequenceService {
         await prisma.sequenceEnrollment.update({
           where: { id: enrollmentId },
           data: {
-            currentStep: branchStepIndex >= 0 ? branchStepIndex : nextStepIndex + 1
+            currentStep: branchStepIndex >= 0 ? branchStepIndex : stepToExecuteIndex + 1
           }
         })
         
@@ -147,7 +154,7 @@ export class SequenceService {
     }
 
     // Check conditions
-    if (nextStep.sendOnlyIfNoReply) {
+    if (stepToExecute.sendOnlyIfNoReply) {
       const hasReply = await this.checkForReply(enrollment.contactId, enrollment.sequenceId)
       if (hasReply) {
         await prisma.sequenceEnrollment.update({
@@ -161,7 +168,7 @@ export class SequenceService {
       }
     }
 
-    if (nextStep.sendOnlyIfNoOpen) {
+    if (stepToExecute.sendOnlyIfNoOpen) {
       const hasOpened = await this.checkForOpen(enrollment.contactId, enrollment.sequenceId)
       if (hasOpened) {
         // Skip this step but continue sequence
@@ -171,6 +178,16 @@ export class SequenceService {
         })
         return this.processSequenceStep(enrollmentId)
       }
+    }
+
+    // Only process email steps (skip delays and conditions that were already handled)
+    if (stepToExecute.type !== 'email') {
+      // Move to next step
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollmentId },
+        data: { currentStep: stepToExecuteIndex + 1 }
+      })
+      return this.processSequenceStep(enrollmentId)
     }
 
     // Get Gmail credentials
@@ -185,10 +202,31 @@ export class SequenceService {
     }
 
     // Replace variables in content
-    const subject = this.replaceVariables(nextStep.subject, enrollment.contact)
-    const htmlContent = this.replaceVariables(nextStep.htmlContent, enrollment.contact)
-    const textContent = nextStep.textContent ? 
-      this.replaceVariables(nextStep.textContent, enrollment.contact) : undefined
+    // Handle both 'content' and 'htmlContent' fields for backward compatibility
+    const subject = this.replaceVariables(stepToExecute.subject || '', enrollment.contact)
+    const htmlContent = this.replaceVariables(
+      stepToExecute.htmlContent || stepToExecute.content || '', 
+      enrollment.contact
+    )
+    const textContent = stepToExecute.textContent ? 
+      this.replaceVariables(stepToExecute.textContent, enrollment.contact) : undefined
+
+    // Validate we have required content
+    if (!subject || !htmlContent) {
+      console.error('Sequence step missing required fields:', {
+        enrollmentId,
+        stepIndex: stepToExecuteIndex,
+        hasSubject: !!subject,
+        hasHtmlContent: !!htmlContent,
+        stepData: stepToExecute
+      })
+      // Skip to next step if content is missing
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollmentId },
+        data: { currentStep: enrollment.currentStep + 1 }
+      })
+      return this.processSequenceStep(enrollmentId)
+    }
 
     // Generate tracking ID
     const trackingId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -226,7 +264,7 @@ export class SequenceService {
         data: { currentStep: enrollment.currentStep + 1 }
       })
 
-      return { success: true, sentStep: nextStep.position }
+      return { success: true, sentStep: stepToExecuteIndex + 1 }
     } catch (error) {
       console.error('Failed to send sequence email:', error)
       return { 

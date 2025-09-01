@@ -19,9 +19,13 @@ export async function POST(
   try {
     const { id: sequenceId } = await params
     
+    // Support both session-based auth and internal API calls with x-user-id header
     const session = await getServerSession(authOptions)
+    const internalUserId = request.headers.get('x-user-id')
     
-    if (!session?.user?.id) {
+    const userId = session?.user?.id || internalUserId
+    
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const body = await request.json()
@@ -41,7 +45,7 @@ export async function POST(
     const sequence = await prisma.sequence.findFirst({
       where: {
         id: sequenceId,
-        userId: session.user.id
+        userId: userId
       }
     })
 
@@ -59,7 +63,7 @@ export async function POST(
     const contacts = await prisma.contact.findMany({
       where: {
         id: { in: contactIds },
-        userId: session.user.id
+        userId: userId
       },
       select: {
         id: true,
@@ -206,9 +210,13 @@ export async function GET(
   try {
     const { id: sequenceId } = await params
     
+    // Support both session-based auth and internal API calls with x-user-id header
     const session = await getServerSession(authOptions)
+    const internalUserId = request.headers.get('x-user-id')
     
-    if (!session?.user?.id) {
+    const userId = session?.user?.id || internalUserId
+    
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -216,7 +224,7 @@ export async function GET(
     const sequence = await prisma.sequence.findFirst({
       where: {
         id: sequenceId,
-        userId: session.user.id
+        userId: userId
       },
       select: {
         id: true,
@@ -232,7 +240,7 @@ export async function GET(
     // Get all user contacts
     const allContacts = await prisma.contact.findMany({
       where: {
-        userId: session.user.id
+        userId: userId
       },
       select: {
         id: true,
@@ -280,7 +288,7 @@ export async function GET(
     // Get user campaigns for bulk enrollment
     const campaigns = await prisma.campaign.findMany({
       where: {
-        userId: session.user.id
+        userId: userId
       },
       select: {
         id: true,

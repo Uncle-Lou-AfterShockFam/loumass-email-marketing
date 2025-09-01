@@ -35,6 +35,13 @@ export async function POST(
               }
             }
           }
+        },
+        sequence: {
+          select: {
+            id: true,
+            name: true,
+            status: true
+          }
         }
       }
     })
@@ -85,6 +92,8 @@ export async function POST(
       recipientCount: campaign.recipients.length,
       subject: campaign.subject,
       trackingEnabled: campaign.trackingEnabled,
+      sequenceId: campaign.sequenceId,
+      sequenceName: campaign.sequence?.name,
       sentBy: session.user.email
     })
 
@@ -121,6 +130,45 @@ export async function POST(
       processRemainingEmails(id, gmailToken.email, session.user.id, IMMEDIATE_BATCH_SIZE).catch(error => {
         console.error(`Campaign ${id} background processing failed:`, error)
       })
+    }
+
+    // Enroll contacts in sequence if one is selected
+    if (campaign.sequenceId && campaign.sequence?.status === 'ACTIVE') {
+      console.log(`Enrolling ${campaign.recipients.length} contacts into sequence: ${campaign.sequence.name}`)
+      
+      try {
+        // Get all contact IDs from recipients
+        const contactIds = campaign.recipients.map(recipient => recipient.contact.id)
+        
+        // Get the base URL from the request
+        const protocol = request.headers.get('x-forwarded-proto') || 'http'
+        const host = request.headers.get('host') || 'localhost:3000'
+        const baseUrl = `${protocol}://${host}`
+        
+        // Call the sequence enrollment API
+        const enrollmentResponse = await fetch(`${baseUrl}/api/sequences/${campaign.sequenceId}/enroll`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Pass the session as a custom header for internal API calls
+            'x-user-id': session.user.id
+          },
+          body: JSON.stringify({
+            contactIds,
+            startImmediately: true
+          })
+        })
+
+        if (enrollmentResponse.ok) {
+          const enrollmentResult = await enrollmentResponse.json()
+          console.log('Sequence enrollment completed:', enrollmentResult)
+        } else {
+          const error = await enrollmentResponse.text()
+          console.error('Sequence enrollment failed:', error)
+        }
+      } catch (error) {
+        console.error('Error enrolling contacts in sequence:', error)
+      }
     }
 
     return NextResponse.json({

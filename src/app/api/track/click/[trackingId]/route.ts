@@ -128,22 +128,39 @@ export async function GET(
       // Update recipient click status and campaign stats
       if (!recipient.clickedAt) {
         // Update recipient with first click timestamp
+        // Also mark as opened if not already (clicks imply opens)
+        const updateData: any = {
+          clickedAt: new Date(),
+          status: 'CLICKED' as const
+        }
+        
+        // If not opened yet, mark as opened too
+        if (!recipient.openedAt) {
+          updateData.openedAt = new Date()
+        }
+        
         await prisma.recipient.update({
           where: { id: recipient.id },
-          data: {
-            clickedAt: new Date(),
-            status: 'CLICKED' as const
-          }
+          data: updateData
         })
         
         // Update campaign stats
+        const campaignUpdateData: any = {
+          clickCount: {
+            increment: 1
+          }
+        }
+        
+        // If this is also the first open, increment open count
+        if (!recipient.openedAt) {
+          campaignUpdateData.openCount = {
+            increment: 1
+          }
+        }
+        
         await prisma.campaign.update({
           where: { id: recipient.campaignId },
-          data: {
-            clickCount: {
-              increment: 1
-            }
-          }
+          data: campaignUpdateData
         })
       }
     } else {

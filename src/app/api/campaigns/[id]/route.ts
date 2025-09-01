@@ -17,7 +17,8 @@ const updateCampaignSchema = z.object({
   }).optional(),
   recipients: z.array(z.string()).optional(),
   scheduledFor: z.string().nullable().optional(),
-  trackingDomainId: z.string().nullable().optional()
+  trackingDomainId: z.string().nullable().optional(),
+  sequenceId: z.string().nullable().optional()
 })
 
 // GET /api/campaigns/[id] - Get single campaign
@@ -154,6 +155,7 @@ export async function PUT(
       if (data.status !== undefined) campaignData.status = data.status
       if (data.trackingEnabled !== undefined) campaignData.trackingEnabled = data.trackingEnabled
       if (data.trackingDomainId !== undefined) campaignData.trackingDomainId = data.trackingDomainId
+      if (data.sequenceId !== undefined) campaignData.sequenceId = data.sequenceId
       if (data.scheduledFor !== undefined) {
         campaignData.scheduledFor = data.scheduledFor ? new Date(data.scheduledFor) : null
       }
