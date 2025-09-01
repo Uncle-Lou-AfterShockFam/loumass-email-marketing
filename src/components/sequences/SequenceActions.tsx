@@ -53,6 +53,40 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
     }
   }
 
+  const handleProcessNow = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/sequences/process-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to process sequences')
+      }
+
+      const result = await response.json()
+      
+      if (result.results && result.results.sentEmails > 0) {
+        toast.success(`Processed ${result.results.processed} enrollments, sent ${result.results.sentEmails} emails`)
+      } else if (result.results && result.results.processed > 0) {
+        toast.success(`Processed ${result.results.processed} enrollments`)
+      } else {
+        toast.info('No enrollments ready to process at this time')
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error('Error processing sequences:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to process sequences')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleExportReport = async () => {
     setIsLoading(true)
     try {
@@ -124,6 +158,16 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
       >
         Enroll Contacts
       </Link>
+
+      {sequence.status === 'ACTIVE' && (
+        <button
+          onClick={handleProcessNow}
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Processing...' : 'Process Now'}
+        </button>
+      )}
       
       <button
         onClick={handleExportReport}
