@@ -427,21 +427,8 @@ function SequenceBuilderFlowInner({
           }
         }
         
-        // Create edge from previous node to current node (for sequential flow)
-        if (index > 0 && step.type !== 'condition') {
-          const prevStep = data.steps[index - 1]
-          if (prevStep && prevStep.type !== 'condition') {
-            loadedEdges.push({
-              id: `${prevStep.id || `step-${index}`}-${nodeId}`,
-              source: prevStep.id || `step-${index}`,
-              target: nodeId,
-              markerEnd: { type: MarkerType.ArrowClosed }
-            })
-          }
-        }
-        
-        // Also handle nextStepId if it exists
-        if (step.nextStepId) {
+        // Handle regular sequential connections using nextStepId
+        if (step.nextStepId && step.type !== 'condition') {
           loadedEdges.push({
             id: `${nodeId}-${step.nextStepId}`,
             source: nodeId,
@@ -452,18 +439,28 @@ function SequenceBuilderFlowInner({
       })
       
       // Connect trigger to first step if exists
-      if (loadedNodes.length > 1) {
+      if (loadedNodes.length > 1 && data.steps && data.steps.length > 0) {
+        const firstStepId = data.steps[0].id || 'step-1'
         loadedEdges.push({
-          id: `trigger-1-${loadedNodes[1].id}`,
+          id: `trigger-1-${firstStepId}`,
           source: 'trigger-1',
-          target: loadedNodes[1].id,
+          target: firstStepId,
           markerEnd: { type: MarkerType.ArrowClosed }
         })
       }
     }
     
+    // Deduplicate edges based on source-target pairs
+    const edgeMap = new Map<string, Edge>()
+    loadedEdges.forEach(edge => {
+      const key = `${edge.source}-${edge.sourceHandle || 'default'}-${edge.target}`
+      if (!edgeMap.has(key)) {
+        edgeMap.set(key, edge)
+      }
+    })
+    
     setNodes(loadedNodes)
-    setEdges(loadedEdges)
+    setEdges(Array.from(edgeMap.values()))
   }
 
   const onConnect = useCallback((connection: Connection) => {
