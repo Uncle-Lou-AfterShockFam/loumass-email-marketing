@@ -344,7 +344,7 @@ export class SequenceService {
                    process.env.NEXT_PUBLIC_APP_URL || 
                    'http://localhost:3000'
     
-    const pixelUrl = `${baseUrl}/api/tracking/open/${trackingId}`
+    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}`
     const pixelHtml = `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`
     
     let trackedHtml = html
@@ -360,7 +360,7 @@ export class SequenceService {
         return match
       }
       
-      const trackedUrl = `${baseUrl}/api/tracking/click/${trackingId}?url=${encodeURIComponent(url)}`
+      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}`
       return match.replace(url, trackedUrl)
     })
     
