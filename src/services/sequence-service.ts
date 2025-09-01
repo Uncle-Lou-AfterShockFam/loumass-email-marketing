@@ -252,7 +252,7 @@ export class SequenceService {
           to: [enrollment.contact.email],
           subject,
           htmlContent: enrollment.sequence.trackingEnabled ? 
-            this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent,
+            this.addTrackingToEmail(htmlContent, trackingId) : htmlContent,
           textContent,
           trackingId,
           sequenceId: enrollment.sequenceId,
