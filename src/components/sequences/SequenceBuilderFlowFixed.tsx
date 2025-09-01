@@ -231,6 +231,7 @@ const ConditionNode = ({ data, selected }: NodeProps) => {
 }
 
 const TriggerNode = ({ data, selected }: NodeProps) => {
+  const nodeData = data as any
   return (
     <div className={`px-4 py-3 shadow-lg rounded-lg bg-gradient-to-r from-green-500 to-green-600 border-2 ${
       selected ? 'border-green-700' : 'border-green-400'
@@ -245,7 +246,7 @@ const TriggerNode = ({ data, selected }: NodeProps) => {
         <div>
           <div className="text-xs font-semibold text-white/90">START</div>
           <div className="text-sm font-medium text-white">
-            {data.label || 'Sequence Start'}
+            {nodeData.label || 'Sequence Start'}
           </div>
         </div>
       </div>
