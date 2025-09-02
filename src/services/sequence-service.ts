@@ -85,6 +85,9 @@ export class SequenceService {
     // Handle different step types
     if (stepToExecute.type === 'delay') {
       console.log(`=== PROCESSING DELAY STEP ${stepToExecuteIndex + 1} ===`)
+      console.log(`Enrollment ID: ${enrollmentId}`)
+      console.log(`Sequence ID: ${enrollment.sequenceId}`)
+      console.log(`Contact: ${enrollment.contact.email}`)
       
       // Check if delay has already been started
       const lastActionTime = enrollment.lastEmailSentAt || enrollment.createdAt
@@ -93,24 +96,29 @@ export class SequenceService {
       const delayDays = (stepToExecute.delay?.days || 0)
       const delayMs = (delayDays * 24 * 60 * 60 * 1000) + (delayHours * 60 * 60 * 1000) + (delayMinutes * 60 * 1000)
       
-      console.log(`Delay: ${delayDays}d ${delayHours}h ${delayMinutes}m (${delayMs}ms)`)
-      console.log('Last action time:', lastActionTime)
+      console.log(`Delay configuration: ${delayDays}d ${delayHours}h ${delayMinutes}m (${delayMs}ms)`)
+      console.log(`Last action time: ${lastActionTime.toISOString()}`)
+      console.log(`Current time: ${new Date().toISOString()}`)
       
       const timeSinceLastAction = Date.now() - lastActionTime.getTime()
+      const timeSinceMinutes = Math.floor(timeSinceLastAction / 60000)
+      
+      console.log(`Time since last action: ${timeSinceMinutes} minutes (${timeSinceLastAction}ms)`)
       
       if (timeSinceLastAction < delayMs) {
         const remainingMs = delayMs - timeSinceLastAction
         const remainingMinutes = Math.ceil(remainingMs / 60000)
-        console.log(`Delay not complete, waiting ${remainingMinutes} more minutes`)
+        console.log(`⏰ Delay not complete, waiting ${remainingMinutes} more minutes`)
         return { success: true, reason: `Still waiting ${remainingMinutes} minutes` }
       }
       
       // Delay is complete, move to next step
-      console.log('Delay complete, moving to next step')
+      console.log('✅ Delay complete, moving to next step')
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {
-          currentStep: stepToExecuteIndex + 1
+          currentStep: stepToExecuteIndex + 1,
+          updatedAt: new Date() // Ensure updatedAt is updated
         }
       })
       

@@ -8,10 +8,13 @@ export async function GET(request: NextRequest) {
     // Verify this is a cron job request (from Vercel or local testing)
     const authHeader = request.headers.get('authorization')
     if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET_KEY}`) {
+      console.error('Unauthorized cron job request')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     console.log('=== SEQUENCE PROCESSOR CRON JOB STARTING ===')
+    console.log(`Time: ${new Date().toISOString()}`)
+    console.log(`Environment: ${process.env.NODE_ENV}`)
     const startTime = Date.now()
 
     // Get all active sequences with active enrollments
@@ -42,6 +45,11 @@ export async function GET(request: NextRequest) {
     })
 
     console.log(`Found ${activeSequences.length} active sequences to process`)
+    
+    // Log details about each sequence
+    for (const seq of activeSequences) {
+      console.log(`  - Sequence: ${seq.name} (${seq.id}) with ${seq.enrollments.length} active enrollments`)
+    }
 
     const sequenceService = new SequenceService()
     const results = {
