@@ -10,24 +10,46 @@ export async function GET(request: NextRequest) {
     // Test 1: Basic response
     console.log('Debug: Test 1 - Basic response OK')
     
-    // Test 2: Session check
+    // Test 2: Environment check
+    const dbUrl = process.env.DATABASE_URL
+    const neonUrl = process.env.NEON_DATABASE_URL
+    console.log('Debug: Environment check:', { 
+      hasDbUrl: !!dbUrl, 
+      hasNeonUrl: !!neonUrl,
+      nodeEnv: process.env.NODE_ENV,
+      dbUrlPrefix: dbUrl?.substring(0, 20) + '...',
+      neonUrlPrefix: neonUrl?.substring(0, 20) + '...'
+    })
+    
+    // Test 3: Database connection
+    console.log('Debug: Test 3 - Testing database connection')
+    try {
+      const dbTest = await prisma.$queryRaw`SELECT 1 as test`
+      console.log('Debug: Database connection OK:', dbTest)
+    } catch (dbError) {
+      console.error('Debug: Database connection failed:', dbError)
+      return NextResponse.json({
+        error: 'Database connection failed',
+        debug: {
+          message: dbError instanceof Error ? dbError.message : String(dbError),
+          env: { hasDbUrl: !!dbUrl, hasNeonUrl: !!neonUrl }
+        }
+      }, { status: 500 })
+    }
+
+    // Test 4: Session check
     const session = await getServerSession(authOptions)
-    console.log('Debug: Test 2 - Session check:', { hasSession: !!session, email: session?.user?.email })
+    console.log('Debug: Test 4 - Session check:', { hasSession: !!session, email: session?.user?.email })
     
     if (!session?.user?.email) {
       return NextResponse.json({ 
         error: 'Unauthorized',
-        debug: 'Session or email missing'
+        debug: 'Session or email missing - this is normal for testing'
       }, { status: 401 })
     }
 
-    // Test 3: Database connection
-    console.log('Debug: Test 3 - Testing database connection')
-    const dbTest = await prisma.$queryRaw`SELECT 1 as test`
-    console.log('Debug: Database connection OK:', dbTest)
-
-    // Test 4: User lookup
-    console.log('Debug: Test 4 - User lookup')
+    // Test 5: User lookup
+    console.log('Debug: Test 5 - User lookup')
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
     })
@@ -40,15 +62,15 @@ export async function GET(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Test 5: Simple EmailEvent count
-    console.log('Debug: Test 5 - EmailEvent count')
+    // Test 6: Simple EmailEvent count
+    console.log('Debug: Test 6 - EmailEvent count')
     const eventCount = await prisma.emailEvent.count({
       where: { userId: user.id }
     })
     console.log('Debug: EmailEvent count:', eventCount)
 
-    // Test 6: Sample EmailEvent query
-    console.log('Debug: Test 6 - Sample EmailEvent query')
+    // Test 7: Sample EmailEvent query
+    console.log('Debug: Test 7 - Sample EmailEvent query')
     const sampleEvents = await prisma.emailEvent.findMany({
       where: { userId: user.id },
       take: 1,
@@ -61,8 +83,8 @@ export async function GET(request: NextRequest) {
     })
     console.log('Debug: Sample events:', sampleEvents)
 
-    // Test 7: GroupBy query (the problematic one)
-    console.log('Debug: Test 7 - Testing groupBy query')
+    // Test 8: GroupBy query (the problematic one)
+    console.log('Debug: Test 8 - Testing groupBy query')
     try {
       const statsWhere = {
         userId: user.id,
