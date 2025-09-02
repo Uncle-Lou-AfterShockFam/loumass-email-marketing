@@ -11,6 +11,7 @@ interface EmailData {
   fromName?: string
   replyTo?: string
   threadId?: string // For follow-up sequences
+  messageId?: string // For proper threading headers (In-Reply-To and References)
   trackingId: string
   campaignId?: string
   sequenceId?: string
@@ -131,8 +132,15 @@ export class GmailService {
       headers.push(`Reply-To: ${emailData.replyTo}`)
     }
 
-    if (emailData.threadId) {
-      // Add threading headers for follow-ups
+    if (emailData.messageId) {
+      // Add proper threading headers using the Gmail message ID
+      // Gmail message IDs should be formatted with angle brackets
+      const formattedMessageId = emailData.messageId.includes('@') ? 
+        emailData.messageId : `<${emailData.messageId}@mail.gmail.com>`
+      headers.push(`In-Reply-To: ${formattedMessageId}`)
+      headers.push(`References: ${formattedMessageId}`)
+    } else if (emailData.threadId) {
+      // Fallback to thread ID if no message ID available
       headers.push(`In-Reply-To: ${emailData.threadId}`)
       headers.push(`References: ${emailData.threadId}`)
     }
@@ -360,7 +368,7 @@ export class GmailService {
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app'
+    const baseUrl = (process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app').trim()
     
     console.log('Base URL for tracking:', baseUrl)
     

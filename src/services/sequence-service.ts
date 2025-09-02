@@ -175,9 +175,9 @@ export class SequenceService {
           }
         })
         
-        // Continue processing from the new step (don't recursively call processSequenceStep)
-        // Return success and let the cron job handle the next step on the next run
-        return { success: true, reason: `Condition processed, moved to step ${targetStepIndex + 1}` }
+        // Continue processing the branch step immediately
+        console.log('Processing branch step immediately...')
+        return this.processSequenceStep(enrollmentId)
       }
       
       // No valid branch, complete sequence
@@ -228,6 +228,42 @@ export class SequenceService {
       })
       return this.processSequenceStep(enrollmentId)
     }
+    
+    // Check if this email step is part of a conditional branch that wasn't chosen
+    // Look for any condition steps that have this email in their branches
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      if (step.type === 'condition' && i < stepToExecuteIndex) {
+        const isInTrueBranch = step.condition?.trueBranch?.includes(stepToExecute.id)
+        const isInFalseBranch = step.condition?.falseBranch?.includes(stepToExecute.id)
+        
+        if (isInTrueBranch || isInFalseBranch) {
+          console.log(`Email step ${stepToExecute.id} is part of a conditional branch from step ${i}`)
+          
+          // Re-evaluate the condition to see if this branch should be executed
+          const conditionMet = await this.evaluateCondition(
+            step.condition,
+            enrollment.contactId,
+            enrollment.sequenceId
+          )
+          
+          const shouldExecute = (conditionMet && isInTrueBranch) || (!conditionMet && isInFalseBranch)
+          
+          if (!shouldExecute) {
+            console.log(`Skipping conditional branch email - condition result: ${conditionMet}, isInTrueBranch: ${isInTrueBranch}, isInFalseBranch: ${isInFalseBranch}`)
+            // Complete the sequence instead of sending the wrong branch
+            await prisma.sequenceEnrollment.update({
+              where: { id: enrollmentId },
+              data: {
+                status: EnrollmentStatus.COMPLETED,
+                completedAt: new Date()
+              }
+            })
+            return { success: true, completed: true, reason: 'Conditional branch not chosen, sequence completed' }
+          }
+        }
+      }
+    }
 
     // Get Gmail credentials
     const gmailToken = await prisma.gmailToken.findUnique({
@@ -242,7 +278,7 @@ export class SequenceService {
 
     // Replace variables in content
     // Handle both 'content' and 'htmlContent' fields for backward compatibility
-    const subject = this.replaceVariables(stepToExecute.subject || '', enrollment.contact)
+    let subject = this.replaceVariables(stepToExecute.subject || '', enrollment.contact)
     const htmlContent = this.replaceVariables(
       stepToExecute.htmlContent || stepToExecute.content || '', 
       enrollment.contact
@@ -272,15 +308,39 @@ export class SequenceService {
     const trackingData = `seq:${enrollmentId}:${enrollment.currentStep}:${Date.now()}`
     const trackingId = Buffer.from(trackingData).toString('base64url')
 
-    // Get thread ID for replies (default: same thread for sequences)
+    // Get thread ID for replies - only use thread from current sequence enrollment
     let threadId: string | undefined
-    const previousRecipient = await prisma.recipient.findFirst({
-      where: {
-        contactId: enrollment.contactId
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-    threadId = previousRecipient?.gmailThreadId || undefined
+    let messageIdForReply: string | undefined
+    
+    // Check if this step should reply to thread
+    if (stepToExecute.replyToThread && enrollment.gmailThreadId) {
+      threadId = enrollment.gmailThreadId
+      messageIdForReply = enrollment.gmailMessageId || undefined
+      console.log('Using sequence thread ID for reply:', threadId)
+      console.log('Using message ID for threading headers:', messageIdForReply)
+      
+      // For thread continuity, maintain the original subject or add "Re:" prefix
+      // Get the first email step's subject to maintain thread
+      const steps = Array.isArray(enrollment.sequence.steps) ? 
+        enrollment.sequence.steps : JSON.parse(enrollment.sequence.steps as string)
+      
+      const firstEmailStep = (steps as any[]).find((s: any) => s.type === 'email')
+      
+      if (firstEmailStep) {
+        const originalSubject = this.replaceVariables(firstEmailStep.subject || '', enrollment.contact)
+        // Use "Re:" prefix for thread continuity
+        if (!subject.startsWith('Re:') && !originalSubject.startsWith('Re:')) {
+          subject = `Re: ${originalSubject}`
+        } else if (originalSubject.startsWith('Re:')) {
+          subject = originalSubject // Keep the original Re: subject
+        }
+        console.log('Adjusted subject for thread continuity:', subject)
+      }
+    } else {
+      // Start a new thread for this sequence
+      threadId = undefined
+      console.log('Starting new thread for this sequence email')
+    }
 
     // Send the email
     try {
@@ -296,7 +356,8 @@ export class SequenceService {
           trackingId,
           sequenceId: enrollment.sequenceId,
           contactId: enrollment.contactId,
-          threadId
+          threadId,
+          messageId: messageIdForReply // Pass message ID for proper threading headers
         }
       )
 
@@ -398,7 +459,7 @@ export class SequenceService {
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app'
+    const baseUrl = (process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app').trim()
     
     console.log('Base URL for tracking:', baseUrl)
     
