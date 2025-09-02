@@ -48,9 +48,9 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
   if (!user) return null
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Account Settings</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Account Settings</h2>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
@@ -64,7 +64,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       {isEditing ? (
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-800 dark:text-gray-200">
               Email Address
             </label>
             <input
@@ -72,12 +72,12 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
               id="email"
               value={user.email}
               disabled
-              className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-500"
+              className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-600 dark:text-gray-400"
             />
           </div>
 
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-800 dark:text-gray-200">
               Name
             </label>
             <input
@@ -85,13 +85,13 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Your name"
             />
           </div>
 
           <div>
-            <label htmlFor="dailyLimit" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="dailyLimit" className="block text-sm font-medium text-gray-800 dark:text-gray-200">
               Daily Email Limit
             </label>
             <input
@@ -101,9 +101,9 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
               onChange={(e) => setFormData({ ...formData, dailyEmailLimit: parseInt(e.target.value) || 500 })}
               min="1"
               max="2000"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Gmail API allows approximately 500-2000 emails per day depending on your account
             </p>
           </div>
@@ -125,7 +125,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
                   dailyEmailLimit: user.dailyEmailLimit || 500
                 })
               }}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              className="px-4 py-2 text-gray-800 dark:text-gray-200 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               Cancel
             </button>
@@ -135,17 +135,17 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         <div className="space-y-3">
           <div>
             <p className="text-sm text-gray-600">Email Address</p>
-            <p className="text-sm font-medium text-gray-900">{user.email}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</p>
           </div>
           
           <div>
             <p className="text-sm text-gray-600">Name</p>
-            <p className="text-sm font-medium text-gray-900">{user.name || 'Not set'}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name || 'Not set'}</p>
           </div>
           
           <div>
             <p className="text-sm text-gray-600">Daily Email Limit</p>
-            <p className="text-sm font-medium text-gray-900">{user.dailyEmailLimit || 500} emails/day</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.dailyEmailLimit || 500} emails/day</p>
           </div>
           
           <div className="pt-4 border-t">

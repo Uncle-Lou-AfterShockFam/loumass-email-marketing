@@ -55,11 +55,11 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statCards.map((stat, index) => (
-        <div key={index} className="bg-white rounded-lg shadow p-6">
+        <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
             </div>
             <div className={`p-3 rounded-lg ${stat.bgColor}`}>
               {stat.icon}

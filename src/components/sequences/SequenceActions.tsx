@@ -232,7 +232,7 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
 
       <Link
         href={`/dashboard/sequences/${sequence.id}/enroll`}
-        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
       >
         Enroll Contacts
       </Link>
@@ -258,7 +258,7 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
       <button
         onClick={handleExportReport}
         disabled={isLoading}
-        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? 'Exporting...' : 'Export Report'}
       </button>

@@ -160,7 +160,7 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
@@ -174,10 +174,10 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Tracking Events</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tracking Events</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setFilter('all')}
@@ -223,10 +223,10 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
         </div>
         {userIp && (
           <div className="mt-2 space-y-1">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Your IP: {userIp} (events from your IP are marked)
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               <span className="inline-block w-3 h-3 bg-purple-100 rounded mr-1"></span>
               Purple = Gmail proxy (1st is pre-fetch, rest are real) | 
               <span className="inline-block w-3 h-3 bg-orange-100 rounded mx-1"></span>
@@ -238,32 +238,32 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Event
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 IP Address
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Location
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Time
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Details
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredEvents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-600 dark:text-gray-400">
                   No events yet
                 </td>
               </tr>
@@ -280,7 +280,7 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getEventIcon(event.eventType)}
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {event.eventType === 'OPENED' ? 
                           (event.eventData?.isPreFetch ? 'Pre-fetch' : 
                            event.eventData?.openNumber > 1 ? `Opened (#${event.eventData?.openNumber})` : 
@@ -292,17 +292,17 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {event.recipient.contact.email}
                     </div>
                     {event.recipient.contact.firstName && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
                         {event.recipient.contact.firstName} {event.recipient.contact.lastName}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {event.ipAddress || 'Unknown'}
                       {isUserIp(event.ipAddress) && (
                         <span className="ml-2 text-xs text-yellow-600 font-medium">
@@ -324,10 +324,10 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <LocationCell event={event} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {event.eventType === 'CLICKED' && event.eventData?.url && (
                       <a 
                         href={event.eventData.url} 
@@ -405,7 +405,7 @@ function LocationCell({ event }: { event: EmailEvent }) {
   if (eventData?.location) {
     const { city, region, country } = eventData.location
     if (city && region && country) {
-      return <div className="text-sm text-gray-900">{`${city}, ${region}, ${country}`}</div>
+      return <div className="text-sm text-gray-900 dark:text-gray-100">{`${city}, ${region}, ${country}`}</div>
     }
   }
   
@@ -430,7 +430,7 @@ function LocationCell({ event }: { event: EmailEvent }) {
       .catch(() => setLocation('Unknown'))
   }, [event.ipAddress])
 
-  return <div className="text-sm text-gray-900">{location}</div>
+  return <div className="text-sm text-gray-900 dark:text-gray-100">{location}</div>
 }
 
 function DeviceInfo({ userAgent }: { userAgent: string }) {

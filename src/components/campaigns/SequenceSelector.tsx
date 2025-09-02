@@ -63,7 +63,7 @@ export default function SequenceSelector({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="h-10 bg-gray-200 rounded mb-2"></div>
@@ -74,9 +74,9 @@ export default function SequenceSelector({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Follow-up Sequence
         </h3>
         <p className="text-sm text-gray-600">
@@ -99,9 +99,9 @@ export default function SequenceSelector({
                 }
               }}
               disabled={disabled || sequences.length === 0}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
             />
-            <span className="ml-3 text-sm font-medium text-gray-700">
+            <span className="ml-3 text-sm font-medium text-gray-800 dark:text-gray-200">
               Enable follow-up sequence
             </span>
           </label>
@@ -111,14 +111,14 @@ export default function SequenceSelector({
         {selectedId !== null && (
           <div className="ml-7 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                 Select Sequence
               </label>
               <select
                 value={selectedId}
                 onChange={(e) => handleSelect(e.target.value)}
                 disabled={disabled}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {sequences.map(sequence => {
                   const firstStep = sequence.steps[0]
@@ -135,9 +135,9 @@ export default function SequenceSelector({
 
             {/* Sequence Preview */}
             {selectedSequence && (
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-900">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {selectedSequence.name}
                   </h4>
                   <button
@@ -165,7 +165,7 @@ export default function SequenceSelector({
                             <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-gray-700">
+                            <span className="text-gray-800 dark:text-gray-200">
                               {step.subject || 'Email'}
                             </span>
                           </>
@@ -175,7 +175,7 @@ export default function SequenceSelector({
                             <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span className="text-gray-700">
+                            <span className="text-gray-800 dark:text-gray-200">
                               Wait {step.delay?.days || 0}d {step.delay?.hours || 0}h
                             </span>
                           </>
@@ -185,7 +185,7 @@ export default function SequenceSelector({
                             <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
-                            <span className="text-gray-700">
+                            <span className="text-gray-800 dark:text-gray-200">
                               If {step.condition?.type}
                             </span>
                           </>
@@ -253,7 +253,7 @@ export default function SequenceSelector({
         {/* No Sequences Message */}
         {sequences.length === 0 && (
           <div className="text-center py-4">
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               No active sequences available
             </p>
             <a

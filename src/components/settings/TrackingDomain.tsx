@@ -89,15 +89,15 @@ export default function TrackingDomain({ domain, userId }: TrackingDomainProps) 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Tracking Domain</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Tracking Domain</h2>
       
       {domain ? (
         <div>
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-900">{domain.domain}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{domain.domain}</p>
                 <div className="flex items-center mt-1">
                   {domain.verified ? (
                     <>
@@ -142,7 +142,7 @@ export default function TrackingDomain({ domain, userId }: TrackingDomainProps) 
               <p className="text-sm text-blue-800 mb-3">
                 Add the following CNAME records to your domain's DNS settings:
               </p>
-              <div className="bg-white rounded border border-blue-200 p-3 font-mono text-xs">
+              <div className="bg-white dark:bg-gray-800 rounded border border-blue-200 p-3 font-mono text-xs">
                 <div className="mb-2">
                   <span className="text-gray-600">Type:</span> CNAME<br/>
                   <span className="text-gray-600">Name:</span> track<br/>
@@ -172,7 +172,7 @@ export default function TrackingDomain({ domain, userId }: TrackingDomainProps) 
               value={newDomain}
               onChange={(e) => setNewDomain(e.target.value)}
               placeholder="tracking.yourdomain.com"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
@@ -183,7 +183,7 @@ export default function TrackingDomain({ domain, userId }: TrackingDomainProps) 
             </button>
           </div>
           
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
             Example: track.yourdomain.com or email.yourdomain.com
           </p>
         </form>

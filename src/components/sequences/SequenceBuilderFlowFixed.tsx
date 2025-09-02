@@ -32,7 +32,7 @@ const RichTextEditor = dynamic(
   () => import('@/components/editor/RichTextEditor').then(mod => mod.default),
   { 
     ssr: false,
-    loading: () => <div className="h-64 bg-gray-50 animate-pulse rounded-lg" />
+    loading: () => <div className="h-64 bg-gray-50 dark:bg-gray-800 animate-pulse rounded-lg" />
   }
 )
 
@@ -63,7 +63,7 @@ const EmailNode = ({ data, selected }: NodeProps) => {
   const nodeData = data as EmailNodeData
   return (
     <div className={`px-4 py-3 shadow-lg rounded-lg bg-white border-2 ${
-      selected ? 'border-blue-500' : 'border-gray-200'
+      selected ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
     } ${nodeData.isValid === false ? 'border-red-500' : ''}`}>
       <Handle
         type="target"
@@ -81,12 +81,12 @@ const EmailNode = ({ data, selected }: NodeProps) => {
         <div className="text-xs font-semibold text-gray-600">EMAIL</div>
       </div>
       
-      <div className="text-sm font-medium text-gray-900 mb-1">
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
         {nodeData.subject || 'Untitled Email'}
       </div>
       
       {nodeData.content && (
-        <div className="text-xs text-gray-500 truncate max-w-[200px]">
+        <div className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px]">
           {nodeData.content.replace(/<[^>]*>/g, '').substring(0, 50)}...
         </div>
       )}
@@ -127,7 +127,7 @@ const DelayNode = ({ data, selected }: NodeProps) => {
   
   return (
     <div className={`px-4 py-3 shadow-lg rounded-lg bg-white border-2 ${
-      selected ? 'border-purple-500' : 'border-gray-200'
+      selected ? 'border-purple-500' : 'border-gray-200 dark:border-gray-700'
     }`}>
       <Handle
         type="target"
@@ -145,7 +145,7 @@ const DelayNode = ({ data, selected }: NodeProps) => {
         <div className="text-xs font-semibold text-gray-600">DELAY</div>
       </div>
       
-      <div className="text-sm font-medium text-gray-900">
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
         Wait: {formatDelay()}
       </div>
       
@@ -179,7 +179,7 @@ const ConditionNode = ({ data, selected }: NodeProps) => {
   
   return (
     <div className={`px-4 py-3 shadow-lg rounded-lg bg-white border-2 ${
-      selected ? 'border-orange-500' : 'border-gray-200'
+      selected ? 'border-orange-500' : 'border-gray-200 dark:border-gray-700'
     } ${!nodeData.condition?.referenceStep ? 'border-red-500' : ''}`}>
       <Handle
         type="target"
@@ -197,7 +197,7 @@ const ConditionNode = ({ data, selected }: NodeProps) => {
         <div className="text-xs font-semibold text-gray-600">CONDITION</div>
       </div>
       
-      <div className="text-sm font-medium text-gray-900 mb-2">
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
         {getConditionLabel()}
       </div>
       
@@ -689,9 +689,9 @@ function SequenceBuilderFlowInner({
   }, [nodes, selectedNode])
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-800">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 max-w-2xl">
             <input
@@ -699,7 +699,7 @@ function SequenceBuilderFlowInner({
               placeholder="Sequence Name"
               value={sequenceName}
               onChange={(e) => setSequenceName(e.target.value)}
-              className="text-xl font-semibold w-full px-2 py-1 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent text-gray-900"
+              className="text-xl font-semibold w-full px-2 py-1 border-b-2 border-transparent hover:border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:outline-none bg-transparent text-gray-900 dark:text-gray-100"
             />
             <input
               type="text"
@@ -712,13 +712,13 @@ function SequenceBuilderFlowInner({
               <select
                 value={sequenceType}
                 onChange={(e) => setSequenceType(e.target.value as typeof sequenceType)}
-                className="text-sm px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                className="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-gray-200"
               >
                 <option value="STANDALONE">Stand Alone Sequence</option>
                 <option value="CAMPAIGN_FOLLOWUP">Campaign Follow Up</option>
               </select>
               {sequenceType === 'CAMPAIGN_FOLLOWUP' && (
-                <span className="ml-2 text-xs text-gray-500">
+                <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
                   Waits before checking campaign engagement
                 </span>
               )}
@@ -728,7 +728,7 @@ function SequenceBuilderFlowInner({
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/dashboard/sequences')}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              className="px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
               Cancel
             </button>
@@ -746,12 +746,12 @@ function SequenceBuilderFlowInner({
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Step Palette */}
         <div className="w-64 bg-white border-r p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">STEPS</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">STEPS</h3>
           
           <div className="space-y-3">
             <button
               onClick={() => addNode('email')}
-              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -759,12 +759,12 @@ function SequenceBuilderFlowInner({
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="text-sm text-gray-700">Send an email to contact</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">Send an email to contact</span>
             </button>
 
             <button
               onClick={() => addNode('delay')}
-              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -772,12 +772,12 @@ function SequenceBuilderFlowInner({
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="text-sm text-gray-700">Add time delay</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">Add time delay</span>
             </button>
 
             <button
               onClick={() => addNode('condition')}
-              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
                 <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -785,12 +785,12 @@ function SequenceBuilderFlowInner({
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="text-sm text-gray-700">Branch based on behavior</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">Branch based on behavior</span>
             </button>
           </div>
 
           <div className="mt-8 pt-8 border-t">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">INSTRUCTIONS</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">INSTRUCTIONS</h3>
             <ul className="space-y-2 text-xs text-gray-600">
               <li>• Click buttons above to add steps</li>
               <li>• Drag from handles to connect steps</li>
@@ -824,7 +824,7 @@ function SequenceBuilderFlowInner({
         {selectedNode && (
           <div className="w-96 bg-white border-l p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Edit {selectedNode.type === 'email' ? 'Email' : 
                        selectedNode.type === 'delay' ? 'Delay' : 
                        'Condition'} Step
@@ -840,20 +840,20 @@ function SequenceBuilderFlowInner({
             {selectedNode.type === 'email' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                     Subject Line
                   </label>
                   <input
                     type="text"
                     value={(selectedNode.data as EmailNodeData).subject || ''}
                     onChange={(e) => updateNodeData(selectedNode.id, { subject: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                     placeholder="Enter email subject..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                     Email Content
                   </label>
                   <RichTextEditor
@@ -869,9 +869,9 @@ function SequenceBuilderFlowInner({
                       type="checkbox"
                       checked={(selectedNode.data as EmailNodeData).replyToThread === true}
                       onChange={(e) => updateNodeData(selectedNode.id, { replyToThread: e.target.checked })}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                     />
-                    <span className="text-sm text-gray-700">Reply in existing thread</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-200">Reply in existing thread</span>
                   </label>
 
                   <label className="flex items-center">
@@ -879,9 +879,9 @@ function SequenceBuilderFlowInner({
                       type="checkbox"
                       checked={(selectedNode.data as EmailNodeData).trackingEnabled !== false}
                       onChange={(e) => updateNodeData(selectedNode.id, { trackingEnabled: e.target.checked })}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                     />
-                    <span className="text-sm text-gray-700">Enable tracking</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-200">Enable tracking</span>
                   </label>
                 </div>
               </div>
@@ -891,7 +891,7 @@ function SequenceBuilderFlowInner({
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                       Days
                     </label>
                     <input
@@ -905,12 +905,12 @@ function SequenceBuilderFlowInner({
                           delay: { ...currentDelay, days: value }
                         })
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                       Hours
                     </label>
                     <input
@@ -925,12 +925,12 @@ function SequenceBuilderFlowInner({
                           delay: { ...currentDelay, hours: value }
                         })
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                       Minutes
                     </label>
                     <input
@@ -945,7 +945,7 @@ function SequenceBuilderFlowInner({
                           delay: { ...currentDelay, minutes: value }
                         })
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                     />
                   </div>
                 </div>
@@ -955,7 +955,7 @@ function SequenceBuilderFlowInner({
             {selectedNode.type === 'condition' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                     Condition Type
                   </label>
                   <select
@@ -966,7 +966,7 @@ function SequenceBuilderFlowInner({
                         type: e.target.value
                       }
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                   >
                     <option value="opened">If email was opened</option>
                     <option value="not_opened">If email was NOT opened</option>
@@ -981,7 +981,7 @@ function SequenceBuilderFlowInner({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                     Check Which Email?
                   </label>
                   <select
@@ -992,7 +992,7 @@ function SequenceBuilderFlowInner({
                         referenceStep: e.target.value
                       }
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Select an email step...</option>
                     {nodes

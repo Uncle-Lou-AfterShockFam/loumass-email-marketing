@@ -117,7 +117,7 @@ export default function SequenceMetrics({ metrics, trackingEnabled }: SequenceMe
       yellow: { bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
       orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' },
       pink: { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
-      gray: { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-200' }
+      gray: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-400', border: 'border-gray-200 dark:border-gray-700' }
     }
     return colors[color] || colors.gray
   }
@@ -143,13 +143,13 @@ export default function SequenceMetrics({ metrics, trackingEnabled }: SequenceMe
               )}
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {metric.disabled ? '-' : metric.value.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
                 {metric.label}
                 {metric.disabled && (
-                  <span className="text-xs text-gray-500 block">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 block">
                     (Tracking disabled)
                   </span>
                 )}

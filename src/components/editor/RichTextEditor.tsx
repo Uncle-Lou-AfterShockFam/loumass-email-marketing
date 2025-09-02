@@ -187,7 +187,7 @@ export default function RichTextEditor({
   ]
 
   return (
-    <div className={`border border-gray-300 rounded-lg bg-white ${disabled ? 'opacity-50' : ''} ${className}`}>
+    <div className={`border border-gray-300 dark:border-gray-600 rounded-lg bg-white ${disabled ? 'opacity-50' : ''} ${className}`}>
       {/* Hidden file input for image upload */}
       <input
         ref={fileInputRef}
@@ -198,7 +198,7 @@ export default function RichTextEditor({
       />
 
       {/* Toolbar */}
-      <div className="border-b border-gray-200 p-2 flex flex-wrap gap-1">
+      <div className="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap gap-1">
         {toolbarButtons.map((button, index) => {
           if (button.command === 'separator') {
             return <div key={index} className="w-px bg-gray-300 mx-1 self-stretch" />
@@ -213,7 +213,7 @@ export default function RichTextEditor({
               type="button"
               disabled={buttonDisabled}
               onClick={() => button.handler ? button.handler() : formatText(button.command)}
-              className={`px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`px-2 py-1 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-transparent hover:border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
                 isImageButton && isUploading ? 'animate-pulse' : ''
               }`}
               title={button.title}
@@ -231,7 +231,7 @@ export default function RichTextEditor({
         onInput={handleInput}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        className="min-h-[200px] p-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+        className="min-h-[200px] p-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
         style={{ minHeight: '200px', color: '#111827' }}
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}

@@ -147,20 +147,20 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
   return (
     <div className="space-y-8">
       {/* Basic Settings */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Basic Settings</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">Basic Settings</h2>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                 Sequence Name
               </label>
               <input
                 type="text"
                 id="name"
                 {...register('name')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter sequence name"
               />
               {errors.name && (
@@ -174,9 +174,9 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
                   type="checkbox"
                   id="trackingEnabled"
                   {...register('trackingEnabled')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                 />
-                <span className="ml-3 text-sm font-medium text-gray-700">
+                <span className="ml-3 text-sm font-medium text-gray-800 dark:text-gray-200">
                   Enable tracking (opens, clicks, replies)
                 </span>
               </label>
@@ -184,14 +184,14 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
               Description (optional)
             </label>
             <textarea
               id="description"
               rows={3}
               {...register('description')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               placeholder="Describe this sequence..."
             />
           </div>
@@ -199,10 +199,10 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
       </div>
 
       {/* Sequence Builder */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Sequence Steps</h2>
-          <span className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sequence Steps</h2>
+          <span className="text-sm text-gray-600 dark:text-gray-400">
             {steps.length} step{steps.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -219,14 +219,14 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
       </div>
 
       {/* Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-3">
             <button
               type="button"
               onClick={handleDuplicate}
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Duplicating...' : 'Duplicate Sequence'}
             </button>
@@ -245,7 +245,7 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
               type="button"
               onClick={() => router.push(`/dashboard/sequences/${sequence.id}`)}
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -269,8 +269,8 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Delete Sequence
             </h3>
             
@@ -300,7 +300,7 @@ export default function SequenceEditForm({ sequence }: SequenceEditFormProps) {
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition disabled:opacity-50"
               >
                 Cancel
               </button>

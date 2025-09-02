@@ -95,10 +95,10 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg-xl dark:shadow-2xl dark:shadow-gray-900 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Import Contacts
             </h3>
             <button
@@ -117,7 +117,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
           {step === 'upload' && (
             <div className="space-y-6">
               <div>
-                <label className="text-base font-medium text-gray-900">
+                <label className="text-base font-medium text-gray-900 dark:text-gray-100">
                   Choose import method
                 </label>
                 <div className="mt-4 space-y-4">
@@ -129,9 +129,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       value="csv"
                       checked={importType === 'csv'}
                       onChange={(e) => setImportType(e.target.value as 'csv')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                     />
-                    <label htmlFor="csv-import" className="ml-3 block text-sm font-medium text-gray-700">
+                    <label htmlFor="csv-import" className="ml-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
                       Upload CSV File
                     </label>
                   </div>
@@ -143,9 +143,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       value="xlsx"
                       checked={importType === 'xlsx'}
                       onChange={(e) => setImportType(e.target.value as 'xlsx')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                     />
-                    <label htmlFor="xlsx-import" className="ml-3 block text-sm font-medium text-gray-700">
+                    <label htmlFor="xlsx-import" className="ml-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
                       Upload Excel File
                     </label>
                   </div>
@@ -157,9 +157,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       value="manual"
                       checked={importType === 'manual'}
                       onChange={(e) => setImportType(e.target.value as 'manual')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                     />
-                    <label htmlFor="manual-import" className="ml-3 block text-sm font-medium text-gray-700">
+                    <label htmlFor="manual-import" className="ml-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
                       Enter Manually
                     </label>
                   </div>
@@ -169,7 +169,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               {/* File Upload */}
               {(importType === 'csv' || importType === 'xlsx') && (
                 <div>
-                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
                     <div className="space-y-1 text-center">
                       <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -191,7 +191,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                         </label>
                         <p className="pl-1">or drag and drop</p>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {importType === 'csv' ? 'CSV' : 'Excel'} up to 10MB
                       </p>
                     </div>
@@ -207,17 +207,17 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               {/* Manual Input */}
               {importType === 'manual' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
                     Enter email addresses (one per line)
                   </label>
                   <textarea
                     value={manualContacts}
                     onChange={(e) => setManualContacts(e.target.value)}
                     rows={8}
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     placeholder="john@example.com&#10;sarah@company.com&#10;mike@startup.io"
                   />
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     {manualContacts.split('\n').filter(line => line.trim()).length} contacts entered
                   </p>
                 </div>
@@ -229,32 +229,32 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
           {step === 'mapping' && csvPreview.length > 0 && (
             <div className="space-y-6">
               <div>
-                <h4 className="text-base font-medium text-gray-900 mb-4">
+                <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
                   Map CSV columns to contact fields
                 </h4>
                 
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                           CSV Column
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                           Sample Data
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                           Map to Field
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {csvPreview[0]?.map((header, index) => (
                         <tr key={index}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                             Column {index + 1}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                             <div className="space-y-1">
                               {csvPreview.slice(1, 4).map((row, rowIndex) => (
                                 <div key={rowIndex} className="text-xs">
@@ -267,7 +267,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                             <select
                               value={fieldMappings[index] || ''}
                               onChange={(e) => handleFieldMapping(index, e.target.value)}
-                              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                              className="block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
                             >
                               <option value="">Don't import</option>
                               {availableFields.map(field => (
@@ -287,7 +287,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               <div className="flex justify-between">
                 <button
                   onClick={() => setStep('upload')}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                 >
                   Back
                 </button>
@@ -306,11 +306,11 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
           {step === 'preview' && (
             <div className="space-y-6">
               <div>
-                <h4 className="text-base font-medium text-gray-900 mb-4">
+                <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
                   Import Preview
                 </h4>
                 
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   <div className="text-sm text-gray-600">
                     <p>Ready to import <span className="font-medium">{csvPreview.length - 1}</span> contacts</p>
                     <p className="mt-1">Fields mapped: {Object.values(fieldMappings).filter(Boolean).length}</p>
@@ -319,7 +319,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
 
                 {/* Sample preview */}
                 <div className="mt-4">
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">Sample contacts:</h5>
+                  <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Sample contacts:</h5>
                   <div className="space-y-2">
                     {csvPreview.slice(1, 4).map((row, index) => {
                       const contact: any = {}
@@ -333,7 +333,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                         <div key={index} className="text-xs bg-white p-2 rounded border">
                           {Object.entries(contact).map(([field, value]) => (
                             <span key={field} className="inline-block mr-4">
-                              <span className="text-gray-500">{field}:</span> {value as string}
+                              <span className="text-gray-600 dark:text-gray-400">{field}:</span> {value as string}
                             </span>
                           ))}
                         </div>
@@ -346,7 +346,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               <div className="flex justify-between">
                 <button
                   onClick={() => setStep('mapping')}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                 >
                   Back to Mapping
                 </button>

@@ -40,8 +40,8 @@ export default function GmailConnection({ isConnected, email }: GmailConnectionP
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Gmail Connection</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Gmail Connection</h2>
       
       {isConnected ? (
         <div>
@@ -53,8 +53,8 @@ export default function GmailConnection({ isConnected, email }: GmailConnectionP
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">Connected to Gmail</p>
-                <p className="text-sm text-gray-500">{email}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Connected to Gmail</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{email}</p>
               </div>
             </div>
             <button
@@ -101,7 +101,7 @@ export default function GmailConnection({ isConnected, email }: GmailConnectionP
             Connect Gmail Account
           </button>
 
-          <p className="text-xs text-gray-500 mt-3 text-center">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center">
             We'll request permission to send emails on your behalf using Gmail API
           </p>
         </div>

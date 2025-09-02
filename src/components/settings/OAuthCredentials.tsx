@@ -159,13 +159,13 @@ export default function OAuthCredentials() {
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
-                className="absolute right-2 top-2 text-sm text-gray-500 hover:text-gray-700"
+                className="absolute right-2 top-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200"
               >
                 {showSecret ? 'Hide' : 'Show'}
               </button>
             </div>
             {isConfigured && !clientSecret && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Client Secret is already saved. Enter a new one to update it.
               </p>
             )}

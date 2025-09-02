@@ -17,18 +17,18 @@ export default function EmailPreview({ subject, content, trackingEnabled = true 
     : content.replace(/\{\{trackingPixel\}\}/g, '')
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg-sm border">
       {/* Preview Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Email Preview</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Email Preview</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('desktop')}
               className={`px-3 py-1.5 text-sm font-medium rounded ${
                 viewMode === 'desktop'
                   ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200'
               }`}
             >
               Desktop
@@ -38,7 +38,7 @@ export default function EmailPreview({ subject, content, trackingEnabled = true 
               className={`px-3 py-1.5 text-sm font-medium rounded ${
                 viewMode === 'mobile'
                   ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200'
               }`}
             >
               Mobile
@@ -49,13 +49,13 @@ export default function EmailPreview({ subject, content, trackingEnabled = true 
 
       {/* Email Content */}
       <div className="p-6">
-        <div className={`mx-auto bg-white rounded-lg shadow-sm border ${
+        <div className={`mx-auto bg-white rounded-lg shadow dark:shadow-lg-sm border ${
           viewMode === 'desktop' ? 'max-w-2xl' : 'max-w-sm'
         }`}>
           {/* Email Header */}
-          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="text-sm text-gray-600 mb-1">Subject:</div>
-            <div className="font-medium text-gray-900">{subject}</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{subject}</div>
           </div>
 
           {/* Email Body */}

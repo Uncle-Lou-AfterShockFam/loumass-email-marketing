@@ -286,10 +286,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
   }
 
   return (
-    <div className="mt-8 bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
+    <div className="mt-8 bg-white rounded-lg shadow dark:shadow-lg">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Enrolled Contacts</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Enrolled Contacts</h2>
           <div className="text-sm text-gray-600">
             {filteredEnrollments.length} of {enrollments.length} enrollments
           </div>
@@ -303,7 +303,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
               placeholder="Search by email, name, or company..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -311,7 +311,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Enrollments</option>
             <option value="active">Active</option>
@@ -325,7 +325,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="enrolled">Sort by Enrolled Date</option>
             <option value="activity">Sort by Last Activity</option>
@@ -335,7 +335,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           {/* Export */}
           <button 
             onClick={handleExportCsv}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             Export CSV
           </button>
@@ -344,49 +344,49 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
 
       {/* Enrollments Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Current Step
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Enrolled
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Last Activity
               </th>
               {trackingEnabled && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Engagement
                 </th>
               )}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {paginatedEnrollments.map((enrollment) => {
               const events = enrollmentEvents[enrollment.id]
               const engagementScore = getEngagementScore(enrollment.id)
               const currentStepNum = typeof enrollment.currentStep === 'string' ? parseInt(enrollment.currentStep) : enrollment.currentStep
               
               return (
-                <tr key={enrollment.id} className="hover:bg-gray-50">
+                <tr key={enrollment.id} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {enrollment.contact.email}
                       </div>
                       {(enrollment.contact.firstName || enrollment.contact.lastName) && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
                           {enrollment.contact.firstName} {enrollment.contact.lastName}
                           {enrollment.contact.company && ` • ${enrollment.contact.company}`}
                         </div>
@@ -400,10 +400,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
                         Step {currentStepNum} of {steps.length}
                       </div>
-                      <div className="text-gray-500 truncate max-w-xs">
+                      <div className="text-gray-600 dark:text-gray-400 truncate max-w-xs">
                         {getStepInfo(currentStepNum)}
                       </div>
                       {enrollment.status === 'ACTIVE' && (
@@ -516,26 +516,26 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-800 dark:text-gray-200 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               Previous
             </button>
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-800 dark:text-gray-200 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-800 dark:text-gray-200">
                 Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(startIndex + itemsPerPage, sortedEnrollments.length)}
@@ -548,7 +548,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -563,7 +563,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         currentPage === pageNumber
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          : 'bg-white border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700'
                       }`}
                     >
                       {pageNumber}
@@ -571,14 +571,14 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
                   )
                 })}
                 {totalPages > 5 && (
-                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-sm font-medium text-gray-800 dark:text-gray-200">
                     ...
                   </span>
                 )}
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -591,10 +591,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
       )}
 
       {/* Summary Stats */}
-      <div className="p-6 border-t border-gray-200 bg-gray-50">
+      <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Active Enrollments</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Active Enrollments</h3>
             <p className="text-2xl font-bold text-green-600">
               {enrollments.filter(e => e.status === 'ACTIVE').length}
             </p>
@@ -602,7 +602,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Completion Rate</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Completion Rate</h3>
             <p className="text-2xl font-bold text-blue-600">
               {enrollments.length > 0 
                 ? Math.round((enrollments.filter(e => e.status === 'COMPLETED').length / enrollments.length) * 100)
@@ -614,7 +614,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Average Progress</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Average Progress</h3>
             <p className="text-2xl font-bold text-purple-600">
               {steps.length > 0 && enrollments.length > 0
                 ? Math.round((enrollments.reduce((sum, e) => {
@@ -627,7 +627,7 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled, s
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Engagement Rate</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Engagement Rate</h3>
             <p className="text-2xl font-bold text-teal-600">
               {eventsLoading ? '-' : (
                 enrollments.length > 0 

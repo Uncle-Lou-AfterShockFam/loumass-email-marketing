@@ -40,13 +40,13 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Total Replies */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Total Replies</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalReplies.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.totalReplies.toLocaleString()}</p>
             <div className="mt-2 flex items-center">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {stats.unreadReplies} unread
               </span>
               {stats.unreadReplies > 0 && (
@@ -63,11 +63,11 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
       </div>
 
       {/* Response Rate */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Response Rate</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.responseRate.toFixed(1)}%</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.responseRate.toFixed(1)}%</p>
             <div className="mt-2">
               <div className="flex items-center">
                 <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
@@ -76,7 +76,7 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
                     style={{ width: `${Math.min(stats.responseRate, 100)}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
                   {stats.responseRate > 3 ? 'Excellent' : stats.responseRate > 1.5 ? 'Good' : 'Low'}
                 </span>
               </div>
@@ -91,13 +91,13 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
       </div>
 
       {/* Average Response Time */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
-            <p className="text-3xl font-bold text-gray-900">{formatResponseTime(stats.avgResponseTime)}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatResponseTime(stats.avgResponseTime)}</p>
             <div className="mt-2 flex items-center">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
                 {stats.avgResponseTime < 2 ? 'Very Fast' : stats.avgResponseTime < 8 ? 'Fast' : stats.avgResponseTime < 24 ? 'Moderate' : 'Slow'}
               </span>
               <div className={`ml-2 w-2 h-2 rounded-full ${
@@ -116,11 +116,11 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
       </div>
 
       {/* Sentiment Score */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Sentiment Score</p>
-            <p className="text-3xl font-bold text-gray-900">{(stats.sentimentScore * 100).toFixed(0)}%</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{(stats.sentimentScore * 100).toFixed(0)}%</p>
             <div className="mt-2">
               <div className="flex items-center">
                 <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
@@ -132,7 +132,7 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
                     style={{ width: `${stats.sentimentScore * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
                   {stats.sentimentScore > 0.7 ? 'Positive' : stats.sentimentScore > 0.5 ? 'Mixed' : 'Negative'}
                 </span>
               </div>
@@ -153,9 +153,9 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
       </div>
 
       {/* Detailed Sentiment Breakdown */}
-      <div className="bg-white rounded-lg shadow p-6 md:col-span-2 lg:col-span-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6 md:col-span-2 lg:col-span-4">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Sentiment Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sentiment Breakdown</h3>
           <p className="text-sm text-gray-600">Distribution of reply sentiments</p>
         </div>
 
@@ -166,7 +166,7 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-900">Positive</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Positive</span>
                 </div>
                 <div className="text-sm text-gray-600">
                   {stats.positiveReplies} ({sentimentPercentages.positive.toFixed(1)}%)
@@ -187,7 +187,7 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-900">Neutral</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Neutral</span>
                 </div>
                 <div className="text-sm text-gray-600">
                   {stats.neutralReplies} ({sentimentPercentages.neutral.toFixed(1)}%)
@@ -208,7 +208,7 @@ export default function RepliesStats({ stats }: RepliesStatsProps) {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-900">Negative</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Negative</span>
                 </div>
                 <div className="text-sm text-gray-600">
                   {stats.negativeReplies} ({sentimentPercentages.negative.toFixed(1)}%)

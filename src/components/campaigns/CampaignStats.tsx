@@ -39,7 +39,7 @@ export default function CampaignStats({ stats }: CampaignStatsProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
-      color: 'bg-gray-50 text-gray-600'
+      color: 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
     },
     {
       name: 'Scheduled',
@@ -56,11 +56,11 @@ export default function CampaignStats({ stats }: CampaignStatsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {statCards.map((stat, index) => (
-        <div key={index} className="bg-white rounded-lg shadow p-6">
+        <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{stat.name}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{stat.name}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stat.value}</p>
             </div>
             <div className={`p-3 rounded-lg ${stat.color}`}>
               {stat.icon}

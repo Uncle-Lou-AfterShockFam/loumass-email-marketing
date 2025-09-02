@@ -103,13 +103,13 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
   const selectedCount = selectedContactIds.length
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Select Recipients</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select Recipients</h2>
         <button
           type="button"
           onClick={handleBulkImport}
-          className="text-sm text-blue-600 hover:text-blue-700"
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
         >
           Import from CSV
         </button>
@@ -126,7 +126,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
               setSearchTerm(e.target.value)
               setCurrentPage(1)
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
         <div>
@@ -136,7 +136,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
               setFilterTag(e.target.value)
               setCurrentPage(1)
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">All tags</option>
             {availableTags.map(tag => (
@@ -145,13 +145,13 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
           </select>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
             {selectedCount} selected
           </span>
           <button
             type="button"
             onClick={handleSelectAll}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
           >
             {isSelectAll ? 'Deselect All' : 'Select All'}
           </button>
@@ -165,11 +165,11 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
         </div>
       ) : contacts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No contacts found.</p>
+          <p className="text-gray-600 dark:text-gray-400">No contacts found.</p>
           <button
             type="button"
             onClick={handleBulkImport}
-            className="mt-2 text-blue-600 hover:text-blue-700"
+            className="mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
           >
             Import contacts from CSV
           </button>
@@ -179,8 +179,8 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
           {contacts.map((contact) => (
             <div
               key={contact.id}
-              className={`flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                selectedContactIds.includes(contact.id) ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+              className={`flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                selectedContactIds.includes(contact.id) ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
               }`}
               onClick={() => handleContactToggle(contact.id)}
             >
@@ -188,21 +188,21 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
                 type="checkbox"
                 checked={selectedContactIds.includes(contact.id)}
                 onChange={() => handleContactToggle(contact.id)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded mr-3"
               />
               
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
                       {contact.firstName && contact.lastName
                         ? `${contact.firstName} ${contact.lastName}`
                         : contact.email
                       }
                     </p>
-                    <p className="text-sm text-gray-500">{contact.email}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{contact.email}</p>
                     {contact.company && (
-                      <p className="text-sm text-gray-500">{contact.company}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{contact.company}</p>
                     )}
                   </div>
                   
@@ -210,7 +210,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
                     {contact.tags.map(tag => (
                       <span
                         key={tag}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
+                        className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded"
                       >
                         {tag}
                       </span>
@@ -225,8 +225,8 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t">
-          <div className="text-sm text-gray-700">
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-800 dark:text-gray-200">
             Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} contacts
           </div>
           
@@ -234,7 +234,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             >
               Previous
             </button>
@@ -249,7 +249,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
                     className={`px-3 py-1 text-sm rounded ${
                       currentPage === page
                         ? 'bg-blue-600 text-white'
-                        : 'border border-gray-300 hover:bg-gray-50'
+                        : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                     }`}
                   >
                     {page}
@@ -261,7 +261,7 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             >
               Next
             </button>
@@ -271,8 +271,8 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
 
       {/* Selection Summary */}
       {selectedCount > 0 && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             {selectedCount} contacts selected for this campaign
           </p>
         </div>

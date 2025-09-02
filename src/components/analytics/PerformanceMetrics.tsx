@@ -79,11 +79,11 @@ export default function PerformanceMetrics({ metrics }: PerformanceMetricsProps)
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Performance vs Industry</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance vs Industry</h3>
             <p className="text-sm text-gray-600">How your email performance compares to industry benchmarks</p>
           </div>
           <div className="flex items-center gap-4 text-xs">
@@ -111,7 +111,7 @@ export default function PerformanceMetrics({ metrics }: PerformanceMetricsProps)
                   <div className="flex items-center gap-3">
                     {getStatusIcon(improvement.status, improvement.metric)}
                     <div>
-                      <div className="font-medium text-gray-900">{improvement.metric}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{improvement.metric}</div>
                       <div className="text-sm text-gray-600">
                         {isNegativeMetric ? 'Lower is better' : 'Higher is better'}
                       </div>
@@ -121,7 +121,7 @@ export default function PerformanceMetrics({ metrics }: PerformanceMetricsProps)
                     <div className={`text-lg font-semibold ${getStatusColor(improvement.status, improvement.metric)}`}>
                       {improvement.improvement.toFixed(1)}%
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
                       {isNegativeMetric ? 'better' : 'improvement'}
                     </div>
                   </div>
@@ -138,7 +138,7 @@ export default function PerformanceMetrics({ metrics }: PerformanceMetricsProps)
                           style={{ width: `${progressWidths.user}%` }}
                         />
                       </div>
-                      <div className="absolute right-0 top-0 -mt-6 text-sm font-medium text-gray-900">
+                      <div className="absolute right-0 top-0 -mt-6 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {improvement.userValue.toFixed(1)}%
                       </div>
                     </div>

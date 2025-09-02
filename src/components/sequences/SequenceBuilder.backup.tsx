@@ -233,12 +233,12 @@ export default function SequenceBuilder({
   return (
     <div className="space-y-6">
       {/* Sequence Settings */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Settings</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sequence Settings</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                 Sequence Name *
               </label>
               <input
@@ -246,19 +246,19 @@ export default function SequenceBuilder({
                 value={sequenceName}
                 onChange={(e) => setSequenceName(e.target.value)}
                 placeholder="e.g., Welcome Series"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                 Trigger Type
               </label>
               <select
                 value={triggerType}
                 onChange={(e) => setTriggerType(e.target.value as typeof triggerType)}
                 aria-label="Trigger Type"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100"
               >
                 <option value="MANUAL">Manual Enrollment</option>
                 <option value="ON_SIGNUP">On Contact Signup</option>
@@ -267,7 +267,7 @@ export default function SequenceBuilder({
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                 Description
               </label>
               <textarea
@@ -275,7 +275,7 @@ export default function SequenceBuilder({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what this sequence does..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100"
               />
             </div>
 
@@ -285,9 +285,9 @@ export default function SequenceBuilder({
                   type="checkbox"
                   checked={trackingEnabled}
                   onChange={(e) => setTrackingEnabled(e.target.checked)}
-                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                 />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-gray-800 dark:text-gray-200">
                   Enable open and click tracking for this sequence
                 </span>
               </label>
@@ -296,7 +296,7 @@ export default function SequenceBuilder({
         </div>
 
       {/* Step Builder Toolbar */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
             <button
@@ -326,7 +326,7 @@ export default function SequenceBuilder({
             <button
               onClick={testSequence}
               disabled={steps.length === 0 || isTestMode}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition disabled:opacity-50"
             >
               {isTestMode ? 'Testing...' : 'Test Sequence'}
             </button>
@@ -335,13 +335,13 @@ export default function SequenceBuilder({
       </div>
 
       {/* Visual Flow Builder */}
-      <div className="bg-white rounded-lg shadow" style={{ minHeight: '500px' }}>
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h3 className="text-lg font-medium text-gray-900">Sequence Flow</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg" style={{ minHeight: '500px' }}>
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Sequence Flow</h3>
         </div>
         
         {steps.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 text-gray-500">
+          <div className="flex flex-col items-center justify-center h-96 text-gray-600 dark:text-gray-400">
             <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -357,7 +357,7 @@ export default function SequenceBuilder({
                 className={`absolute bg-white border-2 rounded-lg p-4 cursor-pointer transition-all ${
                   selectedStep?.id === step.id 
                     ? 'border-blue-500 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 hover:shadow'
                 } ${isTestMode ? 'animate-pulse' : ''}`}
                 style={{ 
                   left: `${step.position.x}px`, 
@@ -388,21 +388,21 @@ export default function SequenceBuilder({
                 </div>
 
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {step.type === 'email' && (step.subject || 'Email Step')}
                     {step.type === 'delay' && `Wait ${step.delay?.days || 0}d ${step.delay?.hours || 0}h ${step.delay?.minutes || 0}m`}
                     {step.type === 'condition' && (
                       <>
                         If {step.condition?.type?.replace('_', ' ') || 'condition'}
                         {step.condition?.referenceStep && (
-                          <span className="text-xs text-gray-500 ml-1">
+                          <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">
                             (checking step)
                           </span>
                         )}
                       </>
                     )}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     Step {index + 1}
                     {step.replyToThread && ' • In Thread'}
                     {step.trackingEnabled && ' • Tracking On'}
@@ -441,9 +441,9 @@ export default function SequenceBuilder({
 
       {/* Step Editor Panel */}
       {selectedStep && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Edit {selectedStep.type === 'email' ? 'Email' : 
                      selectedStep.type === 'delay' ? 'Delay' : 'Condition'} Step
             </h3>
@@ -460,7 +460,7 @@ export default function SequenceBuilder({
           {selectedStep.type === 'email' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Subject Line
                 </label>
                 <input
@@ -468,12 +468,12 @@ export default function SequenceBuilder({
                   value={selectedStep.subject || ''}
                   onChange={(e) => updateStep(selectedStep.id, { subject: e.target.value })}
                   placeholder="Enter email subject..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Email Content
                 </label>
                 <textarea
@@ -483,7 +483,7 @@ export default function SequenceBuilder({
                   })}
                   placeholder="Write your email content... Use {{firstName}}, {{lastName}}, {{company}} for personalization"
                   rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 />
               </div>
 
@@ -493,9 +493,9 @@ export default function SequenceBuilder({
                     type="checkbox"
                     checked={selectedStep.replyToThread}
                     onChange={(e) => updateStep(selectedStep.id, { replyToThread: e.target.checked })}
-                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                   />
-                  <span className="text-sm text-gray-700">Reply in existing thread</span>
+                  <span className="text-sm text-gray-800 dark:text-gray-200">Reply in existing thread</span>
                 </label>
 
                 <label className="flex items-center">
@@ -503,9 +503,9 @@ export default function SequenceBuilder({
                     type="checkbox"
                     checked={selectedStep.trackingEnabled}
                     onChange={(e) => updateStep(selectedStep.id, { trackingEnabled: e.target.checked })}
-                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                   />
-                  <span className="text-sm text-gray-700">Enable tracking for this email</span>
+                  <span className="text-sm text-gray-800 dark:text-gray-200">Enable tracking for this email</span>
                 </label>
               </div>
             </div>
@@ -514,7 +514,7 @@ export default function SequenceBuilder({
           {selectedStep.type === 'delay' && (
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Days
                 </label>
                 <input
@@ -529,12 +529,12 @@ export default function SequenceBuilder({
                       minutes: selectedStep.delay?.minutes || 0
                     } 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Hours
                 </label>
                 <input
@@ -550,12 +550,12 @@ export default function SequenceBuilder({
                       minutes: selectedStep.delay?.minutes || 0
                     } 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Minutes
                 </label>
                 <input
@@ -571,7 +571,7 @@ export default function SequenceBuilder({
                       hours: selectedStep.delay?.hours || 0
                     } 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -580,7 +580,7 @@ export default function SequenceBuilder({
           {selectedStep.type === 'condition' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Condition Type
                 </label>
                 <select
@@ -600,7 +600,7 @@ export default function SequenceBuilder({
                     })
                   }}
                   aria-label="Condition Type"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 >
                   <option value="opened">If email was opened</option>
                   <option value="not_opened">If email was NOT opened</option>
@@ -611,7 +611,7 @@ export default function SequenceBuilder({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Reference Step
                 </label>
                 <select
@@ -631,7 +631,7 @@ export default function SequenceBuilder({
                     })
                   }}
                   aria-label="Reference Step"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Select a previous email step...</option>
                   {steps
@@ -683,7 +683,7 @@ export default function SequenceBuilder({
                           }
                         })
                       }}
-                      className="w-full px-3 py-2 border border-green-300 bg-green-50 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 border border-green-300 bg-green-50 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                     >
                       <option value="">Continue to next step →</option>
                       <option value="END">End sequence</option>
@@ -723,7 +723,7 @@ export default function SequenceBuilder({
                           }
                         })
                       }}
-                      className="w-full px-3 py-2 border border-red-300 bg-red-50 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 border border-red-300 bg-red-50 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 dark:text-gray-100"
                     >
                       <option value="">Continue to next step →</option>
                       <option value="END">End sequence</option>
@@ -744,7 +744,7 @@ export default function SequenceBuilder({
                   </div>
                 </div>
 
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                   <p className="text-xs text-gray-600">
                     <strong>Tip:</strong> Leave a branch empty to continue to the next step in sequence. Select "End sequence" to stop the sequence for that branch, or choose a specific step to jump to.
                   </p>
@@ -759,7 +759,7 @@ export default function SequenceBuilder({
       <div className="flex justify-between">
           <button
             onClick={() => router.push('/dashboard/sequences')}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             Cancel
           </button>
@@ -767,7 +767,7 @@ export default function SequenceBuilder({
           <div className="flex gap-3">
             <button
               onClick={() => alert('Preview mode coming soon!')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
             >
               Preview
             </button>

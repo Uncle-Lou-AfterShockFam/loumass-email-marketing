@@ -82,10 +82,10 @@ export default function ReplyModal({ isOpen, onClose, replyData }: ReplyModalPro
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl dark:shadow-2xl dark:shadow-gray-900 transition-all">
                 <Dialog.Title
                   as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 flex items-center justify-between"
+                  className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
                     <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,54 +105,54 @@ export default function ReplyModal({ isOpen, onClose, replyData }: ReplyModalPro
 
                 <div className="mt-4 space-y-4">
                   {/* Header Information */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-600">From:</span>
-                      <span className="text-sm text-gray-900">{replyData.fromEmail}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{replyData.fromEmail}</span>
                       {replyData.contactName && (
-                        <span className="text-sm text-gray-500">({replyData.contactName})</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">({replyData.contactName})</span>
                       )}
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-600">Subject:</span>
-                      <span className="text-sm text-gray-900">{replyData.subject || 'No subject'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{replyData.subject || 'No subject'}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-600">Date:</span>
-                      <span className="text-sm text-gray-900">{formattedDate}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{formattedDate}</span>
                     </div>
                     
                     {replyData.campaignName && (
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-600">Campaign:</span>
-                        <span className="text-sm text-gray-900">{replyData.campaignName}</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-100">{replyData.campaignName}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Message Body */}
                   <div className="border rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Message Content</h4>
+                    <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">Message Content</h4>
                     <div className="space-y-1 text-sm">
                       {typeof formattedLines === 'string' ? (
                         <p className="text-gray-800 whitespace-pre-wrap break-words">{formattedLines}</p>
                       ) : (
                         formattedLines.map((line, idx) => {
                           if (line.isSeparator) {
-                            return <hr key={idx} className="my-2 border-gray-200" />
+                            return <hr key={idx} className="my-2 border-gray-200 dark:border-gray-700" />
                           }
                           if (line.isHeader) {
                             return (
-                              <div key={idx} className="text-xs text-gray-500 font-medium mt-3 mb-1">
+                              <div key={idx} className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-3 mb-1">
                                 {line.text}
                               </div>
                             )
                           }
                           if (line.isQuoted) {
                             return (
-                              <div key={idx} className="pl-3 border-l-2 border-gray-300 text-gray-600 italic break-words">
+                              <div key={idx} className="pl-3 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 italic break-words">
                                 {line.text.replace(/^>\s*/, '')}
                               </div>
                             )
@@ -169,7 +169,7 @@ export default function ReplyModal({ isOpen, onClose, replyData }: ReplyModalPro
 
                   {/* Technical Details (collapsible) */}
                   <details className="border rounded-lg p-4">
-                    <summary className="cursor-pointer text-sm font-medium text-gray-700">
+                    <summary className="cursor-pointer text-sm font-medium text-gray-800 dark:text-gray-200">
                       Technical Details
                     </summary>
                     <div className="mt-3 space-y-2 text-xs text-gray-600">
@@ -200,7 +200,7 @@ export default function ReplyModal({ isOpen, onClose, replyData }: ReplyModalPro
                 <div className="mt-6 flex justify-end gap-3">
                   <button
                     type="button"
-                    className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    className="inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     onClick={onClose}
                   >
                     Close

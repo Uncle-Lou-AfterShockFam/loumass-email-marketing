@@ -32,9 +32,9 @@ export default function UpdateReplyBodiesButton() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-sm font-medium text-gray-900 mb-2">Update Reply Bodies</h3>
-      <p className="text-xs text-gray-500 mb-3">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-4">
+      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Update Reply Bodies</h3>
+      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
         This will fetch message bodies for any replies that are missing content.
       </p>
       

@@ -101,14 +101,14 @@ export default function ContactsStats({ stats }: ContactsStatsProps) {
               )}
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {stat.value.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
                 {stat.label}
               </p>
               {stat.subtitle && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {stat.subtitle}
                 </p>
               )}

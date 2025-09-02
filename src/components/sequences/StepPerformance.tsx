@@ -77,24 +77,24 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
   }
 
   return (
-    <div className="mt-8 bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
+    <div className="mt-8 bg-white rounded-lg shadow dark:shadow-lg">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Step Performance</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Step Performance</h2>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={showOnlyEmails}
                 onChange={(e) => setShowOnlyEmails(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
               />
               <span className="text-sm text-gray-600">Email steps only</span>
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="step">Sort by Step</option>
               {trackingEnabled && (
@@ -110,44 +110,44 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Step
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Recipients
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Sent
               </th>
               {trackingEnabled && (
                 <>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                     Opens
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                     Clicks
                   </th>
                 </>
               )}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Replies
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Drop-off
               </th>
               {trackingEnabled && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Engagement
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {sortedSteps.map((step) => (
-              <tr key={step.stepId} className="hover:bg-gray-50">
+              <tr key={step.stepId} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className={`mr-3 ${
@@ -158,11 +158,11 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
                       {getStepIcon(step.type)}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         Step {step.stepNumber}
                       </div>
                       {step.subject && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
                           {step.subject}
                         </div>
                       )}
@@ -174,10 +174,10 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {step.recipientsAtStep.toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {step.type === 'email' ? step.emailsSent.toLocaleString() : '-'}
                 </td>
                 {trackingEnabled && (
@@ -185,7 +185,7 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
                     <td className="px-6 py-4 whitespace-nowrap">
                       {step.type === 'email' && step.trackingEnabled ? (
                         <div>
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-900 dark:text-gray-100">
                             {step.opens.toLocaleString()}
                           </div>
                           <div className={`text-xs ${getPerformanceColor(step.openRate)}`}>
@@ -199,7 +199,7 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
                     <td className="px-6 py-4 whitespace-nowrap">
                       {step.type === 'email' && step.trackingEnabled ? (
                         <div>
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-900 dark:text-gray-100">
                             {step.clicks.toLocaleString()}
                           </div>
                           <div className={`text-xs ${getPerformanceColor(step.clickRate)}`}>
@@ -215,7 +215,7 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
                 <td className="px-6 py-4 whitespace-nowrap">
                   {step.type === 'email' ? (
                     <div>
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-gray-900 dark:text-gray-100">
                         {step.replies.toLocaleString()}
                       </div>
                       <div className={`text-xs ${getPerformanceColor(step.replyRate)}`}>
@@ -265,13 +265,13 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
       </div>
 
       {/* Performance Summary */}
-      <div className="p-6 border-t border-gray-200 bg-gray-50">
+      <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Best Performing Step</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Best Performing Step</h3>
             {(() => {
               const emailSteps = steps.filter(s => s.type === 'email')
-              if (emailSteps.length === 0) return <p className="text-sm text-gray-500">No email steps</p>
+              if (emailSteps.length === 0) return <p className="text-sm text-gray-600 dark:text-gray-400">No email steps</p>
               
               const best = emailSteps.reduce((prev, current) => {
                 const prevScore = (prev.openRate + prev.clickRate + prev.replyRate) / 3
@@ -281,7 +281,7 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
               
               return (
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">Step {best.stepNumber}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">Step {best.stepNumber}</p>
                   <p className="text-gray-600">{best.subject}</p>
                   <p className="text-green-600">
                     Avg. engagement: {Math.round((best.openRate + best.clickRate + best.replyRate) / 3)}%
@@ -292,7 +292,7 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Highest Drop-off</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Highest Drop-off</h3>
             {(() => {
               const maxDropOff = steps.reduce((prev, current) => 
                 current.dropOff > prev.dropOff ? current : prev
@@ -300,22 +300,22 @@ export default function StepPerformance({ steps, trackingEnabled }: StepPerforma
               
               return maxDropOff.dropOff > 0 ? (
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">After Step {maxDropOff.stepNumber - 1}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">After Step {maxDropOff.stepNumber - 1}</p>
                   <p className="text-red-600">
                     {maxDropOff.dropOff.toLocaleString()} recipients lost
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No significant drop-off</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">No significant drop-off</p>
               )
             })()}
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Average Performance</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Average Performance</h3>
             {(() => {
               const emailSteps = steps.filter(s => s.type === 'email')
-              if (emailSteps.length === 0) return <p className="text-sm text-gray-500">No email steps</p>
+              if (emailSteps.length === 0) return <p className="text-sm text-gray-600 dark:text-gray-400">No email steps</p>
               
               const avgOpen = emailSteps.reduce((sum, s) => sum + s.openRate, 0) / emailSteps.length
               const avgClick = emailSteps.reduce((sum, s) => sum + s.clickRate, 0) / emailSteps.length

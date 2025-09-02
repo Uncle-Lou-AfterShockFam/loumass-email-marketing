@@ -82,7 +82,7 @@ export default function ReplyTrackingCard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-10 bg-gray-200 rounded"></div>
@@ -92,9 +92,9 @@ export default function ReplyTrackingCard() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Reply Tracking</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Reply Tracking</h3>
         {status?.watchActive && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             Active
@@ -113,7 +113,7 @@ export default function ReplyTrackingCard() {
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
-          <p className="mt-2 text-sm text-gray-500">Gmail not connected</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Gmail not connected</p>
           <p className="text-xs text-gray-400 mt-1">Connect your Gmail account to enable reply tracking</p>
         </div>
       ) : (
@@ -124,10 +124,10 @@ export default function ReplyTrackingCard() {
                 <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-gray-700">Gmail Connected: {status.email}</span>
+                <span className="text-gray-800 dark:text-gray-200">Gmail Connected: {status.email}</span>
               </div>
               {lastChecked && (
-                <p className="text-xs text-gray-500 ml-7">
+                <p className="text-xs text-gray-600 dark:text-gray-400 ml-7">
                   Last checked: {format(lastChecked, 'MMM d, h:mm a')}
                 </p>
               )}
@@ -135,8 +135,8 @@ export default function ReplyTrackingCard() {
           </div>
 
           {checkResult && (
-            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-              <p className="text-sm text-gray-700">{checkResult.message}</p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+              <p className="text-sm text-gray-800 dark:text-gray-200">{checkResult.message}</p>
               {checkResult.repliesFound > 0 && (
                 <>
                   <p className="text-sm font-medium text-green-600">
@@ -179,7 +179,7 @@ export default function ReplyTrackingCard() {
             )}
           </button>
 
-          <div className="text-xs text-gray-500 space-y-1">
+          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
             <p>• Checks your Gmail inbox for replies to campaign emails</p>
             <p>• Updates recipient status when replies are detected</p>
             <p>• Click the button above to manually check for new replies</p>

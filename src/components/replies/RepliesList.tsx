@@ -128,7 +128,7 @@ export default function RepliesList({ replies }: RepliesListProps) {
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-800">
       {/* Bulk Actions Header */}
       {selectedReplies.length > 0 && (
         <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
@@ -163,13 +163,13 @@ export default function RepliesList({ replies }: RepliesListProps) {
       )}
 
       {/* Replies List */}
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {replies.length === 0 ? (
           <div className="p-12 text-center">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No replies yet</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No replies yet</h3>
             <p className="text-gray-600 mb-6">When people reply to your campaigns and sequences, they'll appear here.</p>
             <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +180,7 @@ export default function RepliesList({ replies }: RepliesListProps) {
           </div>
         ) : (
           replies.map((reply) => (
-            <div key={reply.id} className={`hover:bg-gray-50 transition-colors ${!reply.isRead ? 'bg-blue-50/30' : ''}`}>
+            <div key={reply.id} className={`hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors ${!reply.isRead ? 'bg-blue-50/30' : ''}`}>
               <div className="px-6 py-4">
                 <div className="flex items-start gap-4">
                   {/* Checkbox */}
@@ -189,7 +189,7 @@ export default function RepliesList({ replies }: RepliesListProps) {
                       type="checkbox"
                       checked={selectedReplies.includes(reply.id)}
                       onChange={() => handleSelectReply(reply.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                     />
                   </div>
 
@@ -217,14 +217,14 @@ export default function RepliesList({ replies }: RepliesListProps) {
                       <div className="flex items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className={`font-medium ${!reply.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                            <h4 className={`font-medium ${!reply.isRead ? 'text-gray-900 dark:text-gray-100' : 'text-gray-800 dark:text-gray-200'}`}>
                               {reply.contact.name}
                             </h4>
                             {!reply.isRead && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500">{reply.contact.email}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{reply.contact.email}</p>
                         </div>
 
                         {/* Badges */}
@@ -249,7 +249,7 @@ export default function RepliesList({ replies }: RepliesListProps) {
                       </div>
 
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
                           {formatTimestamp(reply.receivedAt)}
                         </span>
                         <button
@@ -265,14 +265,14 @@ export default function RepliesList({ replies }: RepliesListProps) {
 
                     {/* Subject */}
                     <div className="mb-2">
-                      <h5 className={`text-sm ${!reply.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      <h5 className={`text-sm ${!reply.isRead ? 'font-semibold text-gray-900 dark:text-gray-100' : 'font-medium text-gray-800 dark:text-gray-200'}`}>
                         {reply.subject}
                       </h5>
                     </div>
 
                     {/* Campaign/Sequence Info */}
                     {(reply.campaign || reply.sequence) && (
-                      <div className="mb-2 text-xs text-gray-500">
+                      <div className="mb-2 text-xs text-gray-600 dark:text-gray-400">
                         {reply.campaign && (
                           <span>Reply to: {reply.campaign.name}</span>
                         )}
@@ -318,7 +318,7 @@ export default function RepliesList({ replies }: RepliesListProps) {
                       </div>
 
                       {reply.assignedTo && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
                           Assigned to: {reply.assignedTo.name}
                         </div>
                       )}
@@ -326,17 +326,17 @@ export default function RepliesList({ replies }: RepliesListProps) {
 
                     {/* Expanded Content */}
                     {expandedReply === reply.id && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="mb-3">
-                          <h6 className="text-sm font-medium text-gray-900 mb-1">Full Message</h6>
-                          <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                          <h6 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Full Message</h6>
+                          <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                             {reply.fullContent}
                           </div>
                         </div>
 
                         {/* Metadata */}
-                        <div className="pt-3 border-t border-gray-300">
-                          <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+                        <div className="pt-3 border-t border-gray-300 dark:border-gray-600">
+                          <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
                             <div>
                               <span className="font-medium">Thread ID:</span> {reply.threadId}
                             </div>
@@ -360,13 +360,13 @@ export default function RepliesList({ replies }: RepliesListProps) {
                             </svg>
                             Quick Reply
                           </button>
-                          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors">
+                          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                             </svg>
                             Assign
                           </button>
-                          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors">
+                          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>

@@ -82,11 +82,11 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
   return (
     <div className="space-y-6">
       {/* Charts Section */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Performance Analytics</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance Analytics</h3>
               <p className="text-sm text-gray-600">Email performance over time</p>
             </div>
             
@@ -98,8 +98,8 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
                   onClick={() => setActiveChart(tab.id as 'volume' | 'engagement')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeChart === tab.id
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-gray-900 dark:text-gray-100 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-100'
                   }`}
                 >
                   <span className="mr-2">{tab.icon}</span>
@@ -120,7 +120,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
                   <select
                     value={volumeMetric}
                     onChange={(e) => setVolumeMetric(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {volumeOptions.map(option => (
                       <option key={option.value} value={option.value}>
@@ -135,7 +135,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
                   <select
                     value={engagementMetric}
                     onChange={(e) => setEngagementMetric(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {engagementOptions.map(option => (
                       <option key={option.value} value={option.value}>
@@ -147,7 +147,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
               )}
             </div>
             
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               {activeChart === 'volume' ? 'Total emails' : 'Percentage rates'}
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
           {/* Chart Area */}
           <div className="relative">
             {activeChart === 'volume' ? (
-              <div className="flex items-end justify-between gap-2 h-64 bg-gray-50 rounded-lg p-4">
+              <div className="flex items-end justify-between gap-2 h-64 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 {timeSeriesData.emails.map((data, index) => {
                   const value = data[volumeMetric]
                   const height = getBarHeight(value, maxVolumeValue)
@@ -180,7 +180,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
                 })}
               </div>
             ) : (
-              <div className="flex items-end justify-between gap-2 h-64 bg-gray-50 rounded-lg p-4">
+              <div className="flex items-end justify-between gap-2 h-64 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 {timeSeriesData.engagement.map((data, index) => {
                   const value = data[engagementMetric]
                   const height = getBarHeight(value, maxEngagementValue)
@@ -209,11 +209,11 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
       </div>
 
       {/* Top Performing Campaigns */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Top Performing Campaigns</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top Performing Campaigns</h3>
               <p className="text-sm text-gray-600">Your best campaigns from the selected period</p>
             </div>
             <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -226,7 +226,7 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <tr className="text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   <th className="pb-4">Campaign</th>
                   <th className="pb-4">Sent</th>
                   <th className="pb-4">Delivered</th>
@@ -236,39 +236,39 @@ export default function AnalyticsCharts({ timeSeriesData, topCampaigns }: Analyt
                   <th className="pb-4">Sent Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {topCampaigns.map((campaign) => (
-                  <tr key={campaign.id} className="hover:bg-gray-50">
+                  <tr key={campaign.id} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
                     <td className="py-4">
                       <div>
-                        <div className="font-medium text-gray-900">{campaign.name}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{campaign.name}</div>
                         <div className="text-sm text-gray-600 truncate max-w-xs">{campaign.subject}</div>
                       </div>
                     </td>
                     <td className="py-4">
-                      <div className="text-sm font-medium text-gray-900">{campaign.sent.toLocaleString()}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{campaign.sent.toLocaleString()}</div>
                     </td>
                     <td className="py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{campaign.delivered.toLocaleString()}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{campaign.delivered.toLocaleString()}</div>
                         <div className="text-xs text-green-600">{campaign.deliveryRate.toFixed(1)}%</div>
                       </div>
                     </td>
                     <td className="py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{campaign.opened.toLocaleString()}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{campaign.opened.toLocaleString()}</div>
                         <div className="text-xs text-teal-600">{campaign.openRate.toFixed(1)}%</div>
                       </div>
                     </td>
                     <td className="py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{campaign.clicked.toLocaleString()}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{campaign.clicked.toLocaleString()}</div>
                         <div className="text-xs text-purple-600">{campaign.clickRate.toFixed(1)}%</div>
                       </div>
                     </td>
                     <td className="py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{campaign.replied.toLocaleString()}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{campaign.replied.toLocaleString()}</div>
                         <div className="text-xs text-indigo-600">{campaign.replyRate.toFixed(1)}%</div>
                       </div>
                     </td>

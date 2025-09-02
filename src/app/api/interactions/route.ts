@@ -1,0 +1,172 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const contactId = searchParams.get('contactId')
+    const campaignId = searchParams.get('campaignId')
+    const sequenceId = searchParams.get('sequenceId')
+    const interactionType = searchParams.get('interactionType')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
+    const search = searchParams.get('search')
+
+    // Build where clause for filtering
+    const where: any = {
+      userId: user.id
+    }
+
+    if (contactId) {
+      where.contactId = contactId
+    }
+
+    if (campaignId) {
+      where.campaignId = campaignId
+    }
+
+    if (sequenceId) {
+      where.sequenceId = sequenceId
+    }
+
+    if (interactionType && interactionType !== 'all') {
+      where.type = interactionType.toUpperCase()
+    }
+
+    if (dateFrom || dateTo) {
+      where.timestamp = {}
+      if (dateFrom) {
+        where.timestamp.gte = new Date(dateFrom)
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo)
+        endDate.setHours(23, 59, 59, 999)
+        where.timestamp.lte = endDate
+      }
+    }
+
+    if (search) {
+      where.OR = [
+        { subject: { contains: search, mode: 'insensitive' } },
+        { details: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Fetch email events (interactions)
+    const emailEvents = await prisma.emailEvent.findMany({
+      where,
+      include: {
+        contact: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        sequence: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        timestamp: 'desc'
+      },
+      take: 100
+    })
+
+    // Calculate stats
+    const stats = await prisma.emailEvent.groupBy({
+      by: ['type'],
+      where: {
+        userId: user.id,
+        ...where
+      },
+      _count: true
+    })
+
+    const statsMap = {
+      totalSent: 0,
+      totalOpened: 0,
+      totalClicked: 0,
+      totalReplied: 0,
+      totalBounced: 0,
+      totalBlocked: 0
+    }
+
+    stats.forEach(stat => {
+      switch (stat.type) {
+        case 'SENT':
+          statsMap.totalSent = stat._count
+          break
+        case 'OPENED':
+          statsMap.totalOpened = stat._count
+          break
+        case 'CLICKED':
+          statsMap.totalClicked = stat._count
+          break
+        case 'REPLIED':
+          statsMap.totalReplied = stat._count
+          break
+        case 'BOUNCED':
+          statsMap.totalBounced = stat._count
+          break
+        case 'BLOCKED':
+          statsMap.totalBlocked = stat._count
+          break
+      }
+    })
+
+    // Transform data for frontend
+    const interactions = emailEvents.map(event => ({
+      id: event.id,
+      type: event.type.toLowerCase(),
+      contactEmail: event.contact?.email || '',
+      contactName: event.contact?.firstName && event.contact?.lastName 
+        ? `${event.contact.firstName} ${event.contact.lastName}`
+        : event.contact?.firstName || event.contact?.lastName || undefined,
+      campaignName: event.campaign?.name,
+      sequenceName: event.sequence?.name,
+      subject: event.subject || '',
+      timestamp: event.timestamp,
+      details: event.details,
+      clickedUrl: event.type === 'CLICKED' ? event.details : undefined,
+      replyContent: event.type === 'REPLIED' ? event.details : undefined,
+      bounceReason: event.type === 'BOUNCED' ? event.details : undefined
+    }))
+
+    return NextResponse.json({
+      interactions,
+      stats: statsMap
+    })
+  } catch (error) {
+    console.error('Error fetching interactions:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch interactions' },
+      { status: 500 }
+    )
+  }
+}

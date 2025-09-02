@@ -80,7 +80,7 @@ export default function RichTextEditor({
   return (
     <div className="rich-text-editor">
       {/* Toolbar */}
-      <div className="border border-gray-300 rounded-t-lg bg-gray-50 p-2 flex items-center gap-1 flex-wrap">
+      <div className="border border-gray-300 dark:border-gray-600 rounded-t-lg bg-gray-50 dark:bg-gray-800 p-2 flex items-center gap-1 flex-wrap">
         {/* Text formatting */}
         <button
           type="button"
@@ -153,7 +153,7 @@ export default function RichTextEditor({
           </button>
           
           {showVariables && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 min-w-[200px]">
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 dark:border-gray-600 rounded-lg shadow dark:shadow-lg-lg z-10 min-w-[200px]">
               <div className="p-2">
                 <div className="text-xs font-semibold text-gray-600 mb-2">Insert Variable</div>
                 {allVariables.map((variable) => (
@@ -161,10 +161,10 @@ export default function RichTextEditor({
                     key={variable.name}
                     type="button"
                     onClick={() => insertVariable(variable.name)}
-                    className="block w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                    className="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
                   >
                     <span className="text-purple-600">{`{{${variable.name}}}`}</span>
-                    <span className="text-gray-500 ml-2 text-xs">{variable.value}</span>
+                    <span className="text-gray-600 dark:text-gray-400 ml-2 text-xs">{variable.value}</span>
                   </button>
                 ))}
               </div>
@@ -178,7 +178,7 @@ export default function RichTextEditor({
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className="min-h-[200px] p-3 border border-t-0 border-gray-300 rounded-b-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="min-h-[200px] p-3 border border-t-0 border-gray-300 dark:border-gray-600 rounded-b-lg bg-white text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         style={{ lineHeight: '1.6' }}
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}
@@ -187,24 +187,24 @@ export default function RichTextEditor({
       {/* Link Modal */}
       {isLinkModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">Insert Link</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Link Text
                 </label>
                 <input
                   type="text"
                   value={linkText}
                   onChange={(e) => setLinkText(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   URL
                 </label>
                 <input
@@ -212,7 +212,7 @@ export default function RichTextEditor({
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function RichTextEditor({
                   setLinkUrl('')
                   setLinkText('')
                 }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 Cancel
               </button>

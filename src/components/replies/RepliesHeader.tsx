@@ -35,12 +35,12 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
   ]
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Email Replies</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Email Replies</h1>
             <p className="text-sm text-gray-600 mt-1">
               Unified inbox for all campaign and sequence replies
             </p>
@@ -48,14 +48,14 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
           
           <div className="flex items-center gap-3">
             {/* Quick Actions */}
-            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <button className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-800 dark:text-gray-200 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Export
             </button>
             
-            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <button className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-800 dark:text-gray-200 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -87,7 +87,7 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
             placeholder="Search replies by contact, subject, or content..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           {searchTerm && (
             <button
@@ -110,7 +110,7 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
               className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
                 selectedFilter === filter.key
                   ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-transparent'
+                  : 'bg-gray-100 text-gray-800 dark:text-gray-200 hover:bg-gray-200 border border-transparent'
               }`}
             >
               {filter.label}
@@ -129,11 +129,11 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
         <div className="flex flex-wrap items-center gap-4">
           {/* Sentiment Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sentiment:</label>
+            <label className="text-sm font-medium text-gray-800 dark:text-gray-200">Sentiment:</label>
             <select
               value={selectedSentiment}
               onChange={(e) => setSelectedSentiment(e.target.value as typeof selectedSentiment)}
-              className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {sentimentFilters.map((sentiment) => (
                 <option key={sentiment.key} value={sentiment.key}>
@@ -145,11 +145,11 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
 
           {/* Priority Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Priority:</label>
+            <label className="text-sm font-medium text-gray-800 dark:text-gray-200">Priority:</label>
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value as typeof selectedPriority)}
-              className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {priorityFilters.map((priority) => (
                 <option key={priority.key} value={priority.key}>
@@ -161,8 +161,8 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
 
           {/* Date Range Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Date:</label>
-            <select className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <label className="text-sm font-medium text-gray-800 dark:text-gray-200">Date:</label>
+            <select className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Time</option>
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
@@ -174,8 +174,8 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
 
           {/* Sort Order */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sort:</label>
-            <select className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <label className="text-sm font-medium text-gray-800 dark:text-gray-200">Sort:</label>
+            <select className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="priority">By Priority</option>
@@ -200,25 +200,25 @@ export default function RepliesHeader({ totalReplies, unreadReplies }: RepliesHe
       </div>
 
       {/* Action Bar */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <label className="inline-flex items-center">
-              <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              <span className="ml-2 text-sm text-gray-700">Select all</span>
+              <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+              <span className="ml-2 text-sm text-gray-800 dark:text-gray-200">Select all</span>
             </label>
             
             <div className="flex items-center gap-2">
-              <button className="text-sm text-gray-700 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+              <button className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:text-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
                 Mark as read
               </button>
-              <button className="text-sm text-gray-700 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+              <button className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:text-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
                 Archive
               </button>
-              <button className="text-sm text-gray-700 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+              <button className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:text-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
                 Assign to
               </button>
-              <button className="text-sm text-gray-700 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+              <button className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:text-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
                 Add tags
               </button>
             </div>

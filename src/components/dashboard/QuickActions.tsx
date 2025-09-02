@@ -55,9 +55,9 @@ export default function QuickActions({ gmailConnected }: QuickActionsProps) {
   ]
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h2>
       </div>
       
       <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -67,8 +67,8 @@ export default function QuickActions({ gmailConnected }: QuickActionsProps) {
             href={action.disabled ? '#' : action.href}
             className={`p-4 border rounded-lg transition ${
               action.disabled
-                ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
-                : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-50'
+                : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-sm'
             }`}
             onClick={action.disabled ? (e) => e.preventDefault() : undefined}
           >
@@ -77,10 +77,10 @@ export default function QuickActions({ gmailConnected }: QuickActionsProps) {
                 {action.icon}
               </div>
               <div>
-                <h3 className={`font-medium ${action.disabled ? 'text-gray-400' : 'text-gray-900'}`}>
+                <h3 className={`font-medium ${action.disabled ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
                   {action.title}
                 </h3>
-                <p className={`text-sm mt-1 ${action.disabled ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-sm mt-1 ${action.disabled ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
                   {action.description}
                 </p>
                 {action.disabled && (

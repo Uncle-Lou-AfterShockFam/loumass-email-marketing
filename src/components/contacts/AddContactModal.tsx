@@ -158,10 +158,10 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg-xl dark:shadow-2xl dark:shadow-gray-900 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Add New Contact
             </h3>
             <button
@@ -178,10 +178,10 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Basic Information */}
           <div>
-            <h4 className="text-base font-medium text-gray-900 mb-4">Basic Information</h4>
+            <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">Basic Information</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   First Name *
                 </label>
                 <input
@@ -189,7 +189,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   className={`block w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.firstName ? 'border-red-300' : 'border-gray-300'
+                    errors.firstName ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="John"
                 />
@@ -199,7 +199,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Last Name *
                 </label>
                 <input
@@ -207,7 +207,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   className={`block w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.lastName ? 'border-red-300' : 'border-gray-300'
+                    errors.lastName ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="Doe"
                 />
@@ -217,7 +217,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Email Address *
                 </label>
                 <input
@@ -225,7 +225,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   className={`block w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.email ? 'border-red-300' : 'border-gray-300'
+                    errors.email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="john.doe@example.com"
                 />
@@ -235,33 +235,33 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Company
                 </label>
                 <input
                   type="text"
                   value={formData.company}
                   onChange={(e) => handleInputChange('company', e.target.value)}
-                  className="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Acme Corp"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Job Title
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Marketing Director"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Phone Number
                 </label>
                 <input
@@ -269,7 +269,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className={`block w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.phone ? 'border-red-300' : 'border-gray-300'
+                    errors.phone ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="+1 (555) 123-4567"
                 />
@@ -282,7 +282,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
 
           {/* Tags */}
           <div>
-            <h4 className="text-base font-medium text-gray-900 mb-4">Tags</h4>
+            <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">Tags</h4>
             
             {/* Add new tag */}
             <div className="flex gap-2 mb-3">
@@ -291,7 +291,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Add a tag..."
               />
               <button
@@ -313,7 +313,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                       key={tag}
                       type="button"
                       onClick={() => handleInputChange('tags', [...formData.tags, tag])}
-                      className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition"
+                      className="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-200 transition"
                     >
                       + {tag}
                     </button>
@@ -349,7 +349,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
 
           {/* Custom Fields */}
           <div>
-            <h4 className="text-base font-medium text-gray-900 mb-4">Custom Fields</h4>
+            <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">Custom Fields</h4>
             
             {/* Add custom field */}
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -357,7 +357,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                 type="text"
                 value={customFieldKey}
                 onChange={(e) => setCustomFieldKey(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Field name (e.g., Industry)"
               />
               <div className="flex gap-2">
@@ -366,7 +366,7 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
                   value={customFieldValue}
                   onChange={(e) => setCustomFieldValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomField())}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Field value"
                 />
                 <button
@@ -383,9 +383,9 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
             {Object.keys(formData.customFields).length > 0 && (
               <div className="space-y-2">
                 {Object.entries(formData.customFields).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div key={key} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="text-sm">
-                      <span className="font-medium text-gray-700">{key}:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{key}:</span>
                       <span className="ml-2 text-gray-600">{value}</span>
                     </div>
                     <button
@@ -402,11 +402,11 @@ export default function AddContactModal({ onClose, onSave, availableTags }: AddC
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
             >
               Cancel
             </button>

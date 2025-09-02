@@ -29,6 +29,7 @@ model User {
   sessions             Session[]
   trackingDomain       TrackingDomain?
   webhooks             Webhook[]
+  emailEvents          EmailEvent[]
 }
 
 model Account {
@@ -110,6 +111,7 @@ model Contact {
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipients          Recipient[]
   sequenceEnrollments SequenceEnrollment[]
+  emailEvents         EmailEvent[]
 
   @@unique([userId, email])
   @@index([userId])
@@ -185,6 +187,7 @@ model Sequence {
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaigns        Campaign[]
   enrollments      SequenceEnrollment[]
+  emailEvents      EmailEvent[]
 
   @@index([userId])
   @@index([userId, sequenceType])
@@ -221,18 +224,31 @@ model SequenceEnrollment {
 
 model EmailEvent {
   id             String        @id @default(cuid())
+  userId         String?       // Made optional for migration
   campaignId     String?
+  sequenceId     String?
+  contactId      String?
   recipientId    String?
-  eventType      EventType
+  type           EventType?    // Made optional for migration (was eventType)
+  eventType      EventType?    // Keep old field for backwards compatibility
+  subject        String?
+  details        String?
+  timestamp      DateTime?     @default(now())
   eventData      Json?
   ipAddress      String?
   userAgent      String?
   createdAt      DateTime      @default(now())
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign       Campaign?     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sequence       Sequence?     @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: Cascade)
   recipient      Recipient?    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
-  @@index([campaignId, eventType])
-  @@index([recipientId, eventType])
+  @@index([userId, type])
+  @@index([campaignId, type])
+  @@index([sequenceId, type])
+  @@index([contactId, type])
+  @@index([recipientId, type])
 }
 
 model SequenceEvent {

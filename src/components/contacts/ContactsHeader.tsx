@@ -48,10 +48,10 @@ export default function ContactsHeader({ totalContacts, tags, onContactAdded }: 
 
   return (
     <>
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               All Contacts ({totalContacts.toLocaleString()})
             </h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -69,7 +69,7 @@ export default function ContactsHeader({ totalContacts, tags, onContactAdded }: 
                     e.target.value = '' // Reset selection
                   }
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Export</option>
                 <option value="csv">Export as CSV</option>
@@ -80,7 +80,7 @@ export default function ContactsHeader({ totalContacts, tags, onContactAdded }: 
             {/* Import Button */}
             <button
               onClick={() => setShowImportModal(true)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />

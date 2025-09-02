@@ -22,9 +22,9 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
 
   if (funnelData.length === 0) {
     return (
-      <div className="mt-8 bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Sequence Funnel</h2>
-        <p className="text-gray-500 text-center py-8">No email steps to display</p>
+      <div className="mt-8 bg-white rounded-lg shadow dark:shadow-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sequence Funnel</h2>
+        <p className="text-gray-600 dark:text-gray-400 text-center py-8">No email steps to display</p>
       </div>
     )
   }
@@ -54,9 +54,9 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
   }
 
   return (
-    <div className="mt-8 bg-white rounded-lg shadow p-6">
+    <div className="mt-8 bg-white rounded-lg shadow dark:shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Sequence Funnel</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sequence Funnel</h2>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-blue-500 rounded"></div>
@@ -99,7 +99,7 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
             <div key={step.step}>
               {index > 0 && dropOff > 0 && (
                 <div className="flex items-center justify-center py-2">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     <svg className="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
@@ -109,19 +109,19 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
               )}
               
               <div 
-                className="cursor-pointer hover:bg-gray-50 rounded-lg p-4 transition"
+                className="cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg p-4 transition"
                 onClick={() => setSelectedStep(step)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h3 className="font-medium text-gray-900">{step.step}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{step.step}</h3>
                     <p className="text-sm text-gray-600">{step.subject}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {step.recipients.toLocaleString()}
                     </p>
-                    <p className="text-sm text-gray-500">recipients</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">recipients</p>
                   </div>
                 </div>
 
@@ -163,7 +163,7 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
                 <div className="flex items-center justify-between mt-3 text-sm">
                   <div className="flex items-center gap-4">
                     <span className="text-gray-600">
-                      Sent: <span className="font-medium text-gray-900">{step.sent.toLocaleString()}</span>
+                      Sent: <span className="font-medium text-gray-900 dark:text-gray-100">{step.sent.toLocaleString()}</span>
                     </span>
                     {trackingEnabled && (
                       <>
@@ -210,14 +210,14 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
           onClick={() => setSelectedStep(null)}
         >
           <div 
-            className="bg-white rounded-lg max-w-md w-full p-6"
+            className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{selectedStep.step}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStep.step}</h3>
               <button
                 onClick={() => setSelectedStep(null)}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-400"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -238,8 +238,8 @@ export default function SequenceFunnel({ funnelData, trackingEnabled }: Sequence
               ))}
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Conversion Rates</h4>
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Conversion Rates</h4>
               <div className="space-y-2">
                 {selectedStep.sent > 0 && (
                   <>

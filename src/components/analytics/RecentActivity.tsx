@@ -156,11 +156,11 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activity</h3>
             <p className="text-sm text-gray-600">Latest updates and notifications</p>
           </div>
           <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -169,30 +169,30 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
         </div>
       </div>
 
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {activities.length === 0 ? (
           <div className="p-6 text-center">
             <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">No recent activity</h3>
-            <p className="text-sm text-gray-500">Your recent activity will appear here</p>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No recent activity</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Your recent activity will appear here</p>
           </div>
         ) : (
           activities.map((activity) => (
-            <div key={activity.id} className="p-6 hover:bg-gray-50 transition-colors">
+            <div key={activity.id} className="p-6 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
               <div className="flex items-start gap-4">
                 {getActivityIcon(activity.type)}
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     {getActivityBadge(activity.type)}
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       {formatTimestamp(activity.timestamp)}
                     </span>
                   </div>
                   
-                  <h4 className="font-medium text-gray-900 mb-1">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
                     {activity.title}
                   </h4>
                   
@@ -202,7 +202,7 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
 
                   {/* Metadata Display */}
                   {Object.keys(activity.metadata).length > 0 && (
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-3">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400 mb-3">
                       {activity.metadata.recipientCount && (
                         <span>Recipients: {activity.metadata.recipientCount.toLocaleString()}</span>
                       )}

@@ -121,7 +121,7 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
@@ -135,10 +135,10 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg">
       <div className="p-6 border-b">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Sequence Events</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sequence Events</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setFilter('all')}
@@ -185,11 +185,11 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
 
         {/* Step Filter */}
         <div className="flex items-center gap-2 mb-4">
-          <label className="text-sm font-medium text-gray-700">Filter by Step:</label>
+          <label className="text-sm font-medium text-gray-800 dark:text-gray-200">Filter by Step:</label>
           <select
             value={stepFilter}
             onChange={(e) => setStepFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1"
           >
             <option value="all">All Steps</option>
             {steps.map((step, index) => (
@@ -202,10 +202,10 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
 
         {userIp && (
           <div className="space-y-1">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Your IP: {userIp} (events from your IP are highlighted)
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               <span className="inline-block w-3 h-3 bg-purple-100 rounded mr-1"></span>
               Purple = Gmail proxy | 
               <span className="inline-block w-3 h-3 bg-yellow-100 rounded mx-1"></span>
@@ -217,32 +217,32 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Event
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Step
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 IP Address
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Time
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                 Details
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredEvents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-600 dark:text-gray-400">
                   No events yet
                 </td>
               </tr>
@@ -258,7 +258,7 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getEventIcon(event.eventType)}
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {event.eventType === 'OPENED' ? 'Opened' : 
                          event.eventType === 'CLICKED' ? 'Clicked' : 
                          event.eventType === 'REPLIED' ? 'Replied' :
@@ -267,25 +267,25 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {getStepName(event.stepIndex)}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
                       Step {event.stepIndex + 1}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {event.enrollment.contact.email}
                     </div>
                     {event.enrollment.contact.firstName && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
                         {event.enrollment.contact.firstName} {event.enrollment.contact.lastName}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {event.eventData?.ipAddress || 'Unknown'}
                       {isUserIp(event.eventData?.ipAddress) && (
                         <span className="ml-2 text-xs text-yellow-600 font-medium">
@@ -299,10 +299,10 @@ export default function SequenceEventsTab({ sequenceId, steps }: SequenceEventsT
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {event.eventType === 'CLICKED' && event.eventData?.url && (
                       <a 
                         href={event.eventData.url} 
