@@ -82,7 +82,7 @@ export default function InteractionsFilters({ filters, onChange }: InteractionsF
     { value: 'clicked', label: 'Clicked' },
     { value: 'replied', label: 'Replied' },
     { value: 'bounced', label: 'Bounced' },
-    { value: 'blocked', label: 'Blocked' }
+    { value: 'complained', label: 'Complained' }
   ]
 
   return (

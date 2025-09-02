@@ -45,17 +45,10 @@ export async function GET(
                 name: true,
                 status: true
               }
-            },
-            sequence: {
-              select: {
-                id: true,
-                name: true,
-                status: true
-              }
             }
           }
         },
-        enrollments: {
+        sequenceEnrollments: {
           include: {
             sequence: {
               select: {
@@ -83,13 +76,17 @@ export async function GET(
 
     const stats = {
       totalCampaigns: contact.recipients.filter(r => r.campaignId).length,
-      totalSequences: contact.enrollments.length,
+      totalSequences: contact.sequenceEnrollments.length,
       totalOpened: emailEvents.filter(e => e.type === 'OPENED').length,
       totalClicked: emailEvents.filter(e => e.type === 'CLICKED').length,
       totalReplied: emailEvents.filter(e => e.type === 'REPLIED').length,
       totalBounced: emailEvents.filter(e => e.type === 'BOUNCED').length,
       lastEngagement: emailEvents.length > 0 
-        ? emailEvents.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0].timestamp
+        ? emailEvents.sort((a, b) => {
+            const aTime = a.timestamp || a.createdAt
+            const bTime = b.timestamp || b.createdAt
+            return bTime.getTime() - aTime.getTime()
+          })[0].timestamp || emailEvents[0].createdAt
         : null
     }
 
@@ -221,12 +218,10 @@ export async function DELETE(
       include: {
         recipients: {
           where: {
-            status: {
-              in: ['PENDING', 'SENDING']
-            }
+            status: 'PENDING'
           }
         },
-        enrollments: {
+        sequenceEnrollments: {
           where: {
             status: 'ACTIVE'
           }
@@ -245,7 +240,7 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    if (contact.enrollments.length > 0) {
+    if (contact.sequenceEnrollments.length > 0) {
       return NextResponse.json({ 
         error: 'Cannot delete contact with active sequence enrollments' 
       }, { status: 400 })

@@ -7,7 +7,7 @@ interface InteractionsStatsProps {
     totalClicked: number
     totalReplied: number
     totalBounced: number
-    totalBlocked: number
+    totalComplained: number
   }
 }
 
@@ -64,8 +64,8 @@ export default function InteractionsStats({ stats }: InteractionsStatsProps) {
       color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
     },
     {
-      name: 'Blocked',
-      value: stats.totalBlocked,
+      name: 'Complained',
+      value: stats.totalComplained,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />

@@ -15,7 +15,7 @@ export default function InteractionsPage() {
     totalClicked: 0,
     totalReplied: 0,
     totalBounced: 0,
-    totalBlocked: 0
+    totalComplained: 0
   })
   
   const [filters, setFilters] = useState({

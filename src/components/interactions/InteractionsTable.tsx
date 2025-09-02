@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 
 interface Interaction {
   id: string
-  type: 'sent' | 'opened' | 'clicked' | 'replied' | 'bounced' | 'blocked'
+  type: 'sent' | 'opened' | 'clicked' | 'replied' | 'bounced' | 'complained'
   contactEmail: string
   contactName?: string
   campaignName?: string
@@ -65,7 +65,7 @@ export default function InteractionsTable({ interactions, loading }: Interaction
             </svg>
           </div>
         )
-      case 'blocked':
+      case 'complained':
         return (
           <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
             <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

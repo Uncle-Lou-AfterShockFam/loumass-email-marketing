@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -98,12 +98,43 @@ export async function GET(request: NextRequest) {
       take: 100
     })
 
-    // Calculate stats
+    // Calculate stats - create a clean where clause
+    const statsWhere: any = {
+      userId: user.id
+    }
+    
+    // Only add valid filters for stats
+    if (contactId) {
+      statsWhere.contactId = contactId
+    }
+    if (campaignId) {
+      statsWhere.campaignId = campaignId
+    }
+    if (sequenceId) {
+      statsWhere.sequenceId = sequenceId
+    }
+    if (interactionType && interactionType !== 'all') {
+      statsWhere.type = interactionType.toUpperCase()
+    }
+    if (dateFrom || dateTo) {
+      statsWhere.timestamp = {}
+      if (dateFrom) {
+        statsWhere.timestamp.gte = new Date(dateFrom)
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo)
+        endDate.setHours(23, 59, 59, 999)
+        statsWhere.timestamp.lte = endDate
+      }
+    }
+    
     const stats = await prisma.emailEvent.groupBy({
       by: ['type'],
       where: {
-        userId: user.id,
-        ...where
+        ...statsWhere,
+        type: statsWhere.type ? statsWhere.type : {
+          not: null
+        }
       },
       _count: true
     })
@@ -114,7 +145,7 @@ export async function GET(request: NextRequest) {
       totalClicked: 0,
       totalReplied: 0,
       totalBounced: 0,
-      totalBlocked: 0
+      totalComplained: 0
     }
 
     stats.forEach(stat => {
@@ -134,8 +165,8 @@ export async function GET(request: NextRequest) {
         case 'BOUNCED':
           statsMap.totalBounced = stat._count
           break
-        case 'BLOCKED':
-          statsMap.totalBlocked = stat._count
+        case 'COMPLAINED':
+          statsMap.totalComplained = stat._count
           break
       }
     })
@@ -143,7 +174,7 @@ export async function GET(request: NextRequest) {
     // Transform data for frontend
     const interactions = emailEvents.map(event => ({
       id: event.id,
-      type: event.type.toLowerCase(),
+      type: event.type?.toLowerCase() || 'unknown',
       contactEmail: event.contact?.email || '',
       contactName: event.contact?.firstName && event.contact?.lastName 
         ? `${event.contact.firstName} ${event.contact.lastName}`
@@ -164,8 +195,13 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching interactions:', error)
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
-      { error: 'Failed to fetch interactions' },
+      { error: 'Failed to fetch interactions', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
