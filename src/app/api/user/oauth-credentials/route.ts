@@ -4,19 +4,26 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 
-// Simple encryption for storing client secret
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || 'default-encryption-key'
+// Modern encryption for storing client secret
+const ENCRYPTION_KEY = crypto
+  .createHash('sha256')
+  .update(process.env.NEXTAUTH_SECRET || 'default-encryption-key')
+  .digest()
 
 function encrypt(text: string): string {
-  const cipher = crypto.createCipher('aes-256-cbc', ENCRYPTION_KEY)
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv)
   let encrypted = cipher.update(text, 'utf8', 'hex')
   encrypted += cipher.final('hex')
-  return encrypted
+  return iv.toString('hex') + ':' + encrypted
 }
 
 function decrypt(text: string): string {
-  const decipher = crypto.createDecipher('aes-256-cbc', ENCRYPTION_KEY)
-  let decrypted = decipher.update(text, 'hex', 'utf8')
+  const parts = text.split(':')
+  const iv = Buffer.from(parts[0], 'hex')
+  const encryptedText = parts[1]
+  const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv)
+  let decrypted = decipher.update(encryptedText, 'hex', 'utf8')
   decrypted += decipher.final('utf8')
   return decrypted
 }

@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           
           if (!threadId) continue
           
-          // Find recipients with matching thread ID and email
+          // Find recipients with matching thread ID and email (campaigns)
           const recipients = await prisma.recipient.findMany({
             where: {
               gmailThreadId: threadId,
@@ -119,12 +119,26 @@ export async function POST(request: NextRequest) {
             }
           })
           
-          if (recipients.length === 0) {
-            console.log('No matching recipient found for reply')
+          // Also check for sequence enrollments with matching thread ID
+          const sequenceEnrollments = await prisma.sequenceEnrollment.findMany({
+            where: {
+              gmailThreadId: threadId,
+              contact: {
+                email: fromEmail
+              }
+            },
+            include: {
+              contact: true,
+              sequence: true
+            }
+          })
+          
+          if (recipients.length === 0 && sequenceEnrollments.length === 0) {
+            console.log('No matching recipient or enrollment found for reply')
             continue
           }
           
-          // Process reply for each matching recipient (should typically be just one)
+          // Process reply for campaigns
           for (const recipient of recipients) {
             console.log('Reply detected for campaign:', recipient.campaign.name)
             console.log('From contact:', recipient.contact.email)
@@ -159,6 +173,41 @@ export async function POST(request: NextRequest) {
               await prisma.campaign.update({
                 where: { id: recipient.campaignId },
                 data: {
+                  replyCount: {
+                    increment: 1
+                  }
+                }
+              })
+            }
+          }
+          
+          // Process reply for sequences
+          for (const enrollment of sequenceEnrollments) {
+            console.log('Reply detected for sequence:', enrollment.sequence.name)
+            console.log('From contact:', enrollment.contact.email)
+            
+            // Create sequence reply event
+            await prisma.sequenceEvent.create({
+              data: {
+                enrollmentId: enrollment.id,
+                stepIndex: enrollment.currentStep, // Use current step as the reply point
+                eventType: 'REPLIED',
+                eventData: {
+                  gmailMessageId: messageId,
+                  gmailThreadId: threadId,
+                  subject,
+                  fromEmail,
+                  timestamp: new Date().toISOString()
+                }
+              }
+            })
+            
+            // Update enrollment reply tracking if this is their first reply
+            if (!enrollment.lastRepliedAt) {
+              await prisma.sequenceEnrollment.update({
+                where: { id: enrollment.id },
+                data: {
+                  lastRepliedAt: new Date(),
                   replyCount: {
                     increment: 1
                   }

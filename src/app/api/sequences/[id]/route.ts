@@ -238,7 +238,10 @@ export async function PUT(
       }
 
       // Check that condition steps are properly configured for active sequences
-      if (status === 'ACTIVE') {
+      // Only validate referenceStep for STANDALONE sequences
+      // CAMPAIGN_FOLLOWUP sequences check the original campaign email, not a step
+      const finalSequenceType = sequenceType || existingSequence.sequenceType
+      if (status === 'ACTIVE' && finalSequenceType === 'STANDALONE') {
         for (const step of steps.filter(s => s.type === 'condition')) {
           if (!step.condition?.referenceStep) {
             return NextResponse.json({

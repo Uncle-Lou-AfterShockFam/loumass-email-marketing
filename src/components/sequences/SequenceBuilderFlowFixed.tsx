@@ -29,7 +29,7 @@ import dynamic from 'next/dynamic'
 
 // Dynamically import the rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(
-  () => import('@/components/RichTextEditor').then(mod => mod.default),
+  () => import('@/components/editor/RichTextEditor').then(mod => mod.default),
   { 
     ssr: false,
     loading: () => <div className="h-64 bg-gray-50 animate-pulse rounded-lg" />
