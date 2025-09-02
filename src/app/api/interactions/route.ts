@@ -44,8 +44,17 @@ export async function GET(request: NextRequest) {
       where.sequenceId = sequenceId
     }
 
+    // Build AND conditions array for complex queries
+    const andConditions: any[] = []
+
     if (interactionType && interactionType !== 'all') {
-      where.type = interactionType.toUpperCase()
+      // Handle both type and eventType columns for migration compatibility
+      andConditions.push({
+        OR: [
+          { type: interactionType.toUpperCase() },
+          { eventType: interactionType.toUpperCase() }
+        ]
+      })
     }
 
     if (dateFrom || dateTo) {
@@ -61,10 +70,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      where.OR = [
-        { subject: { contains: search, mode: 'insensitive' } },
-        { details: { contains: search, mode: 'insensitive' } }
-      ]
+      andConditions.push({
+        OR: [
+          { subject: { contains: search, mode: 'insensitive' } },
+          { details: { contains: search, mode: 'insensitive' } }
+        ]
+      })
+    }
+
+    // Apply AND conditions if any exist
+    if (andConditions.length > 0) {
+      where.AND = andConditions
     }
 
     // Fetch email events (interactions)
@@ -113,9 +129,20 @@ export async function GET(request: NextRequest) {
     if (sequenceId) {
       statsWhere.sequenceId = sequenceId
     }
+    
+    // Build AND conditions for stats
+    const statsAndConditions: any[] = []
+    
     if (interactionType && interactionType !== 'all') {
-      statsWhere.type = interactionType.toUpperCase()
+      // Handle both type and eventType columns for migration compatibility
+      statsAndConditions.push({
+        OR: [
+          { type: interactionType.toUpperCase() },
+          { eventType: interactionType.toUpperCase() }
+        ]
+      })
     }
+    
     if (dateFrom || dateTo) {
       statsWhere.timestamp = {}
       if (dateFrom) {
@@ -126,6 +153,11 @@ export async function GET(request: NextRequest) {
         endDate.setHours(23, 59, 59, 999)
         statsWhere.timestamp.lte = endDate
       }
+    }
+    
+    // Apply AND conditions if any exist
+    if (statsAndConditions.length > 0) {
+      statsWhere.AND = statsAndConditions
     }
     
     // Get stats using raw aggregation to handle both type and eventType columns
