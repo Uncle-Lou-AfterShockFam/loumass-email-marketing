@@ -75,7 +75,7 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
       } else if (result.results && result.results.processed > 0) {
         toast.success(`Processed ${result.results.processed} enrollments`)
       } else {
-        toast.info('No enrollments ready to process at this time')
+        toast.success('No enrollments ready to process at this time')
       }
       
       router.refresh()
@@ -107,7 +107,7 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
       if (result.repliesFound > 0) {
         toast.success(`Found ${result.repliesFound} new replies`)
       } else {
-        toast.info('No new replies found')
+        toast.success('No new replies found')
       }
       
       router.refresh()
