@@ -128,7 +128,9 @@ export class SequenceService {
     
     if (stepToExecute.type === 'condition') {
       console.log(`=== PROCESSING CONDITION STEP ${stepToExecuteIndex + 1} ===`)
-      console.log('Condition data:', stepToExecute.condition)
+      console.log('Condition data:', JSON.stringify(stepToExecute.condition))
+      console.log('True branch:', stepToExecute.condition?.trueBranch)
+      console.log('False branch:', stepToExecute.condition?.falseBranch)
       
       // Evaluate condition and choose branch
       const conditionMet = await this.evaluateCondition(
@@ -141,20 +143,48 @@ export class SequenceService {
       
       // Determine next step based on condition result
       let branchStepId: string | undefined
-      if (conditionMet && stepToExecute.condition?.trueBranch?.[0]) {
-        branchStepId = stepToExecute.condition.trueBranch[0]
+      
+      // Check if branches are configured properly
+      const trueBranch = stepToExecute.condition?.trueBranch
+      const falseBranch = stepToExecute.condition?.falseBranch
+      
+      // Handle empty arrays or invalid branch configuration
+      const hasTrueBranch = trueBranch && Array.isArray(trueBranch) && trueBranch.length > 0 && trueBranch[0] !== null
+      const hasFalseBranch = falseBranch && Array.isArray(falseBranch) && falseBranch.length > 0 && falseBranch[0] !== null
+      
+      if (conditionMet && hasTrueBranch) {
+        branchStepId = trueBranch[0]
         console.log('Following TRUE branch to step:', branchStepId)
-      } else if (!conditionMet && stepToExecute.condition?.falseBranch?.[0]) {
-        branchStepId = stepToExecute.condition.falseBranch[0]
+      } else if (!conditionMet && hasFalseBranch) {
+        branchStepId = falseBranch[0]
         console.log('Following FALSE branch to step:', branchStepId)
       } else {
-        // No branch defined, continue to next sequential step
+        // No valid branch for the condition result, skip to next sequential step
         const nextStepIndex = stepToExecuteIndex + 1
+        console.log(`No ${conditionMet ? 'TRUE' : 'FALSE'} branch defined, moving to next sequential step ${nextStepIndex}`)
+        
         if (nextStepIndex < steps.length) {
-          branchStepId = steps[nextStepIndex]?.id
-          console.log('No branch defined, continuing to next step:', branchStepId)
+          // Move to the next step in sequence
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              currentStep: nextStepIndex,
+              updatedAt: new Date()
+            }
+          })
+          
+          // Continue processing immediately
+          return this.processSequenceStep(enrollmentId)
         } else {
-          console.log('No branch defined and no next step, completing sequence')
+          console.log('No next step available, completing sequence')
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              status: EnrollmentStatus.COMPLETED,
+              completedAt: new Date()
+            }
+          })
+          return { success: true, completed: true, reason: 'Sequence completed after condition' }
         }
       }
       
@@ -173,25 +203,42 @@ export class SequenceService {
       
       if (branchStepId) {
         const branchStepIndex = steps.findIndex((s: any) => s.id === branchStepId)
-        const targetStepIndex = branchStepIndex >= 0 ? branchStepIndex : stepToExecuteIndex + 1
         
-        console.log(`Moving from step ${stepToExecuteIndex} to step ${targetStepIndex}`)
-        
-        // Update enrollment to point to branch step
-        await prisma.sequenceEnrollment.update({
-          where: { id: enrollmentId },
-          data: {
-            currentStep: targetStepIndex
+        if (branchStepIndex >= 0) {
+          console.log(`Moving from step ${stepToExecuteIndex} to branch step ${branchStepIndex} (ID: ${branchStepId})`)
+          
+          // Update enrollment to point to branch step
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              currentStep: branchStepIndex,
+              updatedAt: new Date()
+            }
+          })
+          
+          // Continue processing the branch step immediately
+          console.log('Processing branch step immediately...')
+          return this.processSequenceStep(enrollmentId)
+        } else {
+          console.log(`WARNING: Branch step ID ${branchStepId} not found in sequence steps`)
+          // Try to continue to next sequential step
+          const nextStepIndex = stepToExecuteIndex + 1
+          if (nextStepIndex < steps.length) {
+            console.log(`Falling back to next sequential step ${nextStepIndex}`)
+            await prisma.sequenceEnrollment.update({
+              where: { id: enrollmentId },
+              data: {
+                currentStep: nextStepIndex,
+                updatedAt: new Date()
+              }
+            })
+            return this.processSequenceStep(enrollmentId)
           }
-        })
-        
-        // Continue processing the branch step immediately
-        console.log('Processing branch step immediately...')
-        return this.processSequenceStep(enrollmentId)
+        }
       }
       
-      // No valid branch, complete sequence
-      console.log('No valid branch found, completing sequence')
+      // Should not reach here because we handle the no-branch case above
+      console.log('Unexpected: No valid branch path found, completing sequence')
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {
@@ -609,7 +656,12 @@ export class SequenceService {
     contactId: string,
     sequenceId: string
   ): Promise<boolean> {
+    console.log('=== EVALUATING CONDITION ===')
+    console.log('Condition type:', condition?.type)
+    console.log('Reference step:', condition?.referenceStep)
+    
     if (!condition || !condition.type) {
+      console.log('No condition or condition type specified, returning false')
       return false
     }
 
@@ -621,7 +673,12 @@ export class SequenceService {
       }
     })
 
-    if (!enrollment) return false
+    if (!enrollment) {
+      console.log('No enrollment found for contact')
+      return false
+    }
+
+    console.log(`Evaluating condition type: ${condition.type} for enrollment ${enrollment.id}`)
 
     // Check for email events based on condition type
     switch (condition.type) {
