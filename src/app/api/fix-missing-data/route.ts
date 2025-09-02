@@ -22,7 +22,7 @@ export async function POST() {
     const campaignsWithSubjects = await prisma.campaign.findMany({
       where: { 
         userId: user.id,
-        subject: { not: null }
+        subject: { not: '' }
       },
       select: {
         id: true,
