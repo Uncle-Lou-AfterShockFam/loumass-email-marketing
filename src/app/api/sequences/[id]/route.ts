@@ -34,6 +34,7 @@ const sequenceStepSchema = z.object({
 const updateSequenceSchema = z.object({
   name: z.string().min(1, 'Sequence name is required').optional(),
   description: z.string().optional(),
+  sequenceType: z.enum(['STANDALONE', 'CAMPAIGN_FOLLOWUP']).optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED']).optional(),
   trackingEnabled: z.boolean().optional(),
   steps: z.array(sequenceStepSchema).optional()
@@ -213,7 +214,7 @@ export async function PUT(
       }, { status: 400 })
     }
 
-    const { name, description, status, trackingEnabled, steps } = validationResult.data
+    const { name, description, sequenceType, status, trackingEnabled, steps } = validationResult.data
 
     // Check sequence exists and belongs to user
     const existingSequence = await prisma.sequence.findFirst({
@@ -261,6 +262,7 @@ export async function PUT(
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
+        ...(sequenceType && { sequenceType }),
         ...(status && { status }),
         ...(trackingEnabled !== undefined && { trackingEnabled }),
         ...(steps && { steps: steps })

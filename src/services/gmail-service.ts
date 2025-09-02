@@ -61,6 +61,25 @@ export class GmailService {
         }
       })
 
+      // Fetch the sent message to get the Message-ID header
+      let messageIdHeader: string | undefined
+      try {
+        const sentMessage = await gmail.users.messages.get({
+          userId: 'me',
+          id: response.data.id!,
+          format: 'metadata',
+          metadataHeaders: ['Message-ID']
+        })
+        
+        messageIdHeader = sentMessage.data.payload?.headers?.find(
+          (h: any) => h.name?.toLowerCase() === 'message-id'
+        )?.value
+        
+        console.log('📧 Captured Message-ID header:', messageIdHeader)
+      } catch (error) {
+        console.error('Failed to fetch Message-ID header:', error)
+      }
+
       // Update recipient record for campaign emails
       let recipientId: string | undefined
 
@@ -76,7 +95,8 @@ export class GmailService {
             status: RecipientStatus.SENT,
             sentAt: new Date(),
             gmailMessageId: response.data.id,
-            gmailThreadId: response.data.threadId
+            gmailThreadId: response.data.threadId,
+            messageIdHeader // Store the Message-ID for threading
           },
           create: {
             campaignId: emailData.campaignId,
@@ -84,7 +104,8 @@ export class GmailService {
             status: RecipientStatus.SENT,
             sentAt: new Date(),
             gmailMessageId: response.data.id,
-            gmailThreadId: response.data.threadId
+            gmailThreadId: response.data.threadId,
+            messageIdHeader // Store the Message-ID for threading
           }
         })
         recipientId = recipient.id
@@ -308,7 +329,7 @@ export class GmailService {
         let trackedHtml = htmlContent
         if (campaign.trackingEnabled) {
           console.log('CALLING addTrackingToEmail...')
-          trackedHtml = this.addTrackingToEmail(htmlContent, trackingId)
+          trackedHtml = await this.addTrackingToEmail(htmlContent, trackingId, userId)
           console.log('Tracked HTML (first 500 chars):', trackedHtml.substring(0, 500))
           console.log('HTML length changed from', htmlContent.length, 'to', trackedHtml.length)
         } else {
@@ -383,12 +404,26 @@ export class GmailService {
     return result
   }
 
-  private addTrackingToEmail(html: string, trackingId: string): string {
+  private async addTrackingToEmail(html: string, trackingId: string, userId: string): Promise<string> {
     console.log('=== addTrackingToEmail CALLED ===')
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = (process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app').trim()
+    // Fetch user's tracking domain from database
+    const userTrackingDomain = await prisma.trackingDomain.findUnique({
+      where: { userId },
+      select: { domain: true, verified: true }
+    })
+    
+    // Use user's verified domain, or fall back to default
+    let baseUrl: string
+    if (userTrackingDomain?.verified && userTrackingDomain.domain) {
+      baseUrl = `https://${userTrackingDomain.domain}`.trim()
+      console.log('Using user tracking domain:', baseUrl)
+    } else {
+      baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://loumassbeta.vercel.app').trim()
+      console.log('Using default tracking domain:', baseUrl)
+    }
     
     console.log('Base URL for tracking:', baseUrl)
     

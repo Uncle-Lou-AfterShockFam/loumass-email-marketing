@@ -137,15 +137,16 @@ export async function POST(
       console.log(`Enrolling ${campaign.recipients.length} contacts into sequence: ${campaign.sequence.name}`)
       
       try {
-        // Get all contact IDs from recipients
+        // Get all contact IDs and recipient IDs from recipients
         const contactIds = campaign.recipients.map(recipient => recipient.contact.id)
+        const recipientIds = campaign.recipients.map(recipient => recipient.id)
         
         // Get the base URL from the request
         const protocol = request.headers.get('x-forwarded-proto') || 'http'
         const host = request.headers.get('host') || 'localhost:3000'
         const baseUrl = `${protocol}://${host}`
         
-        // Call the sequence enrollment API
+        // Call the sequence enrollment API with campaign context
         const enrollmentResponse = await fetch(`${baseUrl}/api/sequences/${campaign.sequenceId}/enroll`, {
           method: 'POST',
           headers: {
@@ -155,7 +156,12 @@ export async function POST(
           },
           body: JSON.stringify({
             contactIds,
-            startImmediately: true
+            startImmediately: true,
+            // Pass campaign context for conditional triggering
+            campaignContext: {
+              campaignId: campaign.id,
+              recipientIds: recipientIds
+            }
           })
         })
 

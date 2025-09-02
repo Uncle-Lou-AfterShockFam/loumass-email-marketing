@@ -15,6 +15,8 @@ interface SequenceStep {
     referenceStep?: string  // Optional during building
     trueBranch?: string[]   // Optional during building
     falseBranch?: string[]  // Optional during building
+    // For campaign-triggered conditions (when first step)
+    campaignBased?: boolean
   }
   replyToThread: boolean
   trackingEnabled: boolean
@@ -31,6 +33,7 @@ interface SequenceBuilderProps {
   sequenceId?: string
   sequenceName?: string
   sequenceDescription?: string
+  sequenceType?: 'STANDALONE' | 'CAMPAIGN_FOLLOWUP'
 }
 
 export default function SequenceBuilder({ 
@@ -41,11 +44,13 @@ export default function SequenceBuilder({
   editMode = false,
   sequenceId,
   sequenceName: initialName,
-  sequenceDescription: initialDescription
+  sequenceDescription: initialDescription,
+  sequenceType: initialSequenceType
 }: SequenceBuilderProps) {
   const router = useRouter()
   const [sequenceName, setSequenceName] = useState(initialName || '')
   const [description, setDescription] = useState(initialDescription || '')
+  const [sequenceType, setSequenceType] = useState<'STANDALONE' | 'CAMPAIGN_FOLLOWUP'>(initialSequenceType || 'STANDALONE')
   const [triggerType, setTriggerType] = useState<'MANUAL' | 'ON_SIGNUP' | 'ON_EVENT'>('MANUAL')
   const [trackingEnabled, setTrackingEnabled] = useState(trackingProp ?? true)
   const [steps, setSteps] = useState<SequenceStep[]>(initialSteps || [])
@@ -62,6 +67,39 @@ export default function SequenceBuilder({
   }
 
   const addStep = (type: SequenceStep['type']) => {
+    // For Campaign Follow Up sequences, automatically add a delay before conditions
+    if (sequenceType === 'CAMPAIGN_FOLLOWUP' && steps.length === 0 && type === 'condition') {
+      // First add a delay step
+      const delayStep: SequenceStep = {
+        id: uuidv4(),
+        type: 'delay',
+        delay: { days: 2, hours: 0, minutes: 0 }, // Default 2 days for follow-up
+        replyToThread: false,
+        trackingEnabled: trackingEnabled,
+        position: { x: 100, y: 100 }
+      }
+      
+      // Then add the condition step
+      const conditionStep: SequenceStep = {
+        id: uuidv4(),
+        type: 'condition',
+        condition: {
+          type: 'replied', // Default check if they replied
+          campaignBased: true // This is campaign-based
+        },
+        replyToThread: false,
+        trackingEnabled: trackingEnabled,
+        position: { x: 350, y: 100 }
+      }
+      
+      // Link delay to condition
+      delayStep.nextStepId = conditionStep.id
+      
+      updateStepsState([delayStep, conditionStep])
+      setSelectedStep(conditionStep)
+      return
+    }
+
     const newStep: SequenceStep = {
       id: uuidv4(),
       type,
@@ -82,7 +120,10 @@ export default function SequenceBuilder({
       newStep.delay = { days: 1, hours: 0, minutes: 0 }
     } else if (type === 'condition') {
       newStep.condition = {
-        type: 'opened'
+        type: 'opened',
+        // For standalone sequences, conditions reference previous emails
+        // For campaign follow-up, conditions reference the campaign
+        campaignBased: sequenceType === 'CAMPAIGN_FOLLOWUP'
         // referenceStep, trueBranch, and falseBranch will be set when configured
       }
       // Initialize nextStepId to maintain flow
@@ -145,15 +186,26 @@ export default function SequenceBuilder({
     setIsSaving(true)
     
     try {
-      // Check if all condition steps have reference steps
+      // Check if all condition steps have reference steps (except campaign-based ones)
       const hasIncompleteConditions = steps.some(
-        step => step.type === 'condition' && !step.condition?.referenceStep
+        (step, index) => {
+          if (step.type === 'condition') {
+            // First step condition doesn't need reference (it's campaign-based)
+            if (index === 0) {
+              return false
+            }
+            // Other conditions need a reference step
+            return !step.condition?.referenceStep
+          }
+          return false
+        }
       )
       
       const payload = {
         name: sequenceName,
         description,
         triggerType,
+        sequenceType,
         trackingEnabled,
         steps: steps,
         status: hasIncompleteConditions ? 'DRAFT' : 'ACTIVE'
@@ -248,6 +300,26 @@ export default function SequenceBuilder({
                 placeholder="e.g., Welcome Series"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sequence Type
+              </label>
+              <select
+                value={sequenceType}
+                onChange={(e) => setSequenceType(e.target.value as typeof sequenceType)}
+                aria-label="Sequence Type"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="STANDALONE">Stand Alone Sequence</option>
+                <option value="CAMPAIGN_FOLLOWUP">Campaign Follow Up</option>
+              </select>
+              {sequenceType === 'CAMPAIGN_FOLLOWUP' && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Will wait before checking campaign engagement
+                </p>
+              )}
             </div>
 
             <div>
@@ -406,7 +478,10 @@ export default function SequenceBuilder({
                     Step {index + 1}
                     {step.replyToThread && ' • In Thread'}
                     {step.trackingEnabled && ' • Tracking On'}
-                    {step.type === 'condition' && !step.condition?.referenceStep && (
+                    {step.type === 'condition' && index === 0 && (
+                      <span className="text-purple-600"> • 🚀 Campaign-based</span>
+                    )}
+                    {step.type === 'condition' && index > 0 && !step.condition?.referenceStep && (
                       <span className="text-amber-600"> • ⚠️ Needs reference</span>
                     )}
                   </p>
@@ -579,6 +654,19 @@ export default function SequenceBuilder({
 
           {selectedStep.type === 'condition' && (
             <div className="space-y-4">
+              {/* Check if this is the first step */}
+              {steps.indexOf(selectedStep) === 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-purple-900 mb-2">
+                    🚀 Campaign-Triggered Condition
+                  </h4>
+                  <p className="text-xs text-purple-700">
+                    Since this condition is the first step, it will evaluate based on the campaign that enrolls contacts into this sequence.
+                    The condition will check the recipient's interaction with that campaign.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Condition Type
@@ -586,16 +674,20 @@ export default function SequenceBuilder({
                 <select
                   value={selectedStep.condition?.type || 'opened'}
                   onChange={(e) => {
+                    const isFirstStep = steps.indexOf(selectedStep) === 0
                     const currentCondition = selectedStep.condition || {
                       type: 'opened',
                       referenceStep: '',
                       trueBranch: [],
-                      falseBranch: []
+                      falseBranch: [],
+                      campaignBased: false
                     }
                     updateStep(selectedStep.id, {
                       condition: {
                         ...currentCondition,
-                        type: e.target.value as any
+                        type: e.target.value as any,
+                        // Set campaignBased to true if this is the first step
+                        campaignBased: isFirstStep
                       }
                     })
                   }}
@@ -610,44 +702,55 @@ export default function SequenceBuilder({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reference Step
-                </label>
-                <select
-                  value={selectedStep.condition?.referenceStep || ''}
-                  onChange={(e) => {
-                    const currentCondition = selectedStep.condition || {
-                      type: 'opened',
-                      referenceStep: '',
-                      trueBranch: [],
-                      falseBranch: []
-                    }
-                    updateStep(selectedStep.id, {
-                      condition: {
-                        ...currentCondition,
-                        referenceStep: e.target.value
+              {/* Only show reference step selector if not first step */}
+              {steps.indexOf(selectedStep) > 0 ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reference Step
+                  </label>
+                  <select
+                    value={selectedStep.condition?.referenceStep || ''}
+                    onChange={(e) => {
+                      const currentCondition = selectedStep.condition || {
+                        type: 'opened',
+                        referenceStep: '',
+                        trueBranch: [],
+                        falseBranch: [],
+                        campaignBased: false
                       }
-                    })
-                  }}
-                  aria-label="Reference Step"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
-                >
-                  <option value="">Select a previous email step...</option>
-                  {steps
-                    .filter(s => s.type === 'email' && s.id !== selectedStep.id)
-                    .map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.subject || 'Email Step'}
-                      </option>
-                    ))}
-                </select>
-                {!selectedStep.condition?.referenceStep && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    ⚠️ Please select which email to check for the condition
+                      updateStep(selectedStep.id, {
+                        condition: {
+                          ...currentCondition,
+                          referenceStep: e.target.value,
+                          campaignBased: false
+                        }
+                      })
+                    }}
+                    aria-label="Reference Step"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select a previous email step...</option>
+                    {steps
+                      .filter(s => s.type === 'email' && s.id !== selectedStep.id)
+                      .map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.subject || 'Email Step'}
+                        </option>
+                      ))}
+                  </select>
+                  {!selectedStep.condition?.referenceStep && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ Please select which email to check for the condition
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-600">
+                    <strong>Reference:</strong> This condition will check the triggering campaign's engagement
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

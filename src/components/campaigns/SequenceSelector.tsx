@@ -120,11 +120,16 @@ export default function SequenceSelector({
                 disabled={disabled}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {sequences.map(sequence => (
-                  <option key={sequence.id} value={sequence.id}>
-                    {sequence.name} ({sequence.steps.length} steps)
-                  </option>
-                ))}
+                {sequences.map(sequence => {
+                  const firstStep = sequence.steps[0]
+                  const startsWithCondition = firstStep?.type === 'condition'
+                  return (
+                    <option key={sequence.id} value={sequence.id}>
+                      {sequence.name} ({sequence.steps.length} steps)
+                      {startsWithCondition && ' ⚡ Conditional'}
+                    </option>
+                  )
+                })}
               </select>
             </div>
 
@@ -192,29 +197,53 @@ export default function SequenceSelector({
 
                 {/* Enrollment Triggers */}
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-1">
-                    Enrollment Triggers:
-                  </p>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li className="flex items-center gap-2">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      When recipient opens the campaign email
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      When recipient clicks a link
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      When recipient replies to the email
-                    </li>
-                  </ul>
+                  {(() => {
+                    const firstStep = selectedSequence.steps[0]
+                    const startsWithCondition = firstStep?.type === 'condition'
+                    
+                    if (startsWithCondition) {
+                      return (
+                        <>
+                          <p className="text-sm font-medium text-purple-900 mb-1">
+                            ⚡ Conditional Sequence Flow:
+                          </p>
+                          <p className="text-sm text-purple-700 mb-2">
+                            All campaign recipients will be enrolled, and the sequence will branch based on their engagement:
+                          </p>
+                          <ul className="text-sm text-purple-700 space-y-1">
+                            <li className="flex items-start gap-2">
+                              <span className="text-green-600 mt-0.5">✓</span>
+                              <span>
+                                <strong>If {firstStep.condition?.type}:</strong> Follow the success path
+                              </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-red-600 mt-0.5">✗</span>
+                              <span>
+                                <strong>If not:</strong> Follow the alternative path
+                              </span>
+                            </li>
+                          </ul>
+                        </>
+                      )
+                    } else {
+                      return (
+                        <>
+                          <p className="text-sm font-medium text-blue-900 mb-1">
+                            Enrollment Triggers:
+                          </p>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              All campaign recipients will be enrolled immediately
+                            </li>
+                          </ul>
+                        </>
+                      )
+                    }
+                  })()}
                 </div>
               </div>
             )}

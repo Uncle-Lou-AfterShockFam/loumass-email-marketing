@@ -171,6 +171,7 @@ model Sequence {
   name             String
   description      String?
   triggerType      String               @default("manual")
+  sequenceType     SequenceType         @default(STANDALONE) // New field for sequence categorization
   steps            Json
   trackingEnabled  Boolean              @default(true)
   status           SequenceStatus       @default(DRAFT)
@@ -181,6 +182,7 @@ model Sequence {
   enrollments      SequenceEnrollment[]
 
   @@index([userId])
+  @@index([userId, sequenceType])
 }
 
 model SequenceEnrollment {
@@ -201,6 +203,8 @@ model SequenceEnrollment {
   gmailMessageId String?
   gmailThreadId  String?
   messageIdHeader String? // Actual Message-ID header for threading
+  triggerCampaignId String? // Campaign that triggered this enrollment
+  triggerRecipientId String? // Recipient ID from the campaign
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   contact        Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
@@ -316,4 +320,9 @@ enum EventType {
   BOUNCED
   UNSUBSCRIBED
   COMPLAINED
+}
+
+enum SequenceType {
+  STANDALONE        // Independent email sequence
+  CAMPAIGN_FOLLOWUP // Campaign-triggered with delay before condition
 }

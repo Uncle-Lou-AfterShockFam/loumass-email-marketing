@@ -13,6 +13,7 @@ interface Sequence {
   description?: string
   status: string
   triggerType: string
+  sequenceType?: 'STANDALONE' | 'CAMPAIGN_FOLLOWUP'
   steps: any
   trackingEnabled: boolean
   totalEnrollments: number

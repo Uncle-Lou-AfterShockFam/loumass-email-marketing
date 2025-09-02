@@ -8,7 +8,12 @@ import { z } from 'zod'
 const enrollmentSchema = z.object({
   contactIds: z.array(z.string()).min(1, 'At least one contact must be selected'),
   startImmediately: z.boolean().default(true),
-  customVariables: z.record(z.string(), z.any()).optional()
+  customVariables: z.record(z.string(), z.any()).optional(),
+  // Campaign context for conditional triggering
+  campaignContext: z.object({
+    campaignId: z.string(),
+    recipientIds: z.array(z.string()) // Maps to contactIds
+  }).optional()
 })
 
 // POST /api/sequences/[id]/enroll - Enroll contacts in sequence
@@ -39,7 +44,7 @@ export async function POST(
       }, { status: 400 })
     }
 
-    const { contactIds, startImmediately, customVariables } = validationResult.data
+    const { contactIds, startImmediately, customVariables, campaignContext } = validationResult.data
 
     // Check sequence exists and belongs to user
     const sequence = await prisma.sequence.findFirst({
@@ -108,12 +113,30 @@ export async function POST(
 
     // Calculate initial step timing
     const steps = Array.isArray(sequence.steps) ? sequence.steps : []
-    const firstStep = steps.find((step: any) => step.type === 'email')
     
-    if (!firstStep) {
-      return NextResponse.json({
-        error: 'Sequence has no email steps to execute'
-      }, { status: 400 })
+    // Check if sequence starts with a condition (for campaign-triggered sequences)
+    const firstStep = steps[0] as any
+    const startsWithCondition = firstStep?.type === 'condition'
+    
+    // If not starting with condition, ensure there's an email step
+    if (!startsWithCondition) {
+      const hasEmailStep = steps.find((step: any) => step.type === 'email')
+      if (!hasEmailStep) {
+        return NextResponse.json({
+          error: 'Sequence has no email steps to execute'
+        }, { status: 400 })
+      }
+    }
+    
+    // If campaign context provided, validate recipient mapping
+    let campaignRecipientMap: Map<string, string> = new Map()
+    if (campaignContext) {
+      // Create mapping of contactId to recipientId
+      contactIds.forEach((contactId, index) => {
+        if (campaignContext.recipientIds[index]) {
+          campaignRecipientMap.set(contactId, campaignContext.recipientIds[index])
+        }
+      })
     }
 
     const now = new Date()
@@ -131,14 +154,21 @@ export async function POST(
           }
         })
 
-        // Create new enrollment
+        // Create new enrollment with campaign context if provided
+        const recipientId = campaignRecipientMap.get(contact.id)
+        
         return prisma.sequenceEnrollment.create({
           data: {
             sequenceId,
             contactId: contact.id,
             status: 'ACTIVE',
             currentStep: 0,
-            createdAt: now
+            createdAt: now,
+            // Add campaign context if provided
+            ...(campaignContext && recipientId ? {
+              triggerCampaignId: campaignContext.campaignId,
+              triggerRecipientId: recipientId
+            } : {})
           },
           include: {
             contact: {

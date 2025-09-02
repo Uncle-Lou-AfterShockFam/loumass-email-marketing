@@ -36,10 +36,19 @@ interface TrackingDomain {
 
 type TrackingDomainOrNull = TrackingDomain | null
 
+interface Sequence {
+  id: string
+  name: string
+  description?: string | null
+  steps: any[]
+  startsWithCondition?: boolean
+}
+
 interface CampaignFormProps {
   contacts: Contact[]
   templates: Template[]
   trackingDomain: TrackingDomainOrNull
+  sequences?: Sequence[]
   campaign?: any // For edit mode
 }
 
@@ -47,6 +56,7 @@ export default function CampaignForm({
   contacts, 
   templates, 
   trackingDomain,
+  sequences,
   campaign 
 }: CampaignFormProps) {
   const router = useRouter()

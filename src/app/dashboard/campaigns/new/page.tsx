@@ -48,6 +48,34 @@ export default async function NewCampaignPage() {
     }
   })
 
+  // Get only Campaign Follow Up sequences for campaigns
+  const sequences = await prisma.sequence.findMany({
+    where: { 
+      userId: session.user.id,
+      status: 'ACTIVE',
+      sequenceType: 'CAMPAIGN_FOLLOWUP'
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      sequenceType: true,
+      steps: true
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  // Filter sequences to identify those starting with conditions
+  const sequencesWithFirstStepInfo = sequences.map(seq => {
+    const steps = (seq.steps || []) as any[]
+    const firstStep = steps?.[0]
+    return {
+      ...seq,
+      steps: steps,
+      startsWithCondition: firstStep?.type === 'condition'
+    }
+  })
+
   return (
     <div>
       <div className="mb-8">
@@ -59,6 +87,7 @@ export default async function NewCampaignPage() {
         contacts={contacts}
         templates={templates}
         trackingDomain={trackingDomain}
+        sequences={sequencesWithFirstStepInfo}
       />
     </div>
   )

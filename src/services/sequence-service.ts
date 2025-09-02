@@ -451,6 +451,45 @@ export class SequenceService {
     console.log(`   - enrollment.gmailThreadId: ${enrollment.gmailThreadId || 'None'}`)
     console.log(`   - enrollment.gmailMessageId: ${enrollment.gmailMessageId || 'None'}`)
     console.log(`   - enrollment.messageIdHeader: ${enrollment.messageIdHeader || 'None'}`)
+    console.log(`   - enrollment.triggerRecipientId: ${enrollment.triggerRecipientId || 'None'}`)
+    
+    // For campaign-triggered sequences, fetch Message-ID from campaign recipient if not stored
+    if (!enrollment.messageIdHeader && enrollment.triggerRecipientId) {
+      console.log('🔍 Fetching Message-ID from campaign recipient...')
+      const campaignRecipient = await prisma.recipient.findUnique({
+        where: { id: enrollment.triggerRecipientId },
+        select: { 
+          messageIdHeader: true,
+          gmailThreadId: true,
+          gmailMessageId: true
+        }
+      })
+      
+      if (campaignRecipient?.messageIdHeader) {
+        // Store the campaign's Message-ID in the enrollment for future use
+        await prisma.sequenceEnrollment.update({
+          where: { id: enrollmentId },
+          data: { 
+            messageIdHeader: campaignRecipient.messageIdHeader,
+            // Also copy the thread ID if not already set
+            ...(campaignRecipient.gmailThreadId && !enrollment.gmailThreadId ? {
+              gmailThreadId: campaignRecipient.gmailThreadId
+            } : {})
+          }
+        })
+        
+        // Update our local enrollment object
+        enrollment.messageIdHeader = campaignRecipient.messageIdHeader
+        if (campaignRecipient.gmailThreadId && !enrollment.gmailThreadId) {
+          enrollment.gmailThreadId = campaignRecipient.gmailThreadId
+        }
+        
+        console.log('✅ Retrieved Message-ID from campaign:', campaignRecipient.messageIdHeader)
+        console.log('✅ Retrieved Thread ID from campaign:', campaignRecipient.gmailThreadId)
+      } else {
+        console.warn('⚠️ Campaign recipient has no Message-ID stored')
+      }
+    }
     
     if (stepToExecute.replyToThread && enrollment.gmailThreadId) {
       threadId = enrollment.gmailThreadId
@@ -516,21 +555,41 @@ export class SequenceService {
 
     // Apply "Re:" prefix for thread continuity when using threadId
     if (threadId) {
-      // For thread continuity, maintain the original subject or add "Re:" prefix
-      const steps = Array.isArray(enrollment.sequence.steps) ? 
-        enrollment.sequence.steps : JSON.parse(enrollment.sequence.steps as string)
-      
-      const firstEmailStep = (steps as any[]).find((s: any) => s.type === 'email')
-      
-      if (firstEmailStep) {
-        const originalSubject = this.replaceVariables(firstEmailStep.subject || '', enrollment.contact)
-        // Use "Re:" prefix for thread continuity
-        if (!subject.startsWith('Re:') && !originalSubject.startsWith('Re:')) {
-          subject = `Re: ${originalSubject}`
-        } else if (originalSubject.startsWith('Re:')) {
-          subject = originalSubject // Keep the original Re: subject
+      // For campaign-triggered sequences, get the campaign subject
+      if (enrollment.triggerCampaignId) {
+        console.log('🎯 Fetching campaign subject for thread continuity...')
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: enrollment.triggerCampaignId },
+          select: { subject: true }
+        })
+        
+        if (campaign?.subject) {
+          const campaignSubject = this.replaceVariables(campaign.subject, enrollment.contact)
+          // Use "Re:" prefix with the campaign subject for proper threading
+          if (!campaignSubject.startsWith('Re:')) {
+            subject = `Re: ${campaignSubject}`
+          } else {
+            subject = campaignSubject
+          }
+          console.log('📧 Using campaign subject for thread continuity:', subject)
         }
-        console.log('📧 Adjusted subject for thread continuity:', subject)
+      } else {
+        // For non-campaign sequences, use the sequence's first email subject
+        const steps = Array.isArray(enrollment.sequence.steps) ? 
+          enrollment.sequence.steps : JSON.parse(enrollment.sequence.steps as string)
+        
+        const firstEmailStep = (steps as any[]).find((s: any) => s.type === 'email')
+        
+        if (firstEmailStep) {
+          const originalSubject = this.replaceVariables(firstEmailStep.subject || '', enrollment.contact)
+          // Use "Re:" prefix for thread continuity
+          if (!subject.startsWith('Re:') && !originalSubject.startsWith('Re:')) {
+            subject = `Re: ${originalSubject}`
+          } else if (originalSubject.startsWith('Re:')) {
+            subject = originalSubject // Keep the original Re: subject
+          }
+          console.log('📧 Adjusted subject for thread continuity:', subject)
+        }
       }
     }
 
@@ -548,7 +607,7 @@ export class SequenceService {
           to: [enrollment.contact.email],
           subject,
           htmlContent: enrollment.sequence.trackingEnabled ? 
-            this.addTrackingToEmail(htmlContent, trackingId) : htmlContent,
+            await this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent,
           textContent,
           trackingId,
           sequenceId: enrollment.sequenceId,
@@ -693,12 +752,26 @@ export class SequenceService {
     return result
   }
 
-  private addTrackingToEmail(html: string, trackingId: string): string {
+  private async addTrackingToEmail(html: string, trackingId: string, userId: string): Promise<string> {
     console.log('=== SEQUENCE addTrackingToEmail CALLED ===')
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = (process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app').trim()
+    // Fetch user's tracking domain from database
+    const userTrackingDomain = await prisma.trackingDomain.findUnique({
+      where: { userId },
+      select: { domain: true, verified: true }
+    })
+    
+    // Use user's verified domain, or fall back to default
+    let baseUrl: string
+    if (userTrackingDomain?.verified && userTrackingDomain.domain) {
+      baseUrl = `https://${userTrackingDomain.domain}`.trim()
+      console.log('Using user tracking domain:', baseUrl)
+    } else {
+      baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://loumassbeta.vercel.app').trim()
+      console.log('Using default tracking domain:', baseUrl)
+    }
     
     console.log('Base URL for tracking:', baseUrl)
     
@@ -795,6 +868,7 @@ export class SequenceService {
     console.log('=== EVALUATING CONDITION ===')
     console.log('Condition type:', condition?.type)
     console.log('Reference step:', condition?.referenceStep)
+    console.log('Reference campaign:', condition?.referenceCampaign)
     
     if (!condition || !condition.type) {
       console.log('No condition or condition type specified, returning false')
@@ -815,6 +889,16 @@ export class SequenceService {
     }
 
     console.log(`Evaluating condition type: ${condition.type} for enrollment ${enrollment.id}`)
+    
+    // Check if this is a campaign-based condition
+    if (condition.referenceCampaign === 'trigger' && enrollment.triggerCampaignId) {
+      console.log('Evaluating campaign-triggered condition for campaign:', enrollment.triggerCampaignId)
+      return await this.evaluateCampaignCondition(
+        condition,
+        enrollment.triggerCampaignId,
+        enrollment.triggerRecipientId || contactId
+      )
+    }
 
     // Check for email events based on condition type
     switch (condition.type) {
@@ -859,6 +943,98 @@ export class SequenceService {
       
       default:
         console.warn(`Unknown condition type: ${condition.type}`)
+        return false
+    }
+  }
+
+  private async evaluateCampaignCondition(
+    condition: any,
+    campaignId: string,
+    recipientId: string
+  ): Promise<boolean> {
+    console.log('=== EVALUATING CAMPAIGN CONDITION ===')
+    console.log('Campaign ID:', campaignId)
+    console.log('Recipient ID:', recipientId)
+    console.log('Condition type:', condition.type)
+    
+    // Get the recipient record from the campaign
+    const recipient = await prisma.recipient.findFirst({
+      where: {
+        id: recipientId,
+        campaignId: campaignId
+      }
+    })
+    
+    if (!recipient) {
+      console.log('No recipient found for campaign')
+      // Try to find by contactId if recipientId doesn't match
+      const recipientByContact = await prisma.recipient.findFirst({
+        where: {
+          contactId: recipientId,
+          campaignId: campaignId
+        }
+      })
+      
+      if (!recipientByContact) {
+        console.log('No recipient found by contact ID either')
+        return false
+      }
+      
+      // Use the found recipient
+      return this.evaluateRecipientCondition(condition.type, recipientByContact)
+    }
+    
+    return this.evaluateRecipientCondition(condition.type, recipient)
+  }
+  
+  private evaluateRecipientCondition(conditionType: string, recipient: any): boolean {
+    console.log('Evaluating recipient condition:', {
+      type: conditionType,
+      status: recipient.status,
+      openedAt: recipient.openedAt,
+      clickedAt: recipient.clickedAt,
+      repliedAt: recipient.repliedAt
+    })
+    
+    switch (conditionType) {
+      case 'opened':
+      case 'campaign_opened':
+        return !!recipient.openedAt
+      
+      case 'clicked':
+      case 'campaign_clicked':
+        return !!recipient.clickedAt
+      
+      case 'replied':
+      case 'campaign_replied':
+        return !!recipient.repliedAt
+      
+      case 'not_opened':
+      case 'campaign_not_opened':
+        return !recipient.openedAt
+      
+      case 'not_clicked':
+      case 'campaign_not_clicked':
+        return !recipient.clickedAt
+      
+      case 'not_replied':
+      case 'campaign_not_replied':
+        return !recipient.repliedAt
+      
+      case 'opened_no_reply':
+      case 'campaign_opened_no_reply':
+        return !!recipient.openedAt && !recipient.repliedAt
+      
+      case 'opened_no_click':
+      case 'campaign_opened_no_click':
+        return !!recipient.openedAt && !recipient.clickedAt
+      
+      case 'clicked_no_reply':
+      case 'campaign_clicked_no_reply':
+        return !!recipient.clickedAt && !recipient.repliedAt
+      
+      default:
+        console.warn(`Unknown campaign condition type: ${conditionType}`)
         return false
     }
   }

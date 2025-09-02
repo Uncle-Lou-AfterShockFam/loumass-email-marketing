@@ -330,6 +330,7 @@ function SequenceBuilderFlowInner({
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [sequenceName, setSequenceName] = useState('')
   const [description, setDescription] = useState('')
+  const [sequenceType, setSequenceType] = useState<'STANDALONE' | 'CAMPAIGN_FOLLOWUP'>('STANDALONE')
   const [isSaving, setIsSaving] = useState(false)
 
   // Initialize with trigger node
@@ -353,6 +354,7 @@ function SequenceBuilderFlowInner({
   const loadSequenceData = (data: any) => {
     setSequenceName(data.name || '')
     setDescription(data.description || '')
+    setSequenceType(data.sequenceType || 'STANDALONE')
     
     // Convert steps to nodes and edges
     const loadedNodes: Node[] = [
@@ -637,6 +639,7 @@ function SequenceBuilderFlowInner({
     const payload = {
       name: sequenceName,
       description,
+      sequenceType,
       steps,
       status: editMode ? (initialData?.status || 'DRAFT') : 'DRAFT',
       triggerType: 'MANUAL',
@@ -705,6 +708,21 @@ function SequenceBuilderFlowInner({
               onChange={(e) => setDescription(e.target.value)}
               className="text-sm text-gray-600 w-full px-2 py-1 mt-1 bg-transparent"
             />
+            <div className="mt-2">
+              <select
+                value={sequenceType}
+                onChange={(e) => setSequenceType(e.target.value as typeof sequenceType)}
+                className="text-sm px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+              >
+                <option value="STANDALONE">Stand Alone Sequence</option>
+                <option value="CAMPAIGN_FOLLOWUP">Campaign Follow Up</option>
+              </select>
+              {sequenceType === 'CAMPAIGN_FOLLOWUP' && (
+                <span className="ml-2 text-xs text-gray-500">
+                  Waits before checking campaign engagement
+                </span>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-4">

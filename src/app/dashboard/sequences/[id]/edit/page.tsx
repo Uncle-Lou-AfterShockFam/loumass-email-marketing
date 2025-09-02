@@ -175,6 +175,7 @@ export default function EditSequencePage() {
         initialData={{
           name: sequence.name,
           description: sequence.description || '',
+          sequenceType: sequence.sequenceType || 'STANDALONE',
           steps: Array.isArray(sequence.steps) ? sequence.steps : [],
           trackingEnabled: sequence.trackingEnabled !== false,
           status: sequence.status

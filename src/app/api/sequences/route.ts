@@ -35,6 +35,7 @@ const createSequenceSchema = z.object({
   name: z.string().min(1, 'Sequence name is required'),
   description: z.string().optional(),
   triggerType: z.enum(['MANUAL', 'ON_SIGNUP', 'ON_EVENT']).default('MANUAL'),
+  sequenceType: z.enum(['STANDALONE', 'CAMPAIGN_FOLLOWUP']).default('STANDALONE'),
   trackingEnabled: z.boolean().default(true),
   steps: z.array(sequenceStepSchema),
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED']).default('DRAFT')
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { name, description, triggerType, trackingEnabled, steps, status } = validationResult.data
+    const { name, description, triggerType, sequenceType, trackingEnabled, steps, status } = validationResult.data
 
     // Validate sequence logic
     const emailSteps = steps.filter(s => s.type === 'email')
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         description,
         status,
         triggerType: triggerType.toLowerCase(),
+        sequenceType: sequenceType || 'STANDALONE',
         trackingEnabled: trackingEnabled ?? true,
         steps: steps // Store steps as JSON
       }

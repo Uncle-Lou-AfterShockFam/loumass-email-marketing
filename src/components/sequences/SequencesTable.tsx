@@ -11,6 +11,7 @@ interface Sequence {
   name: string
   status: string
   triggerType: string
+  sequenceType?: 'STANDALONE' | 'CAMPAIGN_FOLLOWUP'
   totalEnrollments: number
   activeEnrollments: number
   stepCount: number
@@ -362,6 +363,16 @@ export default function SequencesTable({ sequences }: SequencesTableProps) {
                       >
                         {sequence.name}
                       </Link>
+                      {sequence.sequenceType === 'CAMPAIGN_FOLLOWUP' && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          Campaign Follow Up
+                        </span>
+                      )}
+                      {sequence.sequenceType === 'STANDALONE' && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          Stand Alone
+                        </span>
+                      )}
                       {sequence.hasConditions && (
                         <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                           Conditional
