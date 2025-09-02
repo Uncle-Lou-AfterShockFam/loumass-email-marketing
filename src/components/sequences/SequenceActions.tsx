@@ -56,7 +56,7 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
   const handleProcessNow = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/sequences/process-all', {
+      const response = await fetch('/api/sequences/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
