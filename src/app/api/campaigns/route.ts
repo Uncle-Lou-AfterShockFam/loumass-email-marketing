@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           name: data.name,
           subject: data.subject,
           content: data.content,
-          attachments: data.attachments || null,
+          attachments: data.attachments || undefined,
           status: data.status,
           trackingEnabled: data.trackingEnabled,
           trackingDomainId: data.trackingDomainId,
