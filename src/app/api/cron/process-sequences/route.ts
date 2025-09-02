@@ -7,9 +7,25 @@ export async function GET(request: NextRequest) {
   try {
     // Verify this is a cron job request (from Vercel or local testing)
     const authHeader = request.headers.get('authorization')
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET_KEY}`) {
-      console.error('Unauthorized cron job request')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userAgent = request.headers.get('user-agent')
+    
+    console.log(`=== CRON JOB AUTH CHECK ===`)
+    console.log(`Auth Header: ${authHeader || 'Missing'}`)
+    console.log(`User Agent: ${userAgent || 'Missing'}`)
+    console.log(`Expected: Bearer ${process.env.CRON_SECRET_KEY}`)
+    console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
+    
+    // In production, check if it's from Vercel cron or has correct auth
+    if (process.env.NODE_ENV === 'production') {
+      const isVercelCron = userAgent?.includes('vercel-cron') || userAgent?.includes('Vercel-Cron')
+      const hasValidAuth = authHeader === `Bearer ${process.env.CRON_SECRET_KEY}`
+      
+      if (!isVercelCron && !hasValidAuth) {
+        console.error('Unauthorized cron job request - Not from Vercel cron and invalid auth')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      console.log(`✅ Authorized: Vercel Cron: ${isVercelCron}, Valid Auth: ${hasValidAuth}`)
     }
 
     console.log('=== SEQUENCE PROCESSOR CRON JOB STARTING ===')
@@ -99,7 +115,12 @@ export async function GET(request: NextRequest) {
           }
 
           // Process the enrollment step
-          console.log(`Processing enrollment ${enrollment.id} at step ${enrollment.currentStep}`)
+          console.log(`\n🎯 CRON: Processing enrollment ${enrollment.id} for contact ${enrollment.contact.email}`)
+          console.log(`   - Sequence: ${sequence.name} (${sequence.id})`)
+          console.log(`   - Current step: ${enrollment.currentStep}`)
+          console.log(`   - Last email sent: ${enrollment.lastEmailSentAt?.toISOString() || 'Never'}`)
+          console.log(`   - Enrollment updated: ${enrollment.updatedAt.toISOString()}`)
+          
           const result = await sequenceService.processSequenceStep(enrollment.id)
           
           results.processed++

@@ -34,6 +34,9 @@ export class SequenceService {
   }
 
   async processSequenceStep(enrollmentId: string): Promise<{ success: boolean; reason?: string; completed?: boolean; sentStep?: number }> {
+    console.log(`\n🔥 ==== PROCESSING SEQUENCE STEP FOR ENROLLMENT ${enrollmentId} ====`)
+    console.log(`⏰ Processing started at: ${new Date().toISOString()}`)
+    
     const enrollment = await prisma.sequenceEnrollment.findUnique({
       where: { id: enrollmentId },
       include: {
@@ -46,31 +49,68 @@ export class SequenceService {
       }
     })
 
+    console.log(`📋 Enrollment found:`, {
+      id: enrollment?.id,
+      sequenceId: enrollment?.sequenceId,
+      contactId: enrollment?.contactId,
+      status: enrollment?.status,
+      currentStep: enrollment?.currentStep,
+      lastEmailSentAt: enrollment?.lastEmailSentAt?.toISOString(),
+      createdAt: enrollment?.createdAt?.toISOString(),
+      updatedAt: enrollment?.updatedAt?.toISOString(),
+      contactEmail: enrollment?.contact?.email
+    })
+
     if (!enrollment || enrollment.status !== EnrollmentStatus.ACTIVE) {
+      console.log(`❌ Enrollment invalid or not active - Status: ${enrollment?.status}`)
       return { success: false, reason: 'Enrollment not active' }
     }
 
+    console.log(`✅ Enrollment is ACTIVE and valid`)
+
     const steps = enrollment.sequence.steps as any[] // JSON array of steps
+    
+    console.log(`📚 Sequence steps analysis:`)
+    console.log(`  - Total steps in sequence: ${steps.length}`)
+    console.log(`  - Current step index: ${enrollment.currentStep}`)
+    console.log(`  - Step types: ${steps.map((s, i) => `${i}: ${s.type}`).join(', ')}`)
+    console.log(`  - Step IDs: ${steps.map((s, i) => `${i}: ${s.id || 'NO_ID'}`).join(', ')}`)
     
     // The currentStep field represents the index of the step to execute NOW
     // (not the last step executed)
     let stepToExecute: any
     let stepToExecuteIndex: number = enrollment.currentStep
     
+    console.log(`🎯 Attempting to get step at index ${stepToExecuteIndex}`)
+    
     // Get the step to execute based on current index
     stepToExecute = steps[stepToExecuteIndex]
     
+    console.log(`📝 Step to execute:`, {
+      index: stepToExecuteIndex,
+      exists: !!stepToExecute,
+      type: stepToExecute?.type,
+      id: stepToExecute?.id,
+      hasNextStepId: !!stepToExecute?.nextStepId,
+      nextStepId: stepToExecute?.nextStepId
+    })
+    
     // If we have a step with an ID and it has a nextStepId, use that for flow control
     if (stepToExecute?.id && stepToExecute?.nextStepId) {
+      console.log(`🔗 Step has explicit flow control - nextStepId: ${stepToExecute.nextStepId}`)
       // This step has explicit flow control to another step
       const nextStepIndex = steps.findIndex((s: any) => s.id === stepToExecute.nextStepId)
       if (nextStepIndex >= 0) {
+        console.log(`🎯 Next step found at index: ${nextStepIndex}`)
         // We'll update currentStep to this after processing
         // But for now, we execute the current step
+      } else {
+        console.log(`⚠️ WARNING: nextStepId ${stepToExecute.nextStepId} not found in sequence steps`)
       }
     }
 
     if (!stepToExecute) {
+      console.log(`🏁 No step to execute - sequence completed. Step index ${stepToExecuteIndex} >= ${steps.length}`)
       // Sequence completed
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
@@ -79,8 +119,11 @@ export class SequenceService {
           completedAt: new Date()
         }
       })
+      console.log(`✅ Enrollment marked as COMPLETED`)
       return { success: true, completed: true }
     }
+
+    console.log(`🚀 Processing step type: ${stepToExecute.type} at index ${stepToExecuteIndex}`)
 
     // Handle different step types
     if (stepToExecute.type === 'delay') {
@@ -301,13 +344,23 @@ export class SequenceService {
 
     // Only process email steps (skip delays and conditions that were already handled)
     if (stepToExecute.type !== 'email') {
+      console.log(`⏩ Non-email step type "${stepToExecute.type}" - moving to next step`)
+      console.log(`   Moving from step ${stepToExecuteIndex} to step ${stepToExecuteIndex + 1}`)
+      
       // Move to next step
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
-        data: { currentStep: stepToExecuteIndex + 1 }
+        data: { 
+          currentStep: stepToExecuteIndex + 1,
+          updatedAt: new Date()
+        }
       })
+      
+      console.log(`✅ Updated currentStep to ${stepToExecuteIndex + 1}, recursively processing...`)
       return this.processSequenceStep(enrollmentId)
     }
+    
+    console.log(`📧 Processing EMAIL step at index ${stepToExecuteIndex}`)
     
     // Check if this email step is part of a conditional branch that wasn't chosen
     // Look for any condition steps that have this email in their branches
@@ -393,23 +446,30 @@ export class SequenceService {
     let messageIdForReply: string | undefined
     
     // Check if this step should reply to thread
+    console.log(`🧵 Threading check:`)
+    console.log(`   - stepToExecute.replyToThread: ${stepToExecute.replyToThread}`)
+    console.log(`   - enrollment.gmailThreadId: ${enrollment.gmailThreadId || 'None'}`)
+    console.log(`   - enrollment.gmailMessageId: ${enrollment.gmailMessageId || 'None'}`)
+    console.log(`   - enrollment.messageIdHeader: ${enrollment.messageIdHeader || 'None'}`)
+    
     if (stepToExecute.replyToThread && enrollment.gmailThreadId) {
       threadId = enrollment.gmailThreadId
       
       // Use stored Message-ID header if available, otherwise fetch it
       if (enrollment.messageIdHeader) {
         messageIdForReply = enrollment.messageIdHeader
-        console.log('Using stored Message-ID for threading:', messageIdForReply)
+        console.log('✅ Using stored Message-ID for threading:', messageIdForReply)
       } else if (enrollment.gmailMessageId && gmailToken) {
         // Fetch the actual Message-ID header from Gmail if we have a gmailMessageId
         try {
+          console.log('🔍 Fetching Message-ID header from Gmail...')
           const messageHeaders = await this.gmailFetchService.getMessageHeaders(
             enrollment.sequence.userId,
             gmailToken.email,
             enrollment.gmailMessageId
           )
           messageIdForReply = messageHeaders.messageId || undefined
-          console.log('Fetched actual Message-ID for threading:', messageIdForReply)
+          console.log('✅ Fetched actual Message-ID for threading:', messageIdForReply)
           
           // Store it for future use
           if (messageIdForReply) {
@@ -417,17 +477,46 @@ export class SequenceService {
               where: { id: enrollmentId },
               data: { messageIdHeader: messageIdForReply }
             })
+            console.log('💾 Stored Message-ID for future use')
           }
         } catch (error) {
-          console.error('Failed to fetch Message-ID header:', error)
+          console.error('❌ Failed to fetch Message-ID header:', error)
         }
       }
       
-      console.log('Using sequence thread ID for reply:', threadId)
-      console.log('Using message ID for threading headers:', messageIdForReply)
+      console.log('🧵 Using sequence thread ID for reply:', threadId)
+      console.log('📧 Using message ID for threading headers:', messageIdForReply)
+    } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId) {
+      console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
+      console.log('   This suggests the first email in sequence did not store thread ID properly.')
+      console.log('   This follow-up email will start a new thread.')
       
+      // Start a new thread but maintain subject threading for better continuity
+      threadId = undefined
+      
+      // For better thread appearance, maintain the original subject or add "Re:" prefix
+      const steps = Array.isArray(enrollment.sequence.steps) ? 
+        enrollment.sequence.steps : JSON.parse(enrollment.sequence.steps as string)
+      
+      const firstEmailStep = (steps as any[]).find((s: any) => s.type === 'email')
+      
+      if (firstEmailStep) {
+        const originalSubject = this.replaceVariables(firstEmailStep.subject || '', enrollment.contact)
+        // Use "Re:" prefix for visual thread continuity even if technical thread is broken
+        if (!subject.startsWith('Re:') && !originalSubject.startsWith('Re:')) {
+          subject = `Re: ${originalSubject}`
+          console.log('🎯 Adjusted subject for visual thread continuity:', subject)
+        }
+      }
+    } else {
+      // Start a new thread for this sequence
+      threadId = undefined
+      console.log('🆕 Starting new thread for this sequence email')
+    }
+
+    // Apply "Re:" prefix for thread continuity when using threadId
+    if (threadId) {
       // For thread continuity, maintain the original subject or add "Re:" prefix
-      // Get the first email step's subject to maintain thread
       const steps = Array.isArray(enrollment.sequence.steps) ? 
         enrollment.sequence.steps : JSON.parse(enrollment.sequence.steps as string)
       
@@ -441,12 +530,8 @@ export class SequenceService {
         } else if (originalSubject.startsWith('Re:')) {
           subject = originalSubject // Keep the original Re: subject
         }
-        console.log('Adjusted subject for thread continuity:', subject)
+        console.log('📧 Adjusted subject for thread continuity:', subject)
       }
-    } else {
-      // Start a new thread for this sequence
-      threadId = undefined
-      console.log('Starting new thread for this sequence email')
     }
 
     // Send the email
@@ -485,19 +570,42 @@ export class SequenceService {
         }
       }
       
+      console.log(`✅ Email sent successfully!`)
+      console.log(`   Gmail Message ID: ${result.messageId}`)
+      console.log(`   Gmail Thread ID: ${result.threadId}`)
+      console.log(`   Message-ID Header: ${messageIdHeader || 'Not captured'}`)
+      
       // Update enrollment with Gmail thread ID for reply tracking
+      const updateData = { 
+        currentStep: enrollment.currentStep + 1,
+        lastEmailSentAt: new Date(),
+        // Always update gmailMessageId with the latest message ID for proper threading
+        gmailMessageId: result.messageId,
+        gmailThreadId: result.threadId,
+        // Store the Message-ID header only for the first email
+        ...(messageIdHeader && !enrollment.messageIdHeader ? { messageIdHeader } : {})
+      }
+      
+      console.log(`📝 Updating enrollment after email sent:`, {
+        enrollmentId: enrollmentId,
+        oldCurrentStep: enrollment.currentStep,
+        newCurrentStep: updateData.currentStep,
+        lastEmailSentAt: updateData.lastEmailSentAt.toISOString(),
+        oldGmailMessageId: enrollment.gmailMessageId,
+        newGmailMessageId: updateData.gmailMessageId,
+        oldGmailThreadId: enrollment.gmailThreadId,
+        newGmailThreadId: updateData.gmailThreadId,
+        messageIdHeader: updateData.messageIdHeader
+      })
+      
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
-        data: { 
-          currentStep: enrollment.currentStep + 1,
-          lastEmailSentAt: new Date(),
-          gmailMessageId: enrollment.gmailMessageId || result.messageId,
-          gmailThreadId: result.threadId,
-          // Store the Message-ID header only for the first email
-          ...(messageIdHeader && !enrollment.messageIdHeader ? { messageIdHeader } : {})
-        }
+        data: updateData
       })
 
+      console.log(`🎉 Email step ${stepToExecuteIndex + 1} completed successfully!`)
+      console.log(`🔥 ==== PROCESSING COMPLETE FOR ENROLLMENT ${enrollmentId} ====\n`)
+      
       return { success: true, sentStep: stepToExecuteIndex + 1 }
     } catch (error) {
       console.error('Failed to send sequence email:', error)
