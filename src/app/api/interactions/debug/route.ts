@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       debug: {
-        session: !!session,
+        mockSession: true,
         user: { id: user.id, email: user.email },
         eventCount,
         sampleEvents: sampleEvents.length
