@@ -384,16 +384,33 @@ export class GmailService {
         }
 
         // Extract embedded images as attachments to avoid size limits
-        const { cleanedHtml, attachments } = extractImagesAsAttachments(trackedHtml)
-        console.log(`Extracted ${attachments.length} images as attachments`)
+        const { cleanedHtml, attachments: imageAttachments } = extractImagesAsAttachments(trackedHtml)
+        console.log(`Extracted ${imageAttachments.length} images as attachments`)
         console.log('Cleaned HTML length:', cleanedHtml.length, 'vs original:', trackedHtml.length)
+
+        // Combine image attachments with campaign file attachments
+        const allAttachments: EmailAttachment[] = [...imageAttachments]
+        
+        // Add campaign file attachments if any
+        if (campaign.attachments && Array.isArray(campaign.attachments)) {
+          console.log(`Campaign has ${campaign.attachments.length} file attachments`)
+          for (const attachment of campaign.attachments as any[]) {
+            if (attachment.filename && attachment.content && attachment.contentType) {
+              allAttachments.push({
+                filename: attachment.filename,
+                content: attachment.content, // Already base64 encoded
+                contentType: attachment.contentType
+              })
+            }
+          }
+        }
 
         // Send email
         console.log('About to send email with:')
         console.log('- Subject:', subject)
         console.log('- To:', contact.email)
         console.log('- HTML content length:', cleanedHtml.length)
-        console.log('- Attachments:', attachments.length)
+        console.log('- Total attachments:', allAttachments.length, `(${imageAttachments.length} images, ${allAttachments.length - imageAttachments.length} files)`)
         console.log('- HTML content (first 300):', cleanedHtml.substring(0, 300))
         
         const result = await this.sendEmail(userId, gmailAddress, {
@@ -405,7 +422,7 @@ export class GmailService {
           replyTo: undefined, // Campaign model doesn't have replyTo field
           trackingId,
           campaignId,
-          attachments: attachments.length > 0 ? attachments : undefined,
+          attachments: allAttachments.length > 0 ? allAttachments : undefined,
           contactId: contact.id
         })
         

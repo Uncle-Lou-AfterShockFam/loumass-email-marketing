@@ -121,6 +121,7 @@ model Campaign {
   name             String
   subject          String
   content          String
+  attachments      Json?          // Store file attachments as JSON
   status           CampaignStatus @default(DRAFT)
   scheduledFor     DateTime?
   sentAt           DateTime?

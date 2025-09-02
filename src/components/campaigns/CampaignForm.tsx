@@ -76,6 +76,8 @@ export default function CampaignForm({
   const [scheduledFor, setScheduledFor] = useState('')
   const [testEmail, setTestEmail] = useState('')
   const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null)
+  const [attachments, setAttachments] = useState<File[]>([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
 
   // Contact selection
   const [showContactModal, setShowContactModal] = useState(false)
@@ -104,6 +106,40 @@ export default function CampaignForm({
       setContent(template.content)
       setSelectedTemplate(templateId)
     }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const validFiles: File[] = []
+    const maxSize = 10 * 1024 * 1024 // 10MB per file
+    const totalMaxSize = 25 * 1024 * 1024 // 25MB total
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.size > maxSize) {
+        alert(`File "${file.name}" is too large. Maximum size is 10MB per file.`)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    const currentSize = attachments.reduce((acc, file) => acc + file.size, 0)
+    const newSize = validFiles.reduce((acc, file) => acc + file.size, 0)
+    
+    if (currentSize + newSize > totalMaxSize) {
+      alert('Total attachment size cannot exceed 25MB')
+      return
+    }
+
+    setAttachments(prev => [...prev, ...validFiles])
+    // Reset the input
+    e.target.value = ''
+  }
+
+  const handleFileRemove = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSendTest = async () => {
@@ -139,10 +175,42 @@ export default function CampaignForm({
     setIsSubmitting(true)
     
     try {
+      // Convert attachments to base64 for sending
+      const attachmentData: Array<{
+        filename: string
+        content: string
+        contentType: string
+      }> = []
+
+      if (attachments.length > 0) {
+        setUploadingFiles(true)
+        for (const file of attachments) {
+          const reader = new FileReader()
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const result = reader.result as string
+              // Remove the data:type/subtype;base64, prefix
+              const base64Content = result.split(',')[1]
+              resolve(base64Content)
+            }
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+
+          attachmentData.push({
+            filename: file.name,
+            content: base64,
+            contentType: file.type || 'application/octet-stream'
+          })
+        }
+        setUploadingFiles(false)
+      }
+
       const campaignData = {
         name,
         subject,
         content,
+        attachments: attachmentData,
         status: action === 'draft' ? 'DRAFT' : action === 'schedule' ? 'SCHEDULED' : 'DRAFT',
         trackingEnabled,
         trackingOptions: {
@@ -291,6 +359,116 @@ export default function CampaignForm({
         <p className="mt-2 text-sm text-gray-500">
           Tip: Use variables to personalize your emails. Available variables will be replaced with contact data.
         </p>
+      </div>
+
+      {/* File Attachments */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">File Attachments</h2>
+        
+        <div className="space-y-4">
+          {/* File Upload Area */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <input
+              type="file"
+              id="file-upload"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
+              disabled={uploadingFiles}
+            />
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer"
+            >
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 48 48"
+                aria-hidden="true"
+              >
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="mt-2 text-sm text-gray-600">
+                <span className="font-semibold text-blue-600 hover:text-blue-500">
+                  Click to upload
+                </span>{' '}
+                or drag and drop
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                PDF, DOC, XLS, PNG, JPG up to 10MB each
+              </p>
+            </label>
+          </div>
+
+          {/* Attached Files List */}
+          {attachments.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">
+                Attached Files ({attachments.length})
+              </p>
+              <div className="space-y-2">
+                {attachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <svg
+                        className="h-8 w-8 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleFileRemove(index)}
+                      className="text-red-500 hover:text-red-700 transition"
+                      disabled={uploadingFiles}
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Total size: {(attachments.reduce((acc, file) => acc + file.size, 0) / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recipients */}

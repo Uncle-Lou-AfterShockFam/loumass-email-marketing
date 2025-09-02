@@ -13,6 +13,11 @@ const createCampaignSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
   subject: z.string().min(1, 'Subject is required'),
   content: z.string().min(1, 'Content is required'),
+  attachments: z.array(z.object({
+    filename: z.string(),
+    content: z.string(), // base64 encoded
+    contentType: z.string()
+  })).optional(),
   status: z.enum(['DRAFT', 'SCHEDULED', 'SENDING']).default('DRAFT'),
   trackingEnabled: z.boolean().default(true),
   trackingOptions: z.object({
@@ -146,6 +151,7 @@ export async function POST(request: NextRequest) {
           name: data.name,
           subject: data.subject,
           content: data.content,
+          attachments: data.attachments || null,
           status: data.status,
           trackingEnabled: data.trackingEnabled,
           trackingDomainId: data.trackingDomainId,
