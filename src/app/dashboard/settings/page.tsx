@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import GmailConnection from '@/components/settings/GmailConnection'
 import TrackingDomain from '@/components/settings/TrackingDomain'
 import AccountSettings from '@/components/settings/AccountSettings'
+import OAuthCredentials from '@/components/settings/OAuthCredentials'
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -32,6 +33,8 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        <OAuthCredentials />
+        
         <GmailConnection 
           isConnected={!!gmailToken}
           email={gmailToken?.email}

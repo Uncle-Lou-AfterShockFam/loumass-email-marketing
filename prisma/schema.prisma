@@ -8,23 +8,27 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  name           String?
-  password       String?
-  emailVerified  DateTime?
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  accounts       Account[]
-  campaigns      Campaign[]
-  contacts       Contact[]
-  emailTemplates EmailTemplate[]
-  gmailToken     GmailToken?
-  sequences      Sequence[]
-  sessions       Session[]
-  trackingDomain TrackingDomain?
-  webhooks       Webhook[]
+  id                   String          @id @default(cuid())
+  email                String          @unique
+  name                 String?
+  password             String?
+  emailVerified        DateTime?
+  image                String?
+  // OAuth Credentials - each user brings their own
+  googleClientId       String?         // User's Google OAuth Client ID
+  googleClientSecret   String?         // User's Google OAuth Client Secret (encrypted)
+  oauthConfigured      Boolean         @default(false) // Whether OAuth is configured
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  accounts             Account[]
+  campaigns            Campaign[]
+  contacts             Contact[]
+  emailTemplates       EmailTemplate[]
+  gmailToken           GmailToken?
+  sequences            Sequence[]
+  sessions             Session[]
+  trackingDomain       TrackingDomain?
+  webhooks             Webhook[]
 }
 
 model Account {
