@@ -132,7 +132,26 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        if (recipients.length === 0) continue
+        // Also check for sequence enrollments with matching thread ID
+        const contact = await prisma.contact.findFirst({
+          where: { email: fromEmail }
+        })
+        
+        let sequenceEnrollments: any[] = []
+        if (contact) {
+          sequenceEnrollments = await prisma.sequenceEnrollment.findMany({
+            where: {
+              gmailThreadId: threadId,
+              contactId: contact.id
+            },
+            include: {
+              contact: true,
+              sequence: true
+            }
+          })
+        }
+        
+        if (recipients.length === 0 && sequenceEnrollments.length === 0) continue
         
         // Process reply for each matching recipient
         for (const recipient of recipients) {
@@ -206,6 +225,79 @@ export async function POST(request: NextRequest) {
           processedReplies.push({
             campaignName: recipient.campaign.name,
             contactEmail: recipient.contact.email,
+            subject,
+            date
+          })
+        }
+        
+        // Process reply for each matching sequence enrollment
+        for (const enrollment of sequenceEnrollments) {
+          // Check if we've already recorded this reply
+          const existingReply = await prisma.sequenceEvent.findFirst({
+            where: {
+              enrollmentId: enrollment.id,
+              eventType: 'REPLIED',
+              eventData: {
+                path: ['gmailMessageId'],
+                equals: message.id
+              }
+            }
+          })
+          
+          if (existingReply) continue
+          
+          // Get the current step index (the step that sent the email being replied to)
+          const stepIndex = enrollment.currentStep > 0 ? enrollment.currentStep - 1 : 0
+          
+          // Create sequence reply event
+          const replyEvent = await prisma.sequenceEvent.create({
+            data: {
+              enrollmentId: enrollment.id,
+              stepIndex: stepIndex,
+              eventType: 'REPLIED',
+              eventData: {
+                gmailMessageId: message.id,
+                gmailThreadId: threadId,
+                gmailMessageIdHeader: messageId,
+                subject,
+                fromEmail,
+                date,
+                messageBody,
+                inReplyTo,
+                references,
+                timestamp: new Date().toISOString()
+              }
+            }
+          })
+          
+          console.log('Created sequence reply event:', {
+            eventId: replyEvent.id,
+            enrollmentId: enrollment.id,
+            sequenceName: enrollment.sequence.name,
+            stepIndex: stepIndex,
+            fromEmail,
+            subject,
+            hasMessageBody: !!messageBody,
+            messageBodyLength: messageBody?.length || 0
+          })
+          
+          // Update enrollment reply stats
+          if (!enrollment.lastRepliedAt) {
+            await prisma.sequenceEnrollment.update({
+              where: { id: enrollment.id },
+              data: {
+                lastRepliedAt: new Date(),
+                replyCount: {
+                  increment: 1
+                }
+              }
+            })
+          }
+          
+          repliesFound++
+          processedReplies.push({
+            sequenceName: enrollment.sequence.name,
+            contactEmail: enrollment.contact.email,
             subject,
             date
           })

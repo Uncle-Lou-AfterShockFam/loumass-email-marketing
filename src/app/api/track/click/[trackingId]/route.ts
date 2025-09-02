@@ -239,14 +239,44 @@ export async function GET(
       }
     }
 
+    // Decode the URL and ensure it's a valid absolute URL
+    const decodedUrl = decodeURIComponent(url)
+    console.log('Redirecting to:', decodedUrl)
+    
+    // Ensure the URL is absolute
+    let redirectUrl: URL
+    try {
+      redirectUrl = new URL(decodedUrl)
+    } catch (e) {
+      // If not a valid URL, try adding https://
+      try {
+        redirectUrl = new URL(`https://${decodedUrl}`)
+      } catch (e2) {
+        console.error('Invalid redirect URL:', decodedUrl)
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+    }
+    
     // Redirect to the actual URL
-    return NextResponse.redirect(decodeURIComponent(url))
+    return NextResponse.redirect(redirectUrl.toString())
   } catch (error) {
     console.error('Click tracking error:', error)
     // Redirect to the original URL on error
     const url = request.nextUrl.searchParams.get('u')
     if (url) {
-      return NextResponse.redirect(decodeURIComponent(url))
+      try {
+        const decodedUrl = decodeURIComponent(url)
+        const redirectUrl = new URL(decodedUrl)
+        return NextResponse.redirect(redirectUrl.toString())
+      } catch (e) {
+        // Try with https:// prefix
+        try {
+          const redirectUrl = new URL(`https://${decodeURIComponent(url)}`)
+          return NextResponse.redirect(redirectUrl.toString())
+        } catch (e2) {
+          // Fall back to home page
+        }
+      }
     }
     return NextResponse.redirect(new URL('/', request.url))
   }

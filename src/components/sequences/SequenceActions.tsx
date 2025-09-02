@@ -87,6 +87,38 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
     }
   }
 
+  const handleCheckReplies = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/gmail/check-replies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to check for replies')
+      }
+
+      const result = await response.json()
+      
+      if (result.repliesFound > 0) {
+        toast.success(`Found ${result.repliesFound} new replies`)
+      } else {
+        toast.info('No new replies found')
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error('Error checking for replies:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to check for replies')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleExportReport = async () => {
     setIsLoading(true)
     try {
@@ -168,6 +200,14 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
           {isLoading ? 'Processing...' : 'Process Now'}
         </button>
       )}
+
+      <button
+        onClick={handleCheckReplies}
+        disabled={isLoading}
+        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading ? 'Checking...' : 'Check Replies'}
+      </button>
       
       <button
         onClick={handleExportReport}

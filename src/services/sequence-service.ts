@@ -245,7 +245,7 @@ export class SequenceService {
 
     // Send the email
     try {
-      await this.gmailService.sendEmail(
+      const result = await this.gmailService.sendEmail(
         enrollment.sequence.userId,
         gmailToken.email,
         {
@@ -261,12 +261,14 @@ export class SequenceService {
         }
       )
 
-      // Update enrollment
+      // Update enrollment with Gmail thread ID for reply tracking
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: { 
           currentStep: enrollment.currentStep + 1,
-          lastEmailSentAt: new Date()
+          lastEmailSentAt: new Date(),
+          gmailMessageId: result.messageId,
+          gmailThreadId: result.threadId
         }
       })
 
