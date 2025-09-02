@@ -342,29 +342,95 @@ export class SequenceService {
   }
 
   private addTrackingToEmail(html: string, trackingId: string): string {
-    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 
-                   process.env.NEXT_PUBLIC_APP_URL || 
-                   'http://localhost:3000'
+    console.log('=== SEQUENCE addTrackingToEmail CALLED ===')
+    console.log('Input HTML length:', html.length)
+    console.log('Tracking ID:', trackingId)
     
-    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}`
+    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://click.aftershockfam.org'
+    
+    console.log('Base URL for tracking:', baseUrl)
+    
+    // Add open tracking pixel with cache-busting parameter
+    const cacheBuster = Math.random().toString(36).substring(7)
+    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}?cb=${cacheBuster}`
     const pixelHtml = `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`
     
+    console.log('Pixel URL:', pixelUrl)
+    console.log('Pixel HTML:', pixelHtml)
+    
     let trackedHtml = html
-    if (html.includes('</body>')) {
-      trackedHtml = html.replace('</body>', `${pixelHtml}</body>`)
+    
+    // Check if content is plain text (no HTML tags)
+    const hasHtmlTags = /<[^>]+>/.test(html)
+    
+    if (!hasHtmlTags) {
+      console.log('Content appears to be plain text, converting to HTML...')
+      // Convert plain text to HTML with proper structure
+      // First, escape any HTML special characters except URLs
+      trackedHtml = trackedHtml
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+      
+      // Then convert URLs to links
+      trackedHtml = trackedHtml.replace(/(https?:\/\/[^\s<>'"]+)/gi, '<a href="$1">$1</a>')
+      
+      // Wrap in proper HTML structure
+      trackedHtml = `<html><body>${trackedHtml}${pixelHtml}</body></html>`
+      
+      console.log('Converted plain text to HTML with pixel')
     } else {
-      trackedHtml = html + pixelHtml
+      // Content already has HTML, process normally
+      console.log('Content already has HTML tags')
+      
+      // Convert HTTP/HTTPS URLs that are not already inside HTML tags
+      const urlRegex = /(?<!<[^>]*)(https?:\/\/[^\s<>'"]+)/gi
+      let urlsConverted = 0
+      
+      trackedHtml = trackedHtml.replace(urlRegex, (match) => {
+        urlsConverted++
+        console.log(`URL ${urlsConverted}: ${match} -> <a href="${match}">${match}</a>`)
+        return `<a href="${match}">${match}</a>`
+      })
+      
+      console.log(`Converted ${urlsConverted} plain text URLs to HTML links`)
+      
+      // Ensure HTML has proper structure
+      if (!trackedHtml.includes('<html') && !trackedHtml.includes('<body')) {
+        trackedHtml = `<html><body>${trackedHtml}</body></html>`
+      }
+      
+      // Insert pixel before closing body tag
+      if (trackedHtml.includes('</body>')) {
+        console.log('Found </body> tag, inserting pixel before it')
+        trackedHtml = trackedHtml.replace('</body>', `${pixelHtml}</body>`)
+      } else {
+        console.log('No </body> tag found, appending pixel to end')
+        trackedHtml = trackedHtml + pixelHtml
+      }
     }
     
+    // Replace all HTML links for click tracking - FIXED: Use 'u' parameter like campaigns
     const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+    let linkCount = 0
+    
     trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
+      // Don't track unsubscribe links
       if (url.includes('unsubscribe') || url.includes('mailto:')) {
         return match
       }
       
-      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}`
+      linkCount++
+      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
+      console.log(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
       return match.replace(url, trackedUrl)
     })
+    
+    console.log('=== SEQUENCE addTrackingToEmail COMPLETE ===')
+    console.log('Final HTML length:', trackedHtml.length)
+    console.log('Links tracked:', linkCount)
     
     return trackedHtml
   }
