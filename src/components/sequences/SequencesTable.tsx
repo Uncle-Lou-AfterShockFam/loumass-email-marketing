@@ -160,6 +160,36 @@ export default function SequencesTable({ sequences }: SequencesTableProps) {
     }
   }
 
+  const handleDuplicate = async (sequenceId: string, sequenceName: string) => {
+    try {
+      const response = await fetch(`/api/sequences/${sequenceId}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to duplicate sequence')
+      }
+
+      const data = await response.json()
+      toast.success(data.message || `Successfully duplicated "${sequenceName}"`)
+      
+      // Redirect to the new sequence
+      if (data.sequence?.id) {
+        router.push(`/dashboard/sequences/${data.sequence.id}/edit`)
+      } else {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error duplicating sequence:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to duplicate sequence')
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -389,7 +419,11 @@ export default function SequencesTable({ sequences }: SequencesTableProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </Link>
-                    <button className="text-gray-600 hover:text-gray-900">
+                    <button 
+                      onClick={() => handleDuplicate(sequence.id, sequence.name)}
+                      className="text-gray-600 hover:text-gray-900"
+                      title="Duplicate sequence"
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>

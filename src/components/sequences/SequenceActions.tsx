@@ -160,6 +160,43 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
     }
   }
 
+  const handleDuplicate = async () => {
+    if (!confirm(`Are you sure you want to duplicate "${sequence.name}"?`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/sequences/${sequence.id}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to duplicate sequence')
+      }
+
+      const data = await response.json()
+      toast.success(data.message || `Successfully duplicated "${sequence.name}"`)
+      
+      // Redirect to the new sequence
+      if (data.sequence?.id) {
+        router.push(`/dashboard/sequences/${data.sequence.id}/edit`)
+      } else {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error duplicating sequence:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to duplicate sequence')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="flex gap-3">
       <Link
@@ -168,6 +205,15 @@ export default function SequenceActions({ sequence, enrollmentCount }: SequenceA
       >
         Edit Sequence
       </Link>
+
+      <button
+        onClick={handleDuplicate}
+        disabled={isLoading}
+        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Duplicate this sequence"
+      >
+        {isLoading ? 'Duplicating...' : 'Duplicate'}
+      </button>
       
       <button
         onClick={handleStatusToggle}
