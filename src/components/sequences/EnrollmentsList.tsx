@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface Enrollment {
@@ -27,19 +27,90 @@ interface Step {
   delay?: number
 }
 
+interface EnrollmentEvent {
+  enrollmentId: string
+  opens: number
+  clicks: number
+  replies: number
+  lastActivity: Date | null
+}
+
 interface EnrollmentsListProps {
   enrollments: Enrollment[]
   steps: Step[]
   trackingEnabled: boolean
+  sequenceId: string
 }
 
-export default function EnrollmentsList({ enrollments, steps, trackingEnabled }: EnrollmentsListProps) {
+export default function EnrollmentsList({ enrollments, steps, trackingEnabled, sequenceId }: EnrollmentsListProps) {
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'enrolled' | 'activity' | 'step'>('enrolled')
   const [currentPage, setCurrentPage] = useState(1)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [enrollmentEvents, setEnrollmentEvents] = useState<Record<string, EnrollmentEvent>>({})
+  const [eventsLoading, setEventsLoading] = useState(false)
   const itemsPerPage = 10
+
+  // Fetch enrollment events for engagement tracking
+  useEffect(() => {
+    if (trackingEnabled && enrollments.length > 0) {
+      fetchEnrollmentEvents()
+    }
+  }, [sequenceId, trackingEnabled, enrollments])
+
+  const fetchEnrollmentEvents = async () => {
+    if (!trackingEnabled) return
+    
+    setEventsLoading(true)
+    try {
+      const response = await fetch(`/api/sequences/${sequenceId}/events`)
+      if (response.ok) {
+        const data = await response.json()
+        const events = data.events || []
+        
+        // Aggregate events by enrollment ID
+        const eventsByEnrollment: Record<string, EnrollmentEvent> = {}
+        
+        events.forEach((event: any) => {
+          const enrollmentId = event.enrollment?.id || event.enrollmentId
+          if (!enrollmentId) return
+          
+          if (!eventsByEnrollment[enrollmentId]) {
+            eventsByEnrollment[enrollmentId] = {
+              enrollmentId,
+              opens: 0,
+              clicks: 0,
+              replies: 0,
+              lastActivity: null
+            }
+          }
+          
+          const eventEntry = eventsByEnrollment[enrollmentId]
+          
+          if (event.eventType === 'OPENED') {
+            eventEntry.opens++
+          } else if (event.eventType === 'CLICKED') {
+            eventEntry.clicks++
+          } else if (event.eventType === 'REPLIED') {
+            eventEntry.replies++
+          }
+          
+          // Update last activity
+          const eventDate = new Date(event.createdAt)
+          if (!eventEntry.lastActivity || eventDate > eventEntry.lastActivity) {
+            eventEntry.lastActivity = eventDate
+          }
+        })
+        
+        setEnrollmentEvents(eventsByEnrollment)
+      }
+    } catch (error) {
+      console.error('Failed to fetch enrollment events:', error)
+    } finally {
+      setEventsLoading(false)
+    }
+  }
 
   const handlePauseResume = async (enrollmentId: string, action: 'pause' | 'resume') => {
     setActionLoading(enrollmentId)
@@ -138,8 +209,8 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
       if (filter === 'paused' && enrollment.status !== 'PAUSED') return false
       if (filter === 'unsubscribed' && enrollment.status !== 'UNSUBSCRIBED') return false
       if (filter === 'engaged') {
-        // TODO: Engagement tracking not implemented - always return false for now
-        return false
+        const events = enrollmentEvents[enrollment.id]
+        return events && (events.opens > 0 || events.clicks > 0 || events.replies > 0)
       }
     }
 
@@ -161,9 +232,10 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
   const sortedEnrollments = [...filteredEnrollments].sort((a, b) => {
     switch (sortBy) {
       case 'activity':
-        // TODO: Last action tracking not implemented - use updatedAt for now
-        const aTime = new Date(a.updatedAt).getTime()
-        const bTime = new Date(b.updatedAt).getTime()
+        const aEvents = enrollmentEvents[a.id]
+        const bEvents = enrollmentEvents[b.id]
+        const aTime = aEvents?.lastActivity ? new Date(aEvents.lastActivity).getTime() : new Date(a.updatedAt).getTime()
+        const bTime = bEvents?.lastActivity ? new Date(bEvents.lastActivity).getTime() : new Date(b.updatedAt).getTime()
         return bTime - aTime
       case 'step':
         const aStep = typeof a.currentStep === 'string' ? parseInt(a.currentStep) : a.currentStep
@@ -203,9 +275,14 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
     return `Step ${stepNumber}`
   }
 
-  const getEngagementScore = () => {
-    // TODO: Engagement tracking not implemented - return placeholder
-    return 0
+  const getEngagementScore = (enrollmentId: string) => {
+    const events = enrollmentEvents[enrollmentId]
+    if (!events) return 0
+    
+    const totalEvents = events.opens + events.clicks + events.replies
+    // Weight different actions: replies=3, clicks=2, opens=1
+    const weightedScore = (events.replies * 3) + (events.clicks * 2) + (events.opens * 1)
+    return Math.min(100, Math.round(weightedScore * 5)) // Scale to 0-100
   }
 
   return (
@@ -297,7 +374,8 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedEnrollments.map((enrollment) => {
-              const engagementScore = getEngagementScore()
+              const events = enrollmentEvents[enrollment.id]
+              const engagementScore = getEngagementScore(enrollment.id)
               const currentStepNum = typeof enrollment.currentStep === 'string' ? parseInt(enrollment.currentStep) : enrollment.currentStep
               
               return (
@@ -344,7 +422,13 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                     {formatDistanceToNow(new Date(enrollment.createdAt), { addSuffix: true })}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    <span className="text-gray-400">No activity tracking</span>
+                    {(() => {
+                      const events = enrollmentEvents[enrollment.id]
+                      if (eventsLoading) return <span className="text-gray-400">Loading...</span>
+                      if (!trackingEnabled) return <span className="text-gray-400">Tracking disabled</span>
+                      if (!events || !events.lastActivity) return <span className="text-gray-400">No activity</span>
+                      return formatDistanceToNow(events.lastActivity, { addSuffix: true })
+                    })()} 
                   </td>
                   {trackingEnabled && (
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -356,29 +440,36 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
-                              <span>0</span>
+                              <span>{eventsLoading ? '-' : (events?.opens || 0)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                               </svg>
-                              <span>0</span>
+                              <span>{eventsLoading ? '-' : (events?.clicks || 0)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                               </svg>
-                              <span>0</span>
+                              <span>{eventsLoading ? '-' : (events?.replies || 0)}</span>
                             </div>
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                               <div
-                                className="h-1.5 rounded-full bg-gray-400"
-                                style={{ width: '0%' }}
+                                className={`h-1.5 rounded-full ${
+                                  engagementScore >= 75 ? 'bg-green-500' :
+                                  engagementScore >= 50 ? 'bg-blue-500' :
+                                  engagementScore >= 25 ? 'bg-yellow-500' :
+                                  engagementScore > 0 ? 'bg-orange-500' : 'bg-gray-400'
+                                }`}
+                                style={{ width: `${engagementScore}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-600">0%</span>
+                            <span className="text-xs text-gray-600">
+                              {eventsLoading ? '-' : `${engagementScore}%`}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -537,8 +628,16 @@ export default function EnrollmentsList({ enrollments, steps, trackingEnabled }:
 
           <div>
             <h3 className="text-sm font-medium text-gray-900 mb-2">Engagement Rate</h3>
-            <p className="text-2xl font-bold text-teal-600">0%</p>
-            <p className="text-sm text-gray-600">Tracking not implemented</p>
+            <p className="text-2xl font-bold text-teal-600">
+              {eventsLoading ? '-' : (
+                enrollments.length > 0 
+                  ? Math.round((Object.values(enrollmentEvents).filter(e => e.opens > 0 || e.clicks > 0 || e.replies > 0).length / enrollments.length) * 100)
+                  : 0
+              )}%
+            </p>
+            <p className="text-sm text-gray-600">
+              {Object.values(enrollmentEvents).filter(e => e.opens > 0 || e.clicks > 0 || e.replies > 0).length} engaged
+            </p>
           </div>
         </div>
       </div>

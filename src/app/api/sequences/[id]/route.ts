@@ -113,6 +113,11 @@ export async function GET(
     })
 
     console.log(`Found ${sequenceEvents.length} sequence events for sequence ${id}`)
+    console.log('Sequence events by type:', {
+      opens: sequenceEvents.filter(e => e.eventType === 'OPENED').length,
+      clicks: sequenceEvents.filter(e => e.eventType === 'CLICKED').length,
+      replies: sequenceEvents.filter(e => e.eventType === 'REPLIED').length
+    })
 
     // Calculate analytics by step
     const steps = Array.isArray(sequence.steps) ? sequence.steps : []
@@ -122,6 +127,13 @@ export async function GET(
       const opens = stepEvents.filter(e => e.eventType === 'OPENED').length
       const clicks = stepEvents.filter(e => e.eventType === 'CLICKED').length  
       const replies = stepEvents.filter(e => e.eventType === 'REPLIED').length
+      
+      console.log(`Step ${stepIndex} (${step.id}):`, {
+        totalStepEvents: stepEvents.length,
+        opens,
+        clicks,
+        replies
+      })
       
       // Count enrollments that have reached this step (sent emails)
       const enrollmentsAtStep = sequence.enrollments.filter(enrollment => {

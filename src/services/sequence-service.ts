@@ -82,23 +82,44 @@ export class SequenceService {
 
     // Handle different step types
     if (stepToExecute.type === 'delay') {
-      // Schedule next action after delay
-      const delayHours = (stepToExecute.delay?.days || 0) * 24 + (stepToExecute.delay?.hours || 0)
-      const nextActionAt = new Date(Date.now() + delayHours * 60 * 60 * 1000)
+      console.log(`=== PROCESSING DELAY STEP ${stepToExecuteIndex + 1} ===`)
       
+      // Check if delay has already been started
+      const lastActionTime = enrollment.lastEmailSentAt || enrollment.createdAt
+      const delayHours = (stepToExecute.delay?.hours || 0)
+      const delayMinutes = (stepToExecute.delay?.minutes || 0)
+      const delayDays = (stepToExecute.delay?.days || 0)
+      const delayMs = (delayDays * 24 * 60 * 60 * 1000) + (delayHours * 60 * 60 * 1000) + (delayMinutes * 60 * 1000)
+      
+      console.log(`Delay: ${delayDays}d ${delayHours}h ${delayMinutes}m (${delayMs}ms)`)
+      console.log('Last action time:', lastActionTime)
+      
+      const timeSinceLastAction = Date.now() - lastActionTime.getTime()
+      
+      if (timeSinceLastAction < delayMs) {
+        const remainingMs = delayMs - timeSinceLastAction
+        const remainingMinutes = Math.ceil(remainingMs / 60000)
+        console.log(`Delay not complete, waiting ${remainingMinutes} more minutes`)
+        return { success: true, reason: `Still waiting ${remainingMinutes} minutes` }
+      }
+      
+      // Delay is complete, move to next step
+      console.log('Delay complete, moving to next step')
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {
-          currentStep: stepToExecuteIndex + 1,
-          // nextActionAt field doesn't exist in schema yet
-          updatedAt: nextActionAt
+          currentStep: stepToExecuteIndex + 1
         }
       })
       
-      return { success: true, reason: `Delayed for ${delayHours} hours` }
+      // Continue processing the next step immediately
+      return this.processSequenceStep(enrollmentId)
     }
     
     if (stepToExecute.type === 'condition') {
+      console.log(`=== PROCESSING CONDITION STEP ${stepToExecuteIndex + 1} ===`)
+      console.log('Condition data:', stepToExecute.condition)
+      
       // Evaluate condition and choose branch
       const conditionMet = await this.evaluateCondition(
         stepToExecute.condition,
@@ -106,19 +127,30 @@ export class SequenceService {
         enrollment.sequenceId
       )
       
+      console.log('Condition result:', conditionMet ? 'TRUE' : 'FALSE')
+      
       // Determine next step based on condition result
       let branchStepId: string | undefined
       if (conditionMet && stepToExecute.condition?.trueBranch?.[0]) {
         branchStepId = stepToExecute.condition.trueBranch[0]
+        console.log('Following TRUE branch to step:', branchStepId)
       } else if (!conditionMet && stepToExecute.condition?.falseBranch?.[0]) {
         branchStepId = stepToExecute.condition.falseBranch[0]
+        console.log('Following FALSE branch to step:', branchStepId)
       } else {
-        // No branch defined, continue to next step
-        branchStepId = stepToExecute.nextStepId || steps[stepToExecuteIndex + 1]?.id
+        // No branch defined, continue to next sequential step
+        const nextStepIndex = stepToExecuteIndex + 1
+        if (nextStepIndex < steps.length) {
+          branchStepId = steps[nextStepIndex]?.id
+          console.log('No branch defined, continuing to next step:', branchStepId)
+        } else {
+          console.log('No branch defined and no next step, completing sequence')
+        }
       }
       
       // Check if the branch indicates ending the sequence
       if (branchStepId === 'END') {
+        console.log('Branch indicates END, completing sequence')
         await prisma.sequenceEnrollment.update({
           where: { id: enrollmentId },
           data: {
@@ -131,18 +163,25 @@ export class SequenceService {
       
       if (branchStepId) {
         const branchStepIndex = steps.findIndex((s: any) => s.id === branchStepId)
+        const targetStepIndex = branchStepIndex >= 0 ? branchStepIndex : stepToExecuteIndex + 1
+        
+        console.log(`Moving from step ${stepToExecuteIndex} to step ${targetStepIndex}`)
+        
+        // Update enrollment to point to branch step
         await prisma.sequenceEnrollment.update({
           where: { id: enrollmentId },
           data: {
-            currentStep: branchStepIndex >= 0 ? branchStepIndex : stepToExecuteIndex + 1
+            currentStep: targetStepIndex
           }
         })
         
-        // Process the branch step immediately
-        return this.processSequenceStep(enrollmentId)
+        // Continue processing from the new step (don't recursively call processSequenceStep)
+        // Return success and let the cron job handle the next step on the next run
+        return { success: true, reason: `Condition processed, moved to step ${targetStepIndex + 1}` }
       }
       
       // No valid branch, complete sequence
+      console.log('No valid branch found, completing sequence')
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: {

@@ -9,6 +9,7 @@ import SequenceFunnel from '@/components/sequences/SequenceFunnel'
 import EnrollmentsList from '@/components/sequences/EnrollmentsList'
 import StepPerformance from '@/components/sequences/StepPerformance'
 import SequenceActions from '@/components/sequences/SequenceActions'
+import SequenceEventsTab from '@/components/sequences/SequenceEventsTab'
 import { toast } from 'react-hot-toast'
 
 interface SequenceData {
@@ -339,6 +340,16 @@ export default function SequencePage() {
         />
       )}
 
+      {/* Sequence Events Tab - Show all tracking events with step details */}
+      {sequence.trackingEnabled && (
+        <div className="mt-8">
+          <SequenceEventsTab 
+            sequenceId={sequence.id} 
+            steps={sequence.steps}
+          />
+        </div>
+      )}
+
       {/* Engagement Timeline */}
       {sequence.trackingEnabled && Object.keys(engagementTimeline).length > 0 && (
         <div className="mt-8 bg-white rounded-lg shadow p-6">
@@ -372,6 +383,7 @@ export default function SequencePage() {
           enrollments={sequence.enrollments}
           steps={sequence.steps}
           trackingEnabled={sequence.trackingEnabled}
+          sequenceId={sequence.id}
         />
       )}
     </div>

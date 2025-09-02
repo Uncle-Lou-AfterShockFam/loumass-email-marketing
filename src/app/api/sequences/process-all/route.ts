@@ -101,9 +101,10 @@ export async function POST(request: NextRequest) {
             
             // If it's a delay step, check if enough time has passed
             if (currentStep.type === 'delay') {
-              const delayHours = currentStep.hours || 0
-              const delayMinutes = currentStep.minutes || 0
-              const delayMs = (delayHours * 60 * 60 * 1000) + (delayMinutes * 60 * 1000)
+              const delayDays = currentStep.delay?.days || 0
+              const delayHours = currentStep.delay?.hours || 0
+              const delayMinutes = currentStep.delay?.minutes || 0
+              const delayMs = (delayDays * 24 * 60 * 60 * 1000) + (delayHours * 60 * 60 * 1000) + (delayMinutes * 60 * 1000)
               
               // Check when the last action was (email sent or enrollment created)
               const lastActionTime = enrollment.lastEmailSentAt || enrollment.createdAt

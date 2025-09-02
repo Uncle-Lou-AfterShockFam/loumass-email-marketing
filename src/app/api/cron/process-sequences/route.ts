@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     // Verify this is a cron job request (from Vercel or local testing)
     const authHeader = request.headers.get('authorization')
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET_KEY}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -86,24 +86,8 @@ export async function GET(request: NextRequest) {
           if (currentStepIndex < steps.length) {
             const currentStep = steps[currentStepIndex]
             
-            // If it's a delay step, check if enough time has passed
-            if (currentStep.type === 'delay') {
-              const delayHours = currentStep.hours || 0
-              const delayMinutes = currentStep.minutes || 0
-              const delayMs = (delayHours * 60 * 60 * 1000) + (delayMinutes * 60 * 1000)
-              
-              // Check when the last action was (email sent or enrollment created)
-              const lastActionTime = enrollment.lastEmailSentAt || enrollment.createdAt
-              const timeSinceLastAction = Date.now() - lastActionTime.getTime()
-              
-              if (timeSinceLastAction < delayMs) {
-                // Not ready yet
-                const remainingMs = delayMs - timeSinceLastAction
-                const remainingMinutes = Math.ceil(remainingMs / 60000)
-                console.log(`Enrollment ${enrollment.id} waiting ${remainingMinutes} more minutes`)
-                continue
-              }
-            }
+            // Don't skip delay steps - let the sequence service handle timing logic
+            // The sequence service will return appropriate status if delay isn't ready
           }
 
           // Process the enrollment step
