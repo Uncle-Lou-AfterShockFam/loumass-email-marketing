@@ -84,7 +84,7 @@ export default function SequencePage() {
   const fetchSequence = async (id: string) => {
     try {
       setLoading(true)
-      console.log('Fetching sequence:', id)
+      console.log('Fetching sequence with analytics:', id)
       const response = await fetch(`/api/sequences/${id}`)
       
       console.log('Response status:', response.status)
