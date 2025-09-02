@@ -2,6 +2,15 @@ import { gmail_v1 } from 'googleapis'
 import { GmailClient } from '@/lib/gmail-client'
 import { prisma } from '@/lib/prisma'
 import { RecipientStatus } from '@prisma/client'
+import { extractImagesAsAttachments } from '@/utils/email-attachments'
+const MailComposer = require('nodemailer/lib/mail-composer')
+
+export interface EmailAttachment {
+  filename: string
+  content: string | Buffer // base64 string or Buffer
+  contentType?: string
+  cid?: string // Content-ID for inline images
+}
 
 interface EmailData {
   to: string[]
@@ -16,6 +25,7 @@ interface EmailData {
   campaignId?: string
   sequenceId?: string
   contactId: string
+  attachments?: EmailAttachment[] // New field for attachments
 }
 
 export class GmailService {
@@ -37,7 +47,7 @@ export class GmailService {
       
       // Build email message
       console.log('About to build message...')
-      const message = this.buildMessage(emailData, gmailAddress)
+      const message = await this.buildMessage(emailData, gmailAddress)
       console.log('Message built, length:', message.length)
       
       // Debug: decode and log the first part of the message to see headers
@@ -146,32 +156,32 @@ export class GmailService {
     }
   }
 
-  private buildMessage(emailData: EmailData, fromEmail: string): string {
+  private async buildMessage(emailData: EmailData, fromEmail: string): Promise<string> {
     console.log('=== buildMessage CALLED ===')
     console.log('HTML content length:', emailData.htmlContent.length)
-    console.log('HTML content (first 200):', emailData.htmlContent.substring(0, 200))
-    console.log('HTML content (last 200):', emailData.htmlContent.slice(-200))
+    console.log('Has attachments:', !!emailData.attachments?.length)
     
-    const boundary = '----=_Part_' + Math.random().toString(36).substring(2)
-    
-    // Build headers - Note: Gmail will override Message-ID but we still need proper threading headers
-    const headers = [
-      `From: ${emailData.fromName || 'LOUMASS'} <${fromEmail}>`,
-      `To: ${emailData.to.join(', ')}`,
-      `Subject: ${emailData.subject}`
-    ]
+    try {
+      // Create mail options for MailComposer
+      console.log('Creating mailOptions object...')
+      const mailOptions: any = {
+        from: `${emailData.fromName || 'LOUMASS'} <${fromEmail}>`,
+        to: emailData.to.join(', '),
+        subject: emailData.subject,
+        text: emailData.textContent || '',
+        html: emailData.htmlContent,
+        textEncoding: 'base64'
+      }
+      console.log('mailOptions created successfully')
 
     // CRITICAL: Add threading headers when we have a messageId to reference
-    // These headers create threading in the recipient's inbox
     if (emailData.messageId) {
       console.log('🔗 Adding threading headers for reply:')
       console.log('  Original Message-ID to reference:', emailData.messageId)
       console.log('  Gmail Thread ID (if any):', emailData.threadId)
       
-      // These headers are essential for threading in recipient's inbox
-      // They work independently of Gmail's threadId
-      headers.push(`In-Reply-To: ${emailData.messageId}`)
-      headers.push(`References: ${emailData.messageId}`)
+      mailOptions.inReplyTo = emailData.messageId
+      mailOptions.references = emailData.messageId
       console.log('✅ Threading headers added to message')
     } else if (emailData.threadId) {
       console.log('⚠️ Have threadId but no messageId - cannot add threading headers')
@@ -179,50 +189,79 @@ export class GmailService {
     }
 
     if (emailData.replyTo) {
-      headers.push(`Reply-To: ${emailData.replyTo}`)
+      mailOptions.replyTo = emailData.replyTo
     }
 
-    // Add MIME headers last
-    headers.push('MIME-Version: 1.0')
-    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`)
-
-    // Build message parts
-    const messageParts = [
-      headers.join('\r\n'),
-      '',
-      `--${boundary}`
-    ]
-
-    // Add text content if available
-    if (emailData.textContent) {
-      messageParts.push(
-        'Content-Type: text/plain; charset="UTF-8"',
-        'Content-Transfer-Encoding: quoted-printable',
-        '',
-        this.encodeQuotedPrintable(emailData.textContent),
-        '',
-        `--${boundary}`
-      )
+    // Add attachments if provided
+    if (emailData.attachments && emailData.attachments.length > 0) {
+      mailOptions.attachments = emailData.attachments.map(att => {
+        // If content is a base64 data URL, extract the actual base64 data
+        let content = att.content
+        if (typeof content === 'string' && content.startsWith('data:')) {
+          const base64Index = content.indexOf('base64,')
+          if (base64Index !== -1) {
+            content = content.substring(base64Index + 7)
+          }
+        }
+        
+        return {
+          filename: att.filename,
+          content: content,
+          encoding: 'base64',
+          contentType: att.contentType,
+          cid: att.cid
+        }
+      })
+      console.log(`📎 Added ${emailData.attachments.length} attachments to email`)
     }
 
-    // Add HTML content with tracking
-    messageParts.push(
-      'Content-Type: text/html; charset="UTF-8"',
-      'Content-Transfer-Encoding: quoted-printable',
-      '',
-      this.encodeQuotedPrintable(emailData.htmlContent),
-      '',
-      `--${boundary}--`
-    )
-
-    const message = messageParts.join('\r\n')
-    
-    // Encode to base64url
-    return Buffer.from(message)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
+      // Use MailComposer to build the MIME message properly
+      console.log('About to create MailComposer instance...')
+      console.log('MailComposer constructor type:', typeof MailComposer)
+      
+      const mail = new MailComposer(mailOptions)
+      console.log('MailComposer instance created successfully')
+      
+      return new Promise((resolve, reject) => {
+        console.log('Starting mail.compile().build()...')
+        
+        // Add timeout to prevent hanging
+        const timeoutId = setTimeout(() => {
+          console.error('MailComposer build timeout after 10 seconds')
+          reject(new Error('MailComposer build timeout'))
+        }, 10000)
+        
+        mail.compile().build((err: any, message: Buffer) => {
+          clearTimeout(timeoutId)
+          console.log('MailComposer build callback called, err:', !!err, 'message:', !!message)
+          
+          if (err) {
+            console.error('Error compiling message with MailComposer:', err)
+            reject(err)
+            return
+          }
+          
+          if (!message) {
+            console.error('No message returned from MailComposer')
+            reject(new Error('No message returned from MailComposer'))
+            return
+          }
+          
+          // Encode to base64url for Gmail API
+          const encodedMessage = message
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '')
+          
+          console.log('✅ Message compiled successfully, length:', encodedMessage.length)
+          resolve(encodedMessage)
+        })
+      })
+    } catch (buildError) {
+      console.error('Error in buildMessage:', buildError)
+      throw buildError
+    }
   }
 
   private encodeQuotedPrintable(text: string): string {
@@ -282,11 +321,19 @@ export class GmailService {
     userId: string, 
     gmailAddress: string, 
     campaignId: string,
-    contacts: Array<{ id: string, email: string, firstName?: string, customFields?: any }>
+    contacts: Array<{ id: string, email: string, firstName?: string, lastName?: string, company?: string, customFields?: any }>
   ) {
     console.log('=== STARTING BULK CAMPAIGN SEND ===')
+    console.log('User ID:', userId)
+    console.log('Gmail Address:', gmailAddress)
     console.log('Campaign ID:', campaignId)
     console.log('Contact count:', contacts.length)
+    
+    // Validate inputs
+    if (!userId || !gmailAddress || !campaignId || !contacts || contacts.length === 0) {
+      console.error('Invalid inputs to sendBulkCampaign:', { userId, gmailAddress, campaignId, contactsLength: contacts?.length })
+      throw new Error('Invalid inputs to sendBulkCampaign')
+    }
     
     const results = []
     
@@ -336,22 +383,29 @@ export class GmailService {
           console.log('Tracking is DISABLED, using original HTML')
         }
 
+        // Extract embedded images as attachments to avoid size limits
+        const { cleanedHtml, attachments } = extractImagesAsAttachments(trackedHtml)
+        console.log(`Extracted ${attachments.length} images as attachments`)
+        console.log('Cleaned HTML length:', cleanedHtml.length, 'vs original:', trackedHtml.length)
+
         // Send email
         console.log('About to send email with:')
         console.log('- Subject:', subject)
         console.log('- To:', contact.email)
-        console.log('- HTML content length:', trackedHtml.length)
-        console.log('- HTML content (first 300):', trackedHtml.substring(0, 300))
+        console.log('- HTML content length:', cleanedHtml.length)
+        console.log('- Attachments:', attachments.length)
+        console.log('- HTML content (first 300):', cleanedHtml.substring(0, 300))
         
         const result = await this.sendEmail(userId, gmailAddress, {
           to: [contact.email],
           subject,
-          htmlContent: trackedHtml,
+          htmlContent: cleanedHtml,
           textContent,
           fromName: undefined, // Campaign model doesn't have fromName field
           replyTo: undefined, // Campaign model doesn't have replyTo field
           trackingId,
           campaignId,
+          attachments: attachments.length > 0 ? attachments : undefined,
           contactId: contact.id
         })
         

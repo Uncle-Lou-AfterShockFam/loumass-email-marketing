@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+// Increase body size limit to 10MB for campaigns with images
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 // Validation schemas
 const createCampaignSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
@@ -107,7 +111,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    // Check content length
+    const contentLength = request.headers.get('content-length')
+    console.log('Request content-length:', contentLength)
+    
+    // Parse body with error handling
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json({ 
+        error: 'Invalid request body. The request may be too large (max 4.5MB on Vercel).' 
+      }, { status: 400 })
+    }
     
     // Validate request data
     const validationResult = createCampaignSchema.safeParse(body)

@@ -31,7 +31,9 @@ export async function POST(
                 id: true,
                 email: true,
                 firstName: true,
-                lastName: true
+                lastName: true,
+                company: true,
+                variables: true
               }
             }
           }
@@ -106,22 +108,48 @@ export async function POST(
     // Process immediate batch
     if (recipientsToProcess.length > 0) {
       try {
+        console.log('Creating GmailService instance...')
         const gmailService = new GmailService()
+        
+        console.log('Mapping contacts for batch...')
         const contacts = recipientsToProcess.map(recipient => ({
           id: recipient.contact.id,
           email: recipient.contact.email,
           firstName: recipient.contact.firstName || undefined,
           lastName: recipient.contact.lastName || undefined,
+          company: recipient.contact.company || undefined,
+          customFields: recipient.contact.variables as any
         }))
         
-        await gmailService.sendBulkCampaign(
+        console.log(`Sending to ${contacts.length} contacts:`, contacts.map(c => c.email))
+        
+        // Add timeout to prevent hanging
+        const sendPromise = gmailService.sendBulkCampaign(
           session.user.id,
           gmailToken.email,
           id,
           contacts
         )
+        
+        // Set a 30 second timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Send timeout after 30 seconds')), 30000)
+        )
+        
+        await Promise.race([sendPromise, timeoutPromise])
+        console.log('Immediate batch sent successfully')
       } catch (error) {
         console.error('Immediate batch processing failed:', error)
+        // Return error to client but still mark campaign as sent
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to send emails',
+          campaign: {
+            id: updatedCampaign.id,
+            status: 'FAILED',
+            recipientCount: campaign.recipients.length
+          }
+        }, { status: 500 })
       }
     }
     

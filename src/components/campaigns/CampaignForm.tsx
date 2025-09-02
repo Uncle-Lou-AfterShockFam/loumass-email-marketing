@@ -61,6 +61,7 @@ export default function CampaignForm({
 }: CampaignFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sendingStatus, setSendingStatus] = useState<string | null>(null)
   
   // Form state
   const [name, setName] = useState(campaign?.name || '')
@@ -154,10 +155,22 @@ export default function CampaignForm({
         sequenceId: selectedSequenceId
       }
 
+      // Check content size before sending (Vercel limit is 4.5MB)
+      const bodyString = JSON.stringify(campaignData)
+      const bodySizeInBytes = new Blob([bodyString]).size
+      const bodySizeInMB = bodySizeInBytes / (1024 * 1024)
+      
+      if (bodySizeInMB > 4) {
+        alert(`Campaign content is too large (${bodySizeInMB.toFixed(2)}MB). Please reduce image sizes or remove some images. Maximum size is 4MB.`)
+        setIsSubmitting(false)
+        setSendingStatus(null)
+        return
+      }
+
       const response = await fetch(campaign ? `/api/campaigns/${campaign.id}` : '/api/campaigns', {
         method: campaign ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(campaignData)
+        body: bodyString
       })
 
       if (response.ok) {
@@ -165,25 +178,44 @@ export default function CampaignForm({
         
         if (action === 'send') {
           // Trigger immediate send
-          const campaignId = data.campaign?.id || data.id
+          // For POST (create), the campaign is in data.campaign
+          // For PUT (update), the campaign is in data directly
+          const campaignId = campaign ? data.id : data.campaign.id
+          console.log('Attempting to send campaign:', campaignId)
+          
+          setSendingStatus('Sending campaign...')
+          
           const sendResponse = await fetch(`/api/campaigns/${campaignId}/send`, {
             method: 'POST'
           })
           
           if (!sendResponse.ok) {
             const errorData = await sendResponse.json()
+            console.error('Campaign send failed:', errorData)
+            setSendingStatus(null)
             alert(errorData.error || 'Failed to send campaign. Please check your Gmail connection.')
+            // Still redirect to campaign details page so user can see the campaign and retry
             router.push(`/dashboard/campaigns/${campaignId}`)
             return
           }
+          
+          // Send successful
+          const sendData = await sendResponse.json()
+          console.log('Campaign send response:', sendData)
+          setSendingStatus('Campaign sent successfully!')
+          
+          // Brief delay to show success message
+          await new Promise(resolve => setTimeout(resolve, 1500))
         }
         
+        // Always redirect to campaigns list after successful creation
         router.push('/dashboard/campaigns')
       } else {
         alert('Failed to save campaign')
       }
     } catch (error) {
-      alert('Error saving campaign')
+      console.error('Error in campaign form:', error)
+      alert(`Error saving campaign: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -437,6 +469,13 @@ export default function CampaignForm({
         </div>
       </div>
 
+      {/* Status Message */}
+      {sendingStatus && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-lg">
+          {sendingStatus}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex justify-between">
         <button
@@ -473,7 +512,7 @@ export default function CampaignForm({
               disabled={isSubmitting || !name || !subject || !content || selectedContacts.length === 0}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
             >
-              Send Campaign
+              {isSubmitting ? 'Processing...' : 'Send Campaign'}
             </button>
           )}
         </div>

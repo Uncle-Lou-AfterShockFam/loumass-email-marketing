@@ -6,6 +6,11 @@ export class GmailClient {
   private oauth2Client: OAuth2Client
   
   constructor() {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      console.error('Missing Google OAuth credentials in environment variables')
+      throw new Error('Google OAuth credentials not configured')
+    }
+    
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -71,6 +76,8 @@ export class GmailClient {
   }
 
   async getGmailService(userId: string, email: string): Promise<any> {
+    console.log('Getting Gmail service for user:', userId, 'email:', email)
+    
     const gmailToken = await prisma.gmailToken.findUnique({
       where: {
         userId
@@ -78,24 +85,31 @@ export class GmailClient {
     })
 
     if (!gmailToken) {
+      console.error('No Gmail token found for user:', userId)
       throw new Error('No Gmail token found')
     }
+
+    console.log('Gmail token found, expires at:', gmailToken.expiresAt)
 
     // Check if token needs refresh
     const now = new Date()
     if (gmailToken.expiresAt <= now) {
+      console.log('Token expired, refreshing...')
       await this.refreshToken(userId, email)
       return this.getGmailService(userId, email)
     }
 
+    console.log('Setting OAuth2 credentials...')
     this.oauth2Client.setCredentials({
       access_token: gmailToken.accessToken,
       refresh_token: gmailToken.refreshToken,
       expiry_date: gmailToken.expiresAt.getTime()
     })
 
+    console.log('Creating Gmail service instance...')
     const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client })
 
+    console.log('Gmail service created successfully')
     return gmail
   }
 
