@@ -113,6 +113,11 @@ export default function RichTextEditor({
           editorRef.current.appendChild(img)
         }
         
+        // Trigger input event to ensure React state updates
+        const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+        editorRef.current.dispatchEvent(inputEvent)
+        
+        // Also call onChange directly to ensure state is updated
         onChange(editorRef.current.innerHTML)
         editorRef.current.focus()
       }
@@ -153,6 +158,11 @@ export default function RichTextEditor({
           editorRef.current.appendChild(img)
         }
         
+        // Trigger input event to ensure React state updates
+        const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+        editorRef.current.dispatchEvent(inputEvent)
+        
+        // Also call onChange directly to ensure state is updated
         onChange(editorRef.current.innerHTML)
         editorRef.current.focus()
       }
