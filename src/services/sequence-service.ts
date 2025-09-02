@@ -131,6 +131,8 @@ export class SequenceService {
       console.log('Condition data:', JSON.stringify(stepToExecute.condition))
       console.log('True branch:', stepToExecute.condition?.trueBranch)
       console.log('False branch:', stepToExecute.condition?.falseBranch)
+      console.log('Current step has ID:', stepToExecute.id)
+      console.log('All step IDs in sequence:', steps.map((s: any) => s.id))
       
       // Evaluate condition and choose branch
       const conditionMet = await this.evaluateCondition(
@@ -158,8 +160,9 @@ export class SequenceService {
       } else if (!conditionMet && hasFalseBranch) {
         branchStepId = falseBranch[0]
         console.log('Following FALSE branch to step:', branchStepId)
-      } else {
-        // No valid branch for the condition result, skip to next sequential step
+      } else if ((conditionMet && !hasTrueBranch) || (!conditionMet && !hasFalseBranch)) {
+        // No branch for this condition result, but might have branch for the other result
+        // Check if we should continue to next step or if sequence design expects a branch
         const nextStepIndex = stepToExecuteIndex + 1
         console.log(`No ${conditionMet ? 'TRUE' : 'FALSE'} branch defined, moving to next sequential step ${nextStepIndex}`)
         
@@ -202,10 +205,30 @@ export class SequenceService {
       }
       
       if (branchStepId) {
-        const branchStepIndex = steps.findIndex((s: any) => s.id === branchStepId)
+        // First try to find by ID
+        let branchStepIndex = steps.findIndex((s: any) => s.id === branchStepId)
+        
+        // If not found and branchStepId is numeric, try using it as an index
+        if (branchStepIndex < 0 && !isNaN(Number(branchStepId))) {
+          const possibleIndex = Number(branchStepId)
+          if (possibleIndex >= 0 && possibleIndex < steps.length) {
+            console.log(`Using branch value as index: ${possibleIndex}`)
+            branchStepIndex = possibleIndex
+          }
+        }
+        
+        // If still not found, check if branchStepId matches a step without IDs (legacy)
+        if (branchStepIndex < 0) {
+          // Try to match by position if the branch contains something like "3" or "4"
+          const stepNumber = parseInt(branchStepId)
+          if (!isNaN(stepNumber) && stepNumber > 0 && stepNumber <= steps.length) {
+            branchStepIndex = stepNumber - 1 // Convert 1-based to 0-based
+            console.log(`Interpreting branch as step number: Step ${stepNumber} -> Index ${branchStepIndex}`)
+          }
+        }
         
         if (branchStepIndex >= 0) {
-          console.log(`Moving from step ${stepToExecuteIndex} to branch step ${branchStepIndex} (ID: ${branchStepId})`)
+          console.log(`Moving from step ${stepToExecuteIndex} to branch step ${branchStepIndex} (ID/Value: ${branchStepId})`)
           
           // Update enrollment to point to branch step
           await prisma.sequenceEnrollment.update({
@@ -220,7 +243,7 @@ export class SequenceService {
           console.log('Processing branch step immediately...')
           return this.processSequenceStep(enrollmentId)
         } else {
-          console.log(`WARNING: Branch step ID ${branchStepId} not found in sequence steps`)
+          console.log(`WARNING: Branch step ${branchStepId} not found in sequence steps`)
           // Try to continue to next sequential step
           const nextStepIndex = stepToExecuteIndex + 1
           if (nextStepIndex < steps.length) {
