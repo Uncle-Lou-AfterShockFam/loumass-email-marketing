@@ -26,9 +26,11 @@ export class GmailService {
     console.log('To:', emailData.to)
     console.log('Subject:', emailData.subject)
     console.log('HTML content length:', emailData.htmlContent.length)
-    console.log('HTML content (first 300):', emailData.htmlContent.substring(0, 300))
     console.log('Campaign ID:', emailData.campaignId)
     console.log('Contact ID:', emailData.contactId)
+    console.log('🔍 CRITICAL - Threading Info:')
+    console.log('  threadId:', emailData.threadId)
+    console.log('  messageId for In-Reply-To:', emailData.messageId)
     
     try {
       const gmail = await this.gmailClient.getGmailService(userId, gmailAddress)
@@ -37,6 +39,18 @@ export class GmailService {
       console.log('About to build message...')
       const message = this.buildMessage(emailData, gmailAddress)
       console.log('Message built, length:', message.length)
+      
+      // Debug: decode and log the first part of the message to see headers
+      try {
+        const decodedStart = Buffer.from(
+          message.slice(0, 800).replace(/-/g, '+').replace(/_/g, '/') + '==', 
+          'base64'
+        ).toString('utf-8')
+        console.log('📧 First part of decoded message (showing headers):')
+        console.log(decodedStart)
+      } catch (e) {
+        console.log('Could not decode message for debug'  )
+      }
       
       // Send the email
       const response = await gmail.users.messages.send({
@@ -119,31 +133,37 @@ export class GmailService {
     
     const boundary = '----=_Part_' + Math.random().toString(36).substring(2)
     
-    // Build headers
+    // Build headers - Note: Gmail will override Message-ID but we still need proper threading headers
     const headers = [
       `From: ${emailData.fromName || 'LOUMASS'} <${fromEmail}>`,
       `To: ${emailData.to.join(', ')}`,
-      `Subject: ${emailData.subject}`,
-      'MIME-Version: 1.0',
-      `Content-Type: multipart/alternative; boundary="${boundary}"`
+      `Subject: ${emailData.subject}`
     ]
+
+    // CRITICAL: Add threading headers when we have a messageId to reference
+    // These headers create threading in the recipient's inbox
+    if (emailData.messageId) {
+      console.log('🔗 Adding threading headers for reply:')
+      console.log('  Original Message-ID to reference:', emailData.messageId)
+      console.log('  Gmail Thread ID (if any):', emailData.threadId)
+      
+      // These headers are essential for threading in recipient's inbox
+      // They work independently of Gmail's threadId
+      headers.push(`In-Reply-To: ${emailData.messageId}`)
+      headers.push(`References: ${emailData.messageId}`)
+      console.log('✅ Threading headers added to message')
+    } else if (emailData.threadId) {
+      console.log('⚠️ Have threadId but no messageId - cannot add threading headers')
+      console.log('  Threading will only work in sender\'s sent folder, not recipient\'s inbox')
+    }
 
     if (emailData.replyTo) {
       headers.push(`Reply-To: ${emailData.replyTo}`)
     }
 
-    if (emailData.threadId) {
-      console.log('Using Gmail threadId for threading:', emailData.threadId)
-      
-      // Add proper threading headers if we have a Message-ID to reference
-      if (emailData.messageId) {
-        // The messageId should be the actual Message-ID header from the original email
-        // This ensures proper threading for the recipient
-        headers.push(`In-Reply-To: ${emailData.messageId}`)
-        headers.push(`References: ${emailData.messageId}`)
-        console.log('Added threading headers with Message-ID:', emailData.messageId)
-      }
-    }
+    // Add MIME headers last
+    headers.push('MIME-Version: 1.0')
+    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`)
 
     // Build message parts
     const messageParts = [

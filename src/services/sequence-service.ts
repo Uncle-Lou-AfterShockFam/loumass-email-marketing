@@ -535,6 +535,11 @@ export class SequenceService {
     }
 
     // Send the email
+    console.log('📮 SENDING EMAIL WITH THREADING INFO:')
+    console.log('  threadId:', threadId)
+    console.log('  messageId for In-Reply-To:', messageIdForReply)
+    console.log('  replyToThread:', stepToExecute.replyToThread)
+    
     try {
       const result = await this.gmailService.sendEmail(
         enrollment.sequence.userId,
