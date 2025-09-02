@@ -323,6 +323,16 @@ export class SequenceService {
   }
 
   private replaceVariables(text: string, contact: any): string {
+    console.log('=== SEQUENCE replaceVariables CALLED ===')
+    console.log('Input text:', text.substring(0, 200) + '...')
+    console.log('Contact data:', {
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      company: contact.company,
+      variables: contact.variables
+    })
+    
     let result = text
     
     result = result.replace(/\{\{firstName\}\}/g, contact.firstName || '')
@@ -333,11 +343,14 @@ export class SequenceService {
     // Use 'variables' field from Prisma schema instead of 'customFields'
     if (contact.variables) {
       Object.entries(contact.variables as Record<string, any>).forEach(([key, value]) => {
+        console.log(`Replacing {{${key}}} with: ${value}`)
         const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
         result = result.replace(regex, String(value))
       })
     }
 
+    console.log('Final result:', result.substring(0, 200) + '...')
+    console.log('=== replaceVariables COMPLETE ===')
     return result
   }
 
@@ -346,7 +359,7 @@ export class SequenceService {
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
     
-    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://click.aftershockfam.org'
+    const baseUrl = process.env.NEXT_PUBLIC_TRACKING_DOMAIN || 'https://loumassbeta.vercel.app'
     
     console.log('Base URL for tracking:', baseUrl)
     
