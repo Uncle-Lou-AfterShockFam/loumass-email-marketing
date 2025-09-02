@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { GmailService } from './gmail-service'
+import { GmailFetchService } from './gmail-fetch-service'
 import { EnrollmentStatus } from '@prisma/client'
 
 export class SequenceService {
   private gmailService = new GmailService()
+  private gmailFetchService = new GmailFetchService()
 
   async enrollContact(sequenceId: string, contactId: string) {
     // Check if already enrolled
@@ -315,7 +317,34 @@ export class SequenceService {
     // Check if this step should reply to thread
     if (stepToExecute.replyToThread && enrollment.gmailThreadId) {
       threadId = enrollment.gmailThreadId
-      messageIdForReply = enrollment.gmailMessageId || undefined
+      
+      // Use stored Message-ID header if available, otherwise fetch it
+      if (enrollment.messageIdHeader) {
+        messageIdForReply = enrollment.messageIdHeader
+        console.log('Using stored Message-ID for threading:', messageIdForReply)
+      } else if (enrollment.gmailMessageId && gmailToken) {
+        // Fetch the actual Message-ID header from Gmail if we have a gmailMessageId
+        try {
+          const messageHeaders = await this.gmailFetchService.getMessageHeaders(
+            enrollment.sequence.userId,
+            gmailToken.email,
+            enrollment.gmailMessageId
+          )
+          messageIdForReply = messageHeaders.messageId || undefined
+          console.log('Fetched actual Message-ID for threading:', messageIdForReply)
+          
+          // Store it for future use
+          if (messageIdForReply) {
+            await prisma.sequenceEnrollment.update({
+              where: { id: enrollmentId },
+              data: { messageIdHeader: messageIdForReply }
+            })
+          }
+        } catch (error) {
+          console.error('Failed to fetch Message-ID header:', error)
+        }
+      }
+      
       console.log('Using sequence thread ID for reply:', threadId)
       console.log('Using message ID for threading headers:', messageIdForReply)
       
@@ -361,14 +390,33 @@ export class SequenceService {
         }
       )
 
+      // Fetch the actual Message-ID header from the sent email for future threading
+      // Only do this for the first email in the sequence
+      let messageIdHeader: string | undefined
+      if (!enrollment.messageIdHeader && result.messageId && gmailToken) {
+        try {
+          const messageHeaders = await this.gmailFetchService.getMessageHeaders(
+            enrollment.sequence.userId,
+            gmailToken.email,
+            result.messageId
+          )
+          messageIdHeader = messageHeaders.messageId
+          console.log('Stored Message-ID header for future threading:', messageIdHeader)
+        } catch (error) {
+          console.error('Failed to fetch Message-ID after sending:', error)
+        }
+      }
+      
       // Update enrollment with Gmail thread ID for reply tracking
       await prisma.sequenceEnrollment.update({
         where: { id: enrollmentId },
         data: { 
           currentStep: enrollment.currentStep + 1,
           lastEmailSentAt: new Date(),
-          gmailMessageId: result.messageId,
-          gmailThreadId: result.threadId
+          gmailMessageId: enrollment.gmailMessageId || result.messageId,
+          gmailThreadId: result.threadId,
+          // Store the Message-ID header only for the first email
+          ...(messageIdHeader && !enrollment.messageIdHeader ? { messageIdHeader } : {})
         }
       })
 

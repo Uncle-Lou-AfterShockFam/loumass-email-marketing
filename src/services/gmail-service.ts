@@ -132,17 +132,17 @@ export class GmailService {
       headers.push(`Reply-To: ${emailData.replyTo}`)
     }
 
-    if (emailData.messageId) {
-      // Add proper threading headers using the Gmail message ID
-      // Gmail message IDs should be formatted with angle brackets
-      const formattedMessageId = emailData.messageId.includes('@') ? 
-        emailData.messageId : `<${emailData.messageId}@mail.gmail.com>`
-      headers.push(`In-Reply-To: ${formattedMessageId}`)
-      headers.push(`References: ${formattedMessageId}`)
-    } else if (emailData.threadId) {
-      // Fallback to thread ID if no message ID available
-      headers.push(`In-Reply-To: ${emailData.threadId}`)
-      headers.push(`References: ${emailData.threadId}`)
+    if (emailData.threadId) {
+      console.log('Using Gmail threadId for threading:', emailData.threadId)
+      
+      // Add proper threading headers if we have a Message-ID to reference
+      if (emailData.messageId) {
+        // The messageId should be the actual Message-ID header from the original email
+        // This ensures proper threading for the recipient
+        headers.push(`In-Reply-To: ${emailData.messageId}`)
+        headers.push(`References: ${emailData.messageId}`)
+        console.log('Added threading headers with Message-ID:', emailData.messageId)
+      }
     }
 
     // Build message parts

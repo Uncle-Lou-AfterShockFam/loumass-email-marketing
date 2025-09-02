@@ -154,6 +154,7 @@ model Recipient {
   errorMessage   String?
   gmailMessageId String?
   gmailThreadId  String?
+  messageIdHeader String? // Actual Message-ID header for threading
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   emailEvents    EmailEvent[]
@@ -199,6 +200,7 @@ model SequenceEnrollment {
   replyCount     Int              @default(0)
   gmailMessageId String?
   gmailThreadId  String?
+  messageIdHeader String? // Actual Message-ID header for threading
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   contact        Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
