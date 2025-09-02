@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Debug: Starting diagnostic request')
+    console.log('Debug: Starting diagnostic request v2 - with updated DATABASE_URL')
     
     // Test 1: Basic response
     console.log('Debug: Test 1 - Basic response OK')
@@ -37,30 +37,13 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Test 4: Session check
-    const session = await getServerSession(authOptions)
-    console.log('Debug: Test 4 - Session check:', { hasSession: !!session, email: session?.user?.email })
+    // Test 4: Session check (temporarily skipped for debugging)
+    // const session = await getServerSession(authOptions)
+    // console.log('Debug: Test 4 - Session check:', { hasSession: !!session, email: session?.user?.email })
     
-    if (!session?.user?.email) {
-      return NextResponse.json({ 
-        error: 'Unauthorized',
-        debug: 'Session or email missing - this is normal for testing'
-      }, { status: 401 })
-    }
-
-    // Test 5: User lookup
-    console.log('Debug: Test 5 - User lookup')
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-    console.log('Debug: User found:', { id: user?.id, email: user?.email })
-
-    if (!user) {
-      return NextResponse.json({ 
-        error: 'User not found',
-        debug: `User with email ${session.user.email} not found`
-      }, { status: 404 })
-    }
+    // For debugging, skip user lookup and use mock user
+    const user = { id: 'test-user-id', email: 'debug@test.com' }
+    console.log('Debug: Test 5 - Using mock user for debugging:', { id: user.id, email: user.email })
 
     // Test 6: Simple EmailEvent count
     console.log('Debug: Test 6 - EmailEvent count')
