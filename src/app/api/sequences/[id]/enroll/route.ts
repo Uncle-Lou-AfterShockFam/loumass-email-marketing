@@ -14,10 +14,10 @@ const enrollmentSchema = z.object({
 // POST /api/sequences/[id]/enroll - Enroll contacts in sequence
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: sequenceId } = await params
+    const { id: sequenceId } = await context.params
     
     // Support both session-based auth and internal API calls with x-user-id header
     const session = await getServerSession(authOptions)
@@ -205,10 +205,10 @@ export async function POST(
 // GET /api/sequences/[id]/enroll - Get enrollable contacts
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: sequenceId } = await params
+    const { id: sequenceId } = await context.params
     
     // Support both session-based auth and internal API calls with x-user-id header
     const session = await getServerSession(authOptions)

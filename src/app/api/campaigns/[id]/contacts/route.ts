@@ -6,10 +6,10 @@ import { prisma } from '@/lib/prisma'
 // GET /api/campaigns/[id]/contacts - Get campaign contacts
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: campaignId } = await params
+    const { id: campaignId } = await context.params
     
     const session = await getServerSession(authOptions)
     

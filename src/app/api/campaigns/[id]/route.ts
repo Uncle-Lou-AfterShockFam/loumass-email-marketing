@@ -24,9 +24,9 @@ const updateCampaignSchema = z.object({
 // GET /api/campaigns/[id] - Get single campaign
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -103,9 +103,9 @@ export async function GET(
 // PUT /api/campaigns/[id] - Update campaign
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -204,9 +204,9 @@ export async function PUT(
 // DELETE /api/campaigns/[id] - Delete campaign
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
   try {
     const session = await getServerSession(authOptions)
     

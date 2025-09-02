@@ -7,9 +7,9 @@ import { GmailService } from '@/services/gmail-service'
 // POST /api/campaigns/[id]/send - Trigger campaign send
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
   try {
     const session = await getServerSession(authOptions)
     

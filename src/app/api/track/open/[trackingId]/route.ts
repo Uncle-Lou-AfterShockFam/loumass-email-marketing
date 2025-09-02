@@ -102,10 +102,10 @@ async function getLocationFromIp(ip: string): Promise<{ city?: string; region?: 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ trackingId: string }> }
+  context: { params: Promise<{ trackingId: string }> }
 ) {
   try {
-    const { trackingId } = await params
+    const { trackingId } = await context.params
     console.log('=== TRACKING OPEN REQUEST ===')
     console.log('Tracking ID:', trackingId)
     

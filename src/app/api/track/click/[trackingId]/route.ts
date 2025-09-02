@@ -63,10 +63,10 @@ function decodeTrackingId(trackingId: string): {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ trackingId: string }> }
+  context: { params: Promise<{ trackingId: string }> }
 ) {
   try {
-    const { trackingId } = await params
+    const { trackingId } = await context.params
     const url = request.nextUrl.searchParams.get('u')
     
     console.log('=== TRACKING CLICK REQUEST ===')

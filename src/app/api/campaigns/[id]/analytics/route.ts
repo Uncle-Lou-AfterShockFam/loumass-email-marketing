@@ -7,9 +7,9 @@ import { format, startOfHour, endOfHour, eachHourOfInterval } from 'date-fns'
 // GET /api/campaigns/[id]/analytics - Get detailed campaign analytics
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
   try {
     const session = await getServerSession(authOptions)
     

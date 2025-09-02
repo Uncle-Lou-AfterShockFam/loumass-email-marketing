@@ -6,10 +6,10 @@ import { EnrollmentStatus } from '@prisma/client'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {

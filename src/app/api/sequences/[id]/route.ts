@@ -42,10 +42,10 @@ const updateSequenceSchema = z.object({
 // GET /api/sequences/[id] - Get sequence details
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     
     console.log('Fetching sequence with ID:', id)
     
@@ -191,10 +191,10 @@ export async function GET(
 // PUT /api/sequences/[id] - Update sequence
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     
     const session = await getServerSession(authOptions)
     
@@ -293,10 +293,10 @@ export async function PUT(
 // DELETE /api/sequences/[id] - Delete sequence
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     
     const session = await getServerSession(authOptions)
     

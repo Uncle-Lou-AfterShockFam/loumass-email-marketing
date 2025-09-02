@@ -6,10 +6,10 @@ import { EnrollmentStatus } from '@prisma/client'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -62,10 +62,10 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
