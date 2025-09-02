@@ -128,14 +128,10 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // Get stats using raw aggregation to handle both type and eventType columns
     const stats = await prisma.emailEvent.groupBy({
-      by: ['type'],
-      where: {
-        ...statsWhere,
-        type: statsWhere.type ? statsWhere.type : {
-          not: null
-        }
-      },
+      by: ['type', 'eventType'],
+      where: statsWhere,
       _count: true
     })
 
@@ -149,45 +145,54 @@ export async function GET(request: NextRequest) {
     }
 
     stats.forEach(stat => {
-      switch (stat.type) {
+      // Use either type or eventType field (handle migration case)
+      const eventType = stat.type || stat.eventType
+      
+      switch (eventType) {
         case 'SENT':
-          statsMap.totalSent = stat._count
+          statsMap.totalSent += stat._count
           break
         case 'OPENED':
-          statsMap.totalOpened = stat._count
+          statsMap.totalOpened += stat._count
           break
         case 'CLICKED':
-          statsMap.totalClicked = stat._count
+          statsMap.totalClicked += stat._count
           break
         case 'REPLIED':
-          statsMap.totalReplied = stat._count
+          statsMap.totalReplied += stat._count
           break
         case 'BOUNCED':
-          statsMap.totalBounced = stat._count
+          statsMap.totalBounced += stat._count
           break
         case 'COMPLAINED':
-          statsMap.totalComplained = stat._count
+          statsMap.totalComplained += stat._count
           break
       }
     })
 
     // Transform data for frontend
-    const interactions = emailEvents.map(event => ({
-      id: event.id,
-      type: event.type?.toLowerCase() || 'unknown',
-      contactEmail: event.contact?.email || '',
-      contactName: event.contact?.firstName && event.contact?.lastName 
-        ? `${event.contact.firstName} ${event.contact.lastName}`
-        : event.contact?.firstName || event.contact?.lastName || undefined,
-      campaignName: event.campaign?.name,
-      sequenceName: event.sequence?.name,
-      subject: event.subject || '',
-      timestamp: event.timestamp,
-      details: event.details,
-      clickedUrl: event.type === 'CLICKED' ? event.details : undefined,
-      replyContent: event.type === 'REPLIED' ? event.details : undefined,
-      bounceReason: event.type === 'BOUNCED' ? event.details : undefined
-    }))
+    const interactions = emailEvents.map(event => {
+      // Use either type or eventType field (handle migration case)
+      const eventType = event.type || event.eventType || 'SENT'
+      const typeString = eventType.toLowerCase()
+      
+      return {
+        id: event.id,
+        type: typeString,
+        contactEmail: event.contact?.email || '',
+        contactName: event.contact?.firstName && event.contact?.lastName 
+          ? `${event.contact.firstName} ${event.contact.lastName}`
+          : event.contact?.firstName || event.contact?.lastName || undefined,
+        campaignName: event.campaign?.name,
+        sequenceName: event.sequence?.name,
+        subject: event.subject || '',
+        timestamp: event.timestamp,
+        details: event.details,
+        clickedUrl: eventType === 'CLICKED' ? event.details : undefined,
+        replyContent: eventType === 'REPLIED' ? event.details : undefined,
+        bounceReason: eventType === 'BOUNCED' ? event.details : undefined
+      }
+    })
 
     return NextResponse.json({
       interactions,

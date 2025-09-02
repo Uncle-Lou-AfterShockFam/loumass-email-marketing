@@ -5,109 +5,156 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Debug: Starting diagnostic request v2 - with updated DATABASE_URL')
+    console.log('Debug: Starting diagnostic v5 - with real auth test')
     
-    // Test 1: Basic response
-    console.log('Debug: Test 1 - Basic response OK')
-    
-    // Test 2: Environment check
+    // Test 1: Environment check
     const dbUrl = process.env.DATABASE_URL
     const neonUrl = process.env.NEON_DATABASE_URL
+    const nodeEnv = process.env.NODE_ENV
+    
     console.log('Debug: Environment check:', { 
       hasDbUrl: !!dbUrl, 
       hasNeonUrl: !!neonUrl,
-      nodeEnv: process.env.NODE_ENV,
-      dbUrlPrefix: dbUrl?.substring(0, 20) + '...',
-      neonUrlPrefix: neonUrl?.substring(0, 20) + '...'
+      nodeEnv,
+      dbUrlStart: dbUrl?.substring(0, 15),
+      neonUrlStart: neonUrl?.substring(0, 15)
     })
-    
-    // Test 3: Database connection
-    console.log('Debug: Test 3 - Testing database connection')
+
+    // Test 2: Database connection
+    let dbConnectionResult = 'not tested'
     try {
+      console.log('Debug: Testing database connection...')
       const dbTest = await prisma.$queryRaw`SELECT 1 as test`
       console.log('Debug: Database connection OK:', dbTest)
+      dbConnectionResult = 'success'
     } catch (dbError) {
       console.error('Debug: Database connection failed:', dbError)
-      return NextResponse.json({
-        error: 'Database connection failed',
-        debug: {
-          message: dbError instanceof Error ? dbError.message : String(dbError),
-          env: { hasDbUrl: !!dbUrl, hasNeonUrl: !!neonUrl }
-        }
-      }, { status: 500 })
+      dbConnectionResult = dbError instanceof Error ? dbError.message : String(dbError)
     }
 
-    // Test 4: Session check (temporarily skipped for debugging)
-    // const session = await getServerSession(authOptions)
-    // console.log('Debug: Test 4 - Session check:', { hasSession: !!session, email: session?.user?.email })
-    
-    // For debugging, skip user lookup and use mock user
-    const user = { id: 'test-user-id', email: 'debug@test.com' }
-    console.log('Debug: Test 5 - Using mock user for debugging:', { id: user.id, email: user.email })
-
-    // Test 6: Simple EmailEvent count
-    console.log('Debug: Test 6 - EmailEvent count')
-    const eventCount = await prisma.emailEvent.count({
-      where: { userId: user.id }
-    })
-    console.log('Debug: EmailEvent count:', eventCount)
-
-    // Test 7: Sample EmailEvent query
-    console.log('Debug: Test 7 - Sample EmailEvent query')
-    const sampleEvents = await prisma.emailEvent.findMany({
-      where: { userId: user.id },
-      take: 1,
-      select: {
-        id: true,
-        type: true,
-        timestamp: true,
-        subject: true
-      }
-    })
-    console.log('Debug: Sample events:', sampleEvents)
-
-    // Test 8: GroupBy query (the problematic one)
-    console.log('Debug: Test 8 - Testing groupBy query')
+    // Test 3: EmailEvent model check
+    let emailEventCheck = 'not tested'
+    let emailEventCount = 0
     try {
-      const statsWhere = {
-        userId: user.id,
-        type: {
-          not: null
+      console.log('Debug: Testing EmailEvent model...')
+      emailEventCount = await prisma.emailEvent.count()
+      console.log('Debug: EmailEvent count:', emailEventCount)
+      emailEventCheck = 'success'
+    } catch (eventError) {
+      console.error('Debug: EmailEvent query failed:', eventError)
+      emailEventCheck = eventError instanceof Error ? eventError.message : String(eventError)
+    }
+
+    // Test 4: Authentication check
+    let authResult = 'not tested'
+    let userInfo = null
+    try {
+      console.log('Debug: Testing authentication...')
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.email) {
+        authResult = 'No session or email'
+      } else {
+        const user = await prisma.user.findUnique({
+          where: { email: session.user.email }
+        })
+        if (!user) {
+          authResult = 'Session exists but user not found in database'
+        } else {
+          authResult = 'success'
+          userInfo = { id: user.id, email: user.email }
         }
       }
-      console.log('Debug: statsWhere:', statsWhere)
-      
-      const stats = await prisma.emailEvent.groupBy({
-        by: ['type'],
-        where: statsWhere,
-        _count: true
-      })
-      console.log('Debug: GroupBy stats:', stats)
-    } catch (groupByError) {
-      console.error('Debug: GroupBy failed:', groupByError)
-      return NextResponse.json({
-        error: 'GroupBy query failed',
-        debug: {
-          message: groupByError instanceof Error ? groupByError.message : String(groupByError),
-          stack: groupByError instanceof Error ? groupByError.stack : undefined
-        }
-      }, { status: 500 })
+    } catch (authError) {
+      console.error('Debug: Auth check failed:', authError)
+      authResult = authError instanceof Error ? authError.message : String(authError)
+    }
+
+    // Test 5: User-specific EmailEvent query (if authenticated)
+    let userEventsResult = 'not tested'
+    let userEventsCount = 0
+    if (authResult === 'success' && userInfo) {
+      try {
+        console.log('Debug: Testing user-specific EmailEvent query...')
+        userEventsCount = await prisma.emailEvent.count({
+          where: { userId: userInfo.id }
+        })
+        console.log('Debug: User has', userEventsCount, 'email events')
+        userEventsResult = 'success'
+      } catch (userEventsError) {
+        console.error('Debug: User events query failed:', userEventsError)
+        userEventsResult = userEventsError instanceof Error ? userEventsError.message : String(userEventsError)
+      }
+    }
+
+    // Test 6: Complex query with joins (simplified version of interactions query)
+    let complexQueryResult = 'not tested'
+    let sampleEventsCount = 0
+    if (authResult === 'success' && userInfo) {
+      try {
+        console.log('Debug: Testing complex EmailEvent query with user filter...')
+        const sampleEvents = await prisma.emailEvent.findMany({
+          where: { userId: userInfo.id },
+          take: 5,
+          include: {
+            contact: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true
+              }
+            },
+            campaign: {
+              select: {
+                id: true,
+                name: true
+              }
+            },
+            sequence: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            timestamp: 'desc'
+          }
+        })
+        console.log('Debug: Complex query returned', sampleEvents.length, 'events for user')
+        sampleEventsCount = sampleEvents.length
+        complexQueryResult = 'success'
+      } catch (complexError) {
+        console.error('Debug: Complex query failed:', complexError)
+        complexQueryResult = complexError instanceof Error ? complexError.message : String(complexError)
+      }
     }
 
     return NextResponse.json({
       success: true,
+      timestamp: new Date().toISOString(),
       debug: {
-        mockSession: true,
-        user: { id: user.id, email: user.email },
-        eventCount,
-        sampleEvents: sampleEvents.length
+        hasDbUrl: !!dbUrl,
+        hasNeonUrl: !!neonUrl,
+        nodeEnv,
+        dbUrlStart: dbUrl?.substring(0, 15),
+        neonUrlStart: neonUrl?.substring(0, 15),
+        dbConnection: dbConnectionResult,
+        emailEventCheck,
+        emailEventCount,
+        authResult,
+        userInfo,
+        userEventsResult,
+        userEventsCount,
+        complexQueryResult,
+        sampleEventsCount
       }
     })
 
   } catch (error) {
-    console.error('Debug: Diagnostic error:', error)
+    console.error('Debug: Minimal diagnostic error:', error)
     return NextResponse.json({
-      error: 'Diagnostic failed',
+      error: 'Minimal diagnostic failed',
       debug: {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
