@@ -137,7 +137,7 @@ export default function SequencePage() {
         }).length || 0
 
         // Get real tracking data from analytics
-        const stepAnalytics = sequenceData.analytics?.stepAnalytics?.find(a => a.stepIndex === index)
+        const stepAnalytics = sequenceData.analytics?.stepAnalytics?.find((a: any) => a.stepIndex === index)
         const emailsSent = stepAnalytics?.sent || 0
         const opens = stepAnalytics?.opens || 0
         const clicks = stepAnalytics?.clicks || 0
