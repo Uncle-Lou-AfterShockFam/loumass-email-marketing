@@ -58,7 +58,7 @@ export async function GET(
 
     console.log('User ID:', session.user.id)
 
-    // Fetch sequence with enrollment data
+    // Fetch sequence with enrollment data and analytics
     const sequence = await prisma.sequence.findFirst({
       where: {
         id,
@@ -89,6 +89,61 @@ export async function GET(
       return NextResponse.json({ error: 'Sequence not found' }, { status: 404 })
     }
 
+    // Get sequence events for analytics
+    const sequenceEvents = await prisma.sequenceEvent.findMany({
+      where: {
+        enrollment: {
+          sequenceId: id
+        }
+      },
+      include: {
+        enrollment: {
+          include: {
+            contact: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    console.log(`Found ${sequenceEvents.length} sequence events for sequence ${id}`)
+
+    // Calculate analytics by step
+    const steps = Array.isArray(sequence.steps) ? sequence.steps : []
+    const stepAnalytics = steps.map((step: any, stepIndex: number) => {
+      const stepEvents = sequenceEvents.filter(event => event.stepIndex === stepIndex)
+      
+      const opens = stepEvents.filter(e => e.eventType === 'OPENED').length
+      const clicks = stepEvents.filter(e => e.eventType === 'CLICKED').length  
+      const replies = stepEvents.filter(e => e.eventType === 'REPLIED').length
+      
+      // Count enrollments that have reached this step (sent emails)
+      const enrollmentsAtStep = sequence.enrollments.filter(enrollment => {
+        const currentStep = typeof enrollment.currentStep === 'string' ? 
+          parseInt(enrollment.currentStep) : enrollment.currentStep
+        return currentStep > stepIndex || (currentStep === stepIndex && enrollment.lastEmailSentAt)
+      }).length
+
+      return {
+        stepIndex,
+        stepId: step.id,
+        opens,
+        clicks,
+        replies,
+        sent: enrollmentsAtStep,
+        openRate: enrollmentsAtStep > 0 ? Math.round((opens / enrollmentsAtStep) * 100) : 0,
+        clickRate: enrollmentsAtStep > 0 ? Math.round((clicks / enrollmentsAtStep) * 100) : 0,
+        replyRate: enrollmentsAtStep > 0 ? Math.round((replies / enrollmentsAtStep) * 100) : 0
+      }
+    })
+
+    console.log('Step analytics:', stepAnalytics)
     console.log('Found sequence:', sequence.name)
 
     return NextResponse.json({
@@ -102,7 +157,14 @@ export async function GET(
         steps: sequence.steps,
         createdAt: sequence.createdAt,
         updatedAt: sequence.updatedAt,
-        enrollments: sequence.enrollments
+        enrollments: sequence.enrollments,
+        analytics: {
+          stepAnalytics,
+          totalEvents: sequenceEvents.length,
+          totalOpens: sequenceEvents.filter(e => e.eventType === 'OPENED').length,
+          totalClicks: sequenceEvents.filter(e => e.eventType === 'CLICKED').length,
+          totalReplies: sequenceEvents.filter(e => e.eventType === 'REPLIED').length
+        }
       }
     })
 

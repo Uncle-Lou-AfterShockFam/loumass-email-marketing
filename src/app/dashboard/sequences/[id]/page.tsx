@@ -22,6 +22,23 @@ interface SequenceData {
   createdAt: string
   updatedAt: string
   enrollments: any[]
+  analytics?: {
+    stepAnalytics: Array<{
+      stepIndex: number
+      stepId: string
+      opens: number
+      clicks: number
+      replies: number
+      sent: number
+      openRate: number
+      clickRate: number
+      replyRate: number
+    }>
+    totalEvents: number
+    totalOpens: number
+    totalClicks: number
+    totalReplies: number
+  }
 }
 
 interface StepMetric {
@@ -112,18 +129,28 @@ export default function SequencePage() {
       const completedEnrollments = sequenceData.enrollments?.filter((e: any) => e.status === 'COMPLETED').length || 0
       const pausedEnrollments = sequenceData.enrollments?.filter((e: any) => e.status === 'PAUSED').length || 0
 
-      // Calculate step metrics - first pass without dropOff
+      // Calculate step metrics using real analytics data
       const stepMetricsWithoutDropOff = steps.map((step: any, index: number) => {
         const recipientsAtStep = sequenceData.enrollments?.filter((e: any) => {
           const currentStepIndex = typeof e.currentStep === 'string' ? parseInt(e.currentStep) : e.currentStep
           return currentStepIndex >= index
         }).length || 0
 
-        // Placeholder values for tracking data
-        const emailsSent = 0
-        const opens = 0
-        const clicks = 0
-        const replies = 0
+        // Get real tracking data from analytics
+        const stepAnalytics = sequenceData.analytics?.stepAnalytics?.find(a => a.stepIndex === index)
+        const emailsSent = stepAnalytics?.sent || 0
+        const opens = stepAnalytics?.opens || 0
+        const clicks = stepAnalytics?.clicks || 0
+        const replies = stepAnalytics?.replies || 0
+
+        console.log(`Step ${index + 1} (${step.subject}):`, {
+          recipientsAtStep,
+          emailsSent,
+          opens,
+          clicks,
+          replies,
+          hasAnalytics: !!stepAnalytics
+        })
 
         return {
           stepId: step.id,
@@ -164,7 +191,7 @@ export default function SequencePage() {
 
       setFunnelData(calculatedFunnelData)
 
-      // Calculate overall metrics
+      // Calculate overall metrics using real analytics data
       const calculatedMetrics = {
         totalEnrollments,
         activeEnrollments,
@@ -173,11 +200,14 @@ export default function SequencePage() {
         completionRate: totalEnrollments > 0 ? 
           Math.round((completedEnrollments / totalEnrollments) * 100) : 0,
         averageTimeToComplete: calculateAverageTimeToComplete(sequenceData.enrollments || []),
-        totalOpens: calculatedStepMetrics.reduce((sum, s) => sum + s.opens, 0),
-        totalClicks: calculatedStepMetrics.reduce((sum, s) => sum + s.clicks, 0),
-        totalReplies: calculatedStepMetrics.reduce((sum, s) => sum + s.replies, 0),
+        totalOpens: sequenceData.analytics?.totalOpens || 0,
+        totalClicks: sequenceData.analytics?.totalClicks || 0,
+        totalReplies: sequenceData.analytics?.totalReplies || 0,
         overallEngagement: calculateOverallEngagement(calculatedStepMetrics)
       }
+
+      console.log('Overall metrics:', calculatedMetrics)
+      console.log('Analytics data:', sequenceData.analytics)
 
       setMetrics(calculatedMetrics)
       setEngagementTimeline({}) // Placeholder for engagement timeline
