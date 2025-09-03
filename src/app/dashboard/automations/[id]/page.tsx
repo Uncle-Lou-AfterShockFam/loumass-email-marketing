@@ -50,6 +50,7 @@ export default function AutomationPage() {
   const [activeTab, setActiveTab] = useState<'builder' | 'stats' | 'settings'>('builder')
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const automationId = params?.id as string
@@ -73,6 +74,41 @@ export default function AutomationPage() {
       }
     }
   }, [session, status, router, automationId])
+
+  // Ensure navigation is not blocked
+  useEffect(() => {
+    // Detect navigation start and prevent saves during navigation
+    const handleNavigationClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Check if the click is on a navigation link
+      if (target.closest('a[href^="/dashboard"]') || target.closest('button[type="button"]')) {
+        console.log('Navigation detected, preventing saves')
+        setIsNavigating(true)
+        setSaving(false)
+        // Clear any pending saves
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current)
+          saveTimeoutRef.current = null
+        }
+      }
+    }
+
+    // Add event listeners - use capture phase to detect navigation early
+    document.addEventListener('click', handleNavigationClick, true)
+    
+    // Clear any navigation blocking on unmount
+    return () => {
+      // Clear any residual event listeners that might block navigation
+      setHasUnsavedChanges(false)
+      setIsNavigating(false)
+      document.removeEventListener('click', handleNavigationClick, true)
+      
+      // Clear any pending saves
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const fetchAutomation = async () => {
     try {
@@ -150,10 +186,16 @@ export default function AutomationPage() {
   }
 
   const handleSaveAutomation = async (updatedAutomation: Partial<Automation>) => {
-    if (!automation || isTransitioning) return
+    if (!automation || isTransitioning || isNavigating) return
     
     // Don't save if we're in the middle of changing status
     if (processingAction) return
+
+    // Don't save if we're navigating away (check if document is losing visibility)
+    if (document.visibilityState === 'hidden') {
+      console.log('Skipping save - document is hidden (likely navigating away)')
+      return
+    }
 
     console.log('Saving automation with data:', updatedAutomation)
 
@@ -544,7 +586,12 @@ export default function AutomationPage() {
                   type="text"
                   value={automation.name}
                   onChange={(e) => setAutomation(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  onBlur={() => handleSaveAutomation({ name: automation.name })}
+                  onBlur={() => {
+                    // Only save if we're not navigating away
+                    if (!isNavigating) {
+                      handleSaveAutomation({ name: automation.name })
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -554,7 +601,12 @@ export default function AutomationPage() {
                 <textarea
                   value={automation.description || ''}
                   onChange={(e) => setAutomation(prev => prev ? { ...prev, description: e.target.value } : null)}
-                  onBlur={() => handleSaveAutomation({ description: automation.description })}
+                  onBlur={() => {
+                    // Only save if we're not navigating away
+                    if (!isNavigating) {
+                      handleSaveAutomation({ description: automation.description })
+                    }
+                  }}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
