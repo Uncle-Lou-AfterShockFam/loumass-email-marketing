@@ -321,11 +321,11 @@ function AutomationFlowBuilderInner({
     // Configure layout
     dagreGraph.setGraph({
       rankdir: 'TB', // Top to bottom layout
-      nodesep: 100,  // Horizontal spacing between nodes
-      ranksep: 150,  // Vertical spacing between layers
+      nodesep: 60,   // Horizontal spacing between nodes (reduced from 100)
+      ranksep: 80,   // Vertical spacing between layers (reduced from 150)
       align: 'UL',   // Align to upper left
-      marginx: 50,
-      marginy: 50
+      marginx: 30,   // Reduced margin
+      marginy: 30    // Reduced margin
     })
     
     // Add nodes to dagre graph

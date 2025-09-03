@@ -335,11 +335,11 @@ export default function AutomationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Link
                 href="/dashboard/automations"
@@ -473,7 +473,7 @@ export default function AutomationPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div>
         {activeTab === 'builder' && (
           <AutomationFlowBuilder
             nodes={Array.isArray(automation.nodes) ? automation.nodes : automation.nodes?.nodes || []}
