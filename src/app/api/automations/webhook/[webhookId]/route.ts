@@ -8,13 +8,14 @@ const webhookPayloadSchema = z.object({
   contactId: z.string().optional(),
   contact_id: z.string().optional(),
   email: z.string().email().optional(),
-  data: z.record(z.any()).optional()
+  data: z.record(z.string(), z.any()).optional()
 })
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { webhookId: string } }
+  context: { params: Promise<{ webhookId: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -45,7 +46,7 @@ export async function POST(
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid payload format', details: error.errors },
+        { error: 'Invalid payload format', details: error.issues },
         { status: 400 }
       )
     }

@@ -84,7 +84,7 @@ const automationNodeSchema = z.object({
   webhook: z.object({
     method: z.enum(['GET', 'POST']),
     url: z.string().url(),
-    body: z.record(z.string()).optional()
+    body: z.record(z.string(), z.string()).optional()
   }).optional(),
   
   // When configuration (specific date/time)

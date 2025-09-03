@@ -23,8 +23,9 @@ const updateAutomationSchema = z.object({
 // GET /api/automations/[id] - Get specific automation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -111,8 +112,9 @@ export async function GET(
 // PUT /api/automations/[id] - Update automation
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -215,8 +217,9 @@ export async function PUT(
 // DELETE /api/automations/[id] - Delete automation
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     

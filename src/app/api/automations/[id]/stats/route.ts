@@ -6,8 +6,9 @@ import { prisma } from '@/lib/prisma'
 // GET /api/automations/[id]/stats - Get automation statistics
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
