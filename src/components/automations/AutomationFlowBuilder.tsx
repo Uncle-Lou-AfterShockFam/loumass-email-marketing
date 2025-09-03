@@ -1,8 +1,20 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
-import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, BackgroundVariant, useReactFlow, ReactFlowProvider } from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
+import React, { useState, useCallback, useRef, DragEvent } from 'react'
+import { 
+  ReactFlow, 
+  Node, 
+  Edge, 
+  addEdge, 
+  Connection, 
+  useNodesState, 
+  useEdgesState, 
+  Controls, 
+  Background, 
+  BackgroundVariant, 
+  useReactFlow, 
+  ReactFlowProvider 
+} from '@xyflow/react'
 import AutomationNodeEditor from './AutomationNodeEditor'
 
 // Custom node types
@@ -14,6 +26,7 @@ import SMSNode from './nodes/SMSNode'
 import UntilNode from './nodes/UntilNode'
 import WhenNode from './nodes/WhenNode'
 import MoveToNode from './nodes/MoveToNode'
+import TemplateNode from './nodes/TemplateNode'
 
 const nodeTypes = {
   email: EmailNode,
@@ -24,28 +37,55 @@ const nodeTypes = {
   until: UntilNode,
   when: WhenNode,
   moveTo: MoveToNode,
+  template: TemplateNode,
 }
 
 interface AutomationFlowBuilderProps {
   nodes: any[]
-  onNodesChange: (nodes: any[]) => void
-  automationData: any
+  edges?: any[]
+  onNodesChange: (data: { nodes: any[], edges: any[] }) => void
+  automationData?: any
 }
 
 function AutomationFlowBuilderInner({ 
-  nodes: initialNodes, 
+  nodes: initialNodes,
+  edges: initialEdges = [],
   onNodesChange, 
   automationData 
 }: AutomationFlowBuilderProps) {
-  const [nodes, setNodes, onNodesChangeReact] = useNodesState(
-    initialNodes.map(node => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: { ...node }
-    }))
-  )
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  // Handle null or undefined nodes
+  const safeInitialNodes = initialNodes || []
+  const isReadOnly = automationData?.status === 'ACTIVE'
+  
+  // Safely process nodes with error handling
+  let processedNodes: any[] = []
+  try {
+    processedNodes = safeInitialNodes.map((node, index) => {
+      // Ensure node is an object
+      if (!node || typeof node !== 'object') {
+        console.warn('Invalid node:', node)
+        return {
+          id: `node-${Date.now()}-${index}`,
+          type: 'default',
+          position: { x: 100, y: 100 + (index * 150) },
+          data: {}
+        }
+      }
+      
+      return {
+        id: node.id || `node-${Date.now()}-${index}`,
+        type: node.type || 'default',
+        position: node.position || { x: 100, y: 100 + (index * 150) },
+        data: { ...node }
+      }
+    })
+  } catch (error) {
+    console.error('Error processing nodes:', error)
+    processedNodes = []
+  }
+  
+  const [nodes, setNodes, onNodesChangeReact] = useNodesState(processedNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges || [])
   const [selectedNode, setSelectedNode] = useState<any | null>(null)
   const [showNodeEditor, setShowNodeEditor] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -69,26 +109,16 @@ function AutomationFlowBuilderInner({
     },
     {
       type: 'email',
-      label: 'Send Template',
+      label: 'Send Email',
       icon: '📧',
-      description: 'Send an email template',
+      description: 'Send a custom email or template',
       defaultData: {
         emailTemplate: {
+          useTemplate: false,
+          templateId: null,
           subject: 'New Email',
           content: 'Email content here...',
           trackingEnabled: true
-        }
-      }
-    },
-    {
-      type: 'sms',
-      label: 'SMS',
-      icon: '📱',
-      description: 'Send an SMS message',
-      defaultData: {
-        sms: {
-          sender: 'YourApp',
-          message: 'SMS message here...'
         }
       }
     },
@@ -110,16 +140,14 @@ function AutomationFlowBuilderInner({
       }
     },
     {
-      type: 'until',
-      label: 'Until',
-      icon: '⏳',
-      description: 'Wait until a condition is met',
+      type: 'sms',
+      label: 'SMS',
+      icon: '📱',
+      description: 'Send an SMS message',
       defaultData: {
-        until: {
-          type: 'behavior',
-          behavior: {
-            action: 'opens_campaign'
-          }
+        sms: {
+          sender: 'YourApp',
+          message: 'SMS message here...'
         }
       }
     },
@@ -137,26 +165,39 @@ function AutomationFlowBuilderInner({
       }
     },
     {
-      type: 'when',
-      label: 'When',
-      icon: '📅',
-      description: 'Wait until specific date/time',
+      type: 'until',
+      label: 'Wait Until',
+      icon: '⏳',
+      description: 'Wait until a condition is met or timeout',
       defaultData: {
-        when: {
-          datetime: new Date().toISOString()
+        until: {
+          condition: {
+            type: 'opened',
+            field: 'email'
+          },
+          timeout: {
+            days: 7,
+            hours: 0,
+            minutes: 0
+          },
+          checkInterval: {
+            hours: 1,
+            minutes: 0
+          }
         }
       }
     },
     {
-      type: 'moveTo',
-      label: 'Move to',
-      icon: '📂',
-      description: 'Move subscriber to segment/list',
+      type: 'template',
+      label: 'Create Template',
+      icon: '📝',
+      description: 'Create a reusable email template',
       defaultData: {
-        moveTo: {
-          type: 'segment',
-          segmentId: '',
-          segmentName: ''
+        template: {
+          name: 'New Template',
+          subject: 'Template Subject',
+          content: 'Template content here...',
+          variables: []
         }
       }
     }
@@ -167,19 +208,24 @@ function AutomationFlowBuilderInner({
     [setEdges]
   )
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
+  const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
   }, [])
 
   const onDrop = useCallback(
-    (event: React.DragEvent) => {
+    (event: DragEvent) => {
       event.preventDefault()
 
-      const type = event.dataTransfer.getData('application/reactflow')
-      if (!type) return
+      // Prevent drops when automation is active
+      if (isReadOnly) return
 
-      // Use screenToFlowPosition for proper coordinate conversion
+      const type = event.dataTransfer.getData('application/reactflow')
+      if (typeof type === 'undefined' || !type) {
+        return
+      }
+
+      // Calculate position using screenToFlowPosition
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -190,7 +236,7 @@ function AutomationFlowBuilderInner({
 
       const newNode = {
         id: `${type}-${Date.now()}`,
-        type,
+        type: type as string,
         position,
         data: {
           id: `${type}-${Date.now()}`,
@@ -201,15 +247,18 @@ function AutomationFlowBuilderInner({
         }
       }
 
-      setNodes((nds) => nds.concat(newNode))
+      setNodes((nds) => [...nds, newNode])
     },
-    [setNodes, screenToFlowPosition]
+    [setNodes, screenToFlowPosition, isReadOnly]
   )
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    // Prevent editing when automation is active
+    if (isReadOnly) return
+    
     setSelectedNode(node)
     setShowNodeEditor(true)
-  }, [])
+  }, [isReadOnly])
 
   const handleNodeSave = useCallback((updatedData: any) => {
     if (!selectedNode) return
@@ -225,85 +274,119 @@ function AutomationFlowBuilderInner({
     setSelectedNode(null)
   }, [selectedNode, setNodes])
 
-  // Update parent component when nodes change
+  // Update parent component when nodes or edges change
   const handleNodesChange = useCallback(() => {
-    const updatedNodes = nodes.map(node => node.data)
-    onNodesChange(updatedNodes)
-  }, [nodes, onNodesChange])
+    // Preserve the full node structure but extract the essential data
+    const updatedNodes = nodes.map(node => ({
+      id: node.id,
+      type: node.data?.type || node.type,
+      position: node.position,
+      ...node.data
+    }))
+    
+    // Include edges for connections between nodes
+    const updatedEdges = edges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: edge.type
+    }))
+    
+    if (onNodesChange) {
+      onNodesChange({ nodes: updatedNodes, edges: updatedEdges })
+    }
+  }, [nodes, edges, onNodesChange])
 
-  // Call update when nodes change
+  // Call update when nodes or edges change
   React.useEffect(() => {
     handleNodesChange()
   }, [handleNodesChange])
 
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
+  const onDragStart = (event: DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType)
     event.dataTransfer.effectAllowed = 'move'
   }
 
   return (
-    <div className="h-[calc(100vh-200px)] flex">
+    <div className="h-[calc(100vh-200px)] flex relative">
+      {/* Read-only overlay */}
+      {isReadOnly && (
+        <div className="absolute top-0 left-0 right-0 z-10 bg-yellow-50 border-b border-yellow-200 px-4 py-2">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium text-yellow-800">
+              This automation is currently active and cannot be modified. Pause or stop it to make changes.
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Node Palette */}
-      <div className="w-64 bg-white border-r border-gray-200 p-4">
+      <div className={`w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto ${isReadOnly ? 'opacity-50 pointer-events-none' : ''}`}>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Automation Nodes</h3>
         
-        <div className="space-y-2">
+        <div className="space-y-3">
           {nodeTemplates.map((template) => (
             <div
               key={template.type}
-              className="p-3 border border-gray-200 rounded-lg cursor-move hover:bg-gray-50 hover:border-gray-300 transition-colors"
-              draggable
+              className="p-3 border-2 border-gray-200 rounded-lg cursor-grab hover:cursor-grab active:cursor-grabbing hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+              draggable={true}
               onDragStart={(event) => onDragStart(event, template.type)}
             >
               <div className="flex items-center">
-                <span className="text-xl mr-3">{template.icon}</span>
+                <span className="text-2xl mr-3">{template.icon}</span>
                 <div>
-                  <div className="text-sm font-medium text-gray-900">{template.label}</div>
-                  <div className="text-xs text-gray-500">{template.description}</div>
+                  <div className="text-sm font-semibold text-gray-900">{template.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{template.description}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">How to use</h4>
+        <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">💡 How to use</h4>
           <p className="text-xs text-blue-700">
-            Drag and drop nodes onto the canvas to build your automation flow. 
-            Connect nodes by dragging from the node handles.
+            <strong>Drag</strong> nodes from this panel and <strong>drop</strong> them onto the canvas to build your automation flow.
           </p>
         </div>
       </div>
 
       {/* Flow Canvas */}
-      <div className="flex-1 relative" ref={reactFlowWrapper}>
+      <div className="flex-1 relative bg-gray-50" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChangeReact}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onNodesChange={isReadOnly ? undefined : onNodesChangeReact}
+          onEdgesChange={isReadOnly ? undefined : onEdgesChange}
+          onConnect={isReadOnly ? undefined : onConnect}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
+          className={`bg-gray-50 ${isReadOnly ? 'pointer-events-none' : ''}`}
+          nodesDraggable={!isReadOnly}
+          nodesConnectable={!isReadOnly}
+          elementsSelectable={!isReadOnly}
         >
           <Controls />
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         </ReactFlow>
 
         {/* Empty State */}
         {nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
               <div className="text-6xl mb-4">🤖</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Start Building Your Automation</h3>
-              <p className="text-gray-500 mb-4">
-                Drag nodes from the left panel to create your automation flow
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Start Building Your Automation</h3>
+              <p className="text-gray-600 mb-4 max-w-md">
+                Drag automation nodes from the left panel and drop them here to create your workflow
               </p>
-              <div className="text-sm text-gray-400">
-                Tip: Start with a "Wait" or "Send Template" node
+              <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg border border-gray-200 inline-block">
+                💡 Tip: Start with a <strong>"Wait"</strong> or <strong>"Send Template"</strong> node
               </div>
             </div>
           </div>
@@ -325,9 +408,22 @@ function AutomationFlowBuilderInner({
 }
 
 export default function AutomationFlowBuilder(props: AutomationFlowBuilderProps) {
-  return (
-    <ReactFlowProvider>
-      <AutomationFlowBuilderInner {...props} />
-    </ReactFlowProvider>
-  )
+  try {
+    return (
+      <ReactFlowProvider>
+        <AutomationFlowBuilderInner {...props} />
+      </ReactFlowProvider>
+    )
+  } catch (error) {
+    console.error('AutomationFlowBuilder error:', error)
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)] bg-gray-50">
+        <div className="text-center p-8">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Automation</h3>
+          <p className="text-gray-600">There was an error loading the automation flow. Please refresh the page.</p>
+        </div>
+      </div>
+    )
+  }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useParams } from 'next/navigation'
@@ -17,7 +17,7 @@ interface Automation {
   status: string
   trackingEnabled: boolean
   applyToExisting: boolean
-  nodes: any[]
+  nodes: any[] | { nodes: any[], edges: any[] }
   totalEntered: number
   currentlyActive: number
   totalCompleted: number
@@ -48,6 +48,9 @@ export default function AutomationPage() {
   const [saving, setSaving] = useState(false)
   const [processingAction, setProcessingAction] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'builder' | 'stats' | 'settings'>('builder')
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const automationId = params?.id as string
 
@@ -61,6 +64,14 @@ export default function AutomationPage() {
 
     fetchAutomation()
     fetchStats()
+
+    // Cleanup on unmount
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+    }
   }, [session, status, router, automationId])
 
   const fetchAutomation = async () => {
@@ -103,6 +114,14 @@ export default function AutomationPage() {
   const handleControlAutomation = async (action: 'start' | 'pause' | 'stop' | 'resume') => {
     try {
       setProcessingAction(action)
+      setIsTransitioning(true)
+      
+      // Clear any pending saves
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+      
       const response = await fetch(`/api/automations/${automationId}/control`, {
         method: 'POST',
         headers: {
@@ -125,11 +144,18 @@ export default function AutomationPage() {
       toast.error(error.message || 'Failed to control automation')
     } finally {
       setProcessingAction(null)
+      // Keep transitioning true for a bit to prevent immediate saves
+      setTimeout(() => setIsTransitioning(false), 1000)
     }
   }
 
   const handleSaveAutomation = async (updatedAutomation: Partial<Automation>) => {
-    if (!automation) return
+    if (!automation || isTransitioning) return
+    
+    // Don't save if we're in the middle of changing status
+    if (processingAction) return
+
+    console.log('Saving automation with data:', updatedAutomation)
 
     try {
       setSaving(true)
@@ -147,7 +173,9 @@ export default function AutomationPage() {
       }
 
       const result = await response.json()
+      console.log('Automation saved successfully, received:', result.automation)
       setAutomation(result.automation)
+      setHasUnsavedChanges(false)
       toast.success('Automation saved successfully')
     } catch (error: any) {
       console.error('Error saving automation:', error)
@@ -157,16 +185,39 @@ export default function AutomationPage() {
     }
   }
 
-  const handleNodesUpdate = (nodes: any[]) => {
-    if (!automation) return
+  const handleNodesUpdate = (data: { nodes: any[], edges: any[] }) => {
+    if (!automation || isTransitioning) return
     
-    const updatedAutomation = { ...automation, nodes }
+    // Don't allow modifications to active automations
+    if (automation.status === 'ACTIVE') {
+      console.log('Cannot modify active automation - skipping auto-save')
+      return
+    }
+    
+    // Don't update if we're processing an action
+    if (processingAction) return
+    
+    // Store both nodes and edges in the automation structure
+    const flowData = {
+      nodes: data.nodes,
+      edges: data.edges
+    }
+    
+    const updatedAutomation = { ...automation, nodes: flowData }
     setAutomation(updatedAutomation)
+    setHasUnsavedChanges(true)
     
-    // Auto-save nodes after a short delay
-    setTimeout(() => {
-      handleSaveAutomation({ nodes })
-    }, 1000)
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+    
+    // Auto-save nodes after a short delay (only for non-active automations)
+    saveTimeoutRef.current = setTimeout(() => {
+      if (!isTransitioning && !processingAction && automation.status !== 'ACTIVE') {
+        handleSaveAutomation({ nodes: flowData })
+      }
+    }, 1500)
   }
 
   const getStatusBadge = (status: string) => {
@@ -316,6 +367,47 @@ export default function AutomationPage() {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Manual Save Button */}
+              {automation.status !== 'ACTIVE' && (
+                <div className="relative">
+                  {hasUnsavedChanges && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full animate-pulse"></span>
+                  )}
+                  <button
+                    onClick={() => handleSaveAutomation({ nodes: automation.nodes })}
+                    disabled={saving || !!processingAction}
+                    className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                      hasUnsavedChanges 
+                        ? 'border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100' 
+                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    {saving ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </>
+                    ) : hasUnsavedChanges ? (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" />
+                        </svg>
+                        Save Changes
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        All Saved
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
               {getActionButtons()}
             </div>
           </div>
@@ -384,7 +476,8 @@ export default function AutomationPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'builder' && (
           <AutomationFlowBuilder
-            nodes={automation.nodes}
+            nodes={Array.isArray(automation.nodes) ? automation.nodes : automation.nodes?.nodes || []}
+            edges={Array.isArray(automation.nodes) ? [] : automation.nodes?.edges || []}
             onNodesChange={handleNodesUpdate}
             automationData={automation}
           />

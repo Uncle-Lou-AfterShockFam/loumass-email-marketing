@@ -23,7 +23,52 @@ function ConditionNode({ data, selected }: ConditionNodeProps) {
       const conditionCount = rules.conditions.length
       const operator = rules.operator === 'all' ? 'AND' : 'OR'
       
-      return `${conditionCount} rule${conditionCount > 1 ? 's' : ''} (${operator})`
+      if (conditionCount === 1) {
+        const rule = rules.conditions[0]
+        const fieldMap: Record<string, string> = {
+          'email': 'Email',
+          'firstName': 'First Name',
+          'lastName': 'Last Name',
+          'company': 'Company',
+          'phone': 'Phone',
+          'tags': 'Tags',
+          'segments': 'Segments',
+          'status': 'Status',
+          'createdAt': 'Created Date',
+          'lastEngagement': 'Last Activity',
+          'engagementScore': 'Engagement'
+        }
+        
+        const operatorMap: Record<string, string> = {
+          'equals': '=',
+          'not_equals': '≠',
+          'contains': 'contains',
+          'not_contains': '!contains',
+          'starts_with': 'starts with',
+          'ends_with': 'ends with',
+          'is_empty': 'is empty',
+          'is_not_empty': 'not empty',
+          'includes': 'includes',
+          'not_includes': '!includes',
+          'greater_than': '>',
+          'less_than': '<',
+          'before': 'before',
+          'after': 'after',
+          'in_last': 'in last'
+        }
+        
+        const field = fieldMap[rule.field] || rule.field
+        const op = operatorMap[rule.operator] || rule.operator
+        const value = typeof rule.value === 'object' ? 
+          `${rule.value.duration} ${rule.value.unit}` : 
+          String(rule.value).substring(0, 10) + (String(rule.value).length > 10 ? '...' : '')
+        
+        return rule.operator === 'is_empty' || rule.operator === 'is_not_empty' 
+          ? `${field} ${op}`
+          : `${field} ${op} ${value}`
+      }
+      
+      return `${conditionCount} rules (${operator})`
     }
     
     if (condition.type === 'behavior') {
@@ -32,12 +77,21 @@ function ConditionNode({ data, selected }: ConditionNodeProps) {
       
       const actionMap: Record<string, string> = {
         'opens_campaign': 'Opens email',
-        'not_opens_campaign': "Doesn't open email",
+        'not_opens_campaign': "Doesn't open",
         'clicks': 'Clicks link',
-        'not_clicks': "Doesn't click"
+        'not_clicks': "Doesn't click",
+        'replies': 'Replies',
+        'not_replies': "Doesn't reply",
+        'bounces': 'Bounces',
+        'unsubscribes': 'Unsubscribes'
       }
       
-      return actionMap[behavior.action] || behavior.action
+      const action = actionMap[behavior.action] || behavior.action
+      const timeFrame = behavior.timeFrame 
+        ? ` in ${behavior.timeFrame.duration} ${behavior.timeFrame.unit}`
+        : ''
+      
+      return action + timeFrame
     }
     
     return 'Configure condition'

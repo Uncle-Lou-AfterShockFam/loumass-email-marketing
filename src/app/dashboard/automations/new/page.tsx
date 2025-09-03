@@ -94,7 +94,7 @@ interface AutomationData {
   }
   applyToExisting: boolean
   trackingEnabled: boolean
-  nodes: AutomationNode[]
+  nodes: AutomationNode[] | { nodes: AutomationNode[], edges: any[] }
 }
 
 export default function NewAutomationPage() {
@@ -110,7 +110,7 @@ export default function NewAutomationPage() {
     triggerData: {},
     applyToExisting: false,
     trackingEnabled: true,
-    nodes: []
+    nodes: { nodes: [], edges: [] }
   })
 
   const handleSettingsComplete = (settings: Partial<AutomationData>) => {
@@ -118,8 +118,8 @@ export default function NewAutomationPage() {
     setCurrentStep('builder')
   }
 
-  const handleNodesUpdate = (nodes: AutomationNode[]) => {
-    setAutomationData(prev => ({ ...prev, nodes }))
+  const handleNodesUpdate = (data: { nodes: any[], edges: any[] }) => {
+    setAutomationData(prev => ({ ...prev, nodes: data }))
   }
 
   const handleSave = async (status: 'DRAFT' | 'ACTIVE' = 'DRAFT') => {
@@ -133,12 +133,13 @@ export default function NewAutomationPage() {
       return
     }
 
-    if (automationData.nodes.length === 0) {
+    const nodesList = Array.isArray(automationData.nodes) ? automationData.nodes : automationData.nodes?.nodes || []
+    if (nodesList.length === 0) {
       toast.error('Please add at least one node to your automation')
       return
     }
 
-    const emailNodes = automationData.nodes.filter(n => n.type === 'email')
+    const emailNodes = nodesList.filter((n: any) => n.type === 'email')
     if (emailNodes.length === 0) {
       toast.error('Automation must contain at least one email node')
       return
@@ -242,7 +243,8 @@ export default function NewAutomationPage() {
           />
         ) : (
           <AutomationFlowBuilder
-            nodes={automationData.nodes}
+            nodes={Array.isArray(automationData.nodes) ? automationData.nodes : automationData.nodes?.nodes || []}
+            edges={Array.isArray(automationData.nodes) ? [] : automationData.nodes?.edges || []}
             onNodesChange={handleNodesUpdate}
             automationData={automationData}
           />
