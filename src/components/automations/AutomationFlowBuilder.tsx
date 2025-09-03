@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useRef } from 'react'
-import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background } from '@xyflow/react'
+import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, BackgroundVariant } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import AutomationNodeEditor from './AutomationNodeEditor'
 
@@ -292,7 +292,7 @@ export default function AutomationFlowBuilder({
           fitView
         >
           <Controls />
-          <Background variant="dots" gap={12} size={1} />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         </ReactFlow>
 
         {/* Empty State */}
