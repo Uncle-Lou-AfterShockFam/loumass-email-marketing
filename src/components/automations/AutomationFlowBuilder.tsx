@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useRef } from 'react'
-import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, BackgroundVariant } from '@xyflow/react'
+import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, BackgroundVariant, useReactFlow, ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import AutomationNodeEditor from './AutomationNodeEditor'
 
@@ -32,7 +32,7 @@ interface AutomationFlowBuilderProps {
   automationData: any
 }
 
-export default function AutomationFlowBuilder({ 
+function AutomationFlowBuilderInner({ 
   nodes: initialNodes, 
   onNodesChange, 
   automationData 
@@ -49,6 +49,7 @@ export default function AutomationFlowBuilder({
   const [selectedNode, setSelectedNode] = useState<any | null>(null)
   const [showNodeEditor, setShowNodeEditor] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
+  const { screenToFlowPosition } = useReactFlow()
 
   // Node template configurations
   const nodeTemplates = [
@@ -175,17 +176,14 @@ export default function AutomationFlowBuilder({
     (event: React.DragEvent) => {
       event.preventDefault()
 
-      if (!reactFlowWrapper.current) return
-
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
       const type = event.dataTransfer.getData('application/reactflow')
-
       if (!type) return
 
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      }
+      // Use screenToFlowPosition for proper coordinate conversion
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
 
       const template = nodeTemplates.find(t => t.type === type)
       if (!template) return
@@ -205,7 +203,7 @@ export default function AutomationFlowBuilder({
 
       setNodes((nds) => nds.concat(newNode))
     },
-    [setNodes]
+    [setNodes, screenToFlowPosition]
   )
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -323,5 +321,13 @@ export default function AutomationFlowBuilder({
         onSave={handleNodeSave}
       />
     </div>
+  )
+}
+
+export default function AutomationFlowBuilder(props: AutomationFlowBuilderProps) {
+  return (
+    <ReactFlowProvider>
+      <AutomationFlowBuilderInner {...props} />
+    </ReactFlowProvider>
   )
 }
