@@ -227,7 +227,7 @@ export class AutomationEngine {
     } catch (error) {
       await this.logExecutionEvent(executionId, 'EMAIL_ERROR', {
         nodeId: node.id,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
       throw error
     }
@@ -392,7 +392,7 @@ export class AutomationEngine {
     } catch (error) {
       await this.logExecutionEvent(executionId, 'WEBHOOK_ERROR', {
         nodeId: node.id,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
       throw error
     }
@@ -433,7 +433,7 @@ export class AutomationEngine {
     } catch (error) {
       await this.logExecutionEvent(executionId, 'SMS_ERROR', {
         nodeId: node.id,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
       throw error
     }
@@ -564,7 +564,7 @@ export class AutomationEngine {
     } catch (error) {
       await this.logExecutionEvent(executionId, 'MOVE_ERROR', {
         nodeId: node.id,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
       throw error
     }
@@ -644,14 +644,14 @@ export class AutomationEngine {
       data: {
         status: 'ERROR',
         executionData: {
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           errorAt: new Date().toISOString()
         }
       }
     })
 
     await this.logExecutionEvent(executionId, 'EXECUTION_ERROR', {
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 
