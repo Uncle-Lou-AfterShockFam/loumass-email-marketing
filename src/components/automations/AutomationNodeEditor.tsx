@@ -446,7 +446,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             onChange={(e) => {
               const selectedSegment = segments.find((s: any) => s.id === e.target.value)
               handleNestedFieldChange('moveTo', 'segmentId', e.target.value)
-              handleNestedFieldChange('moveTo', 'segmentName', selectedSegment?.name || '')
+              handleNestedFieldChange('moveTo', 'segmentName', (selectedSegment as any)?.name || '')
             }}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
