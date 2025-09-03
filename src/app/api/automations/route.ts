@@ -120,7 +120,13 @@ const createAutomationSchema = z.object({
   }).optional(),
   applyToExisting: z.boolean().default(false),
   trackingEnabled: z.boolean().default(true),
-  nodes: z.array(automationNodeSchema),
+  nodes: z.union([
+    z.array(automationNodeSchema), // Old format: array of nodes
+    z.object({                      // New format: object with nodes and edges
+      nodes: z.array(automationNodeSchema),
+      edges: z.array(z.any())
+    })
+  ]),
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED']).default('DRAFT')
 })
 
@@ -147,8 +153,11 @@ export async function POST(request: NextRequest) {
 
     const { name, description, triggerEvent, triggerData, applyToExisting, trackingEnabled, nodes, status } = validationResult.data
 
+    // Handle both old array format and new object format
+    const nodesList = Array.isArray(nodes) ? nodes : nodes.nodes || []
+    
     // Validate automation logic
-    const emailNodes = nodes.filter(n => n.type === 'email')
+    const emailNodes = nodesList.filter((n: any) => n.type === 'email')
     if (emailNodes.length === 0) {
       return NextResponse.json({ 
         error: 'Automation must contain at least one email node' 
@@ -156,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check that condition nodes are properly configured
-    for (const node of nodes.filter(n => n.type === 'condition')) {
+    for (const node of nodesList.filter((n: any) => n.type === 'condition')) {
       if (status === 'ACTIVE' && node.condition) {
         if (node.condition.type === 'behavior' && !node.condition.behavior?.campaignRef) {
           return NextResponse.json({
@@ -211,7 +220,7 @@ export async function POST(request: NextRequest) {
         currentlyActive: automation.currentlyActive,
         totalCompleted: automation.totalCompleted,
         totalExecutions: automation._count.executions,
-        nodeCount: nodes.length,
+        nodeCount: Array.isArray(nodes) ? nodes.length : (nodes.nodes?.length || 0),
         createdAt: automation.createdAt,
         updatedAt: automation.updatedAt
       }
@@ -280,7 +289,9 @@ export async function GET(request: NextRequest) {
 
     // Calculate metrics for each automation
     const automationsWithMetrics = automations.map(automation => {
-      const nodes = Array.isArray(automation.nodes) ? automation.nodes : []
+      const nodes = Array.isArray(automation.nodes) 
+        ? automation.nodes 
+        : (automation.nodes as any)?.nodes || []
       return {
         id: automation.id,
         name: automation.name,

@@ -16,7 +16,13 @@ const updateAutomationSchema = z.object({
   }).optional(),
   applyToExisting: z.boolean().optional(),
   trackingEnabled: z.boolean().optional(),
-  nodes: z.array(z.any()).optional(), // Simplified for now
+  nodes: z.union([
+    z.array(z.any()), // Old format: array of nodes
+    z.object({        // New format: object with nodes and edges
+      nodes: z.array(z.any()),
+      edges: z.array(z.any())
+    })
+  ]).optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'STOPPED']).optional()
 })
 
@@ -157,7 +163,12 @@ export async function PUT(
 
     // If nodes are being updated, validate them
     if (updateData.nodes) {
-      const emailNodes = updateData.nodes.filter((n: any) => n.type === 'email')
+      // Handle both old array format and new object format
+      const nodesList = Array.isArray(updateData.nodes) 
+        ? updateData.nodes 
+        : updateData.nodes.nodes || []
+      
+      const emailNodes = nodesList.filter((n: any) => n.type === 'email')
       if (emailNodes.length === 0) {
         return NextResponse.json({ 
           error: 'Automation must contain at least one email node' 
