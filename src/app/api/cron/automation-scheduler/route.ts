@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     console.error('Automation scheduler cron error:', error)
     
     return NextResponse.json(
-      { error: 'Scheduler error', details: error.message },
+      { error: 'Scheduler error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
