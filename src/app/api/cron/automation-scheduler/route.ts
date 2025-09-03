@@ -76,6 +76,7 @@ async function resumeWaitingExecutions() {
         await prisma.automationExecutionEvent.create({
           data: {
             executionId: execution.id,
+            nodeId: execution.currentNodeId || 'system',
             eventType: 'EXECUTION_RESUMED',
             eventData: {
               message: 'Execution resumed after wait period',
@@ -150,6 +151,7 @@ async function checkUntilConditions() {
           await prisma.automationExecutionEvent.create({
             data: {
               executionId: execution.id,
+              nodeId: execution.currentNodeId || 'system',
               eventType: conditionMet ? 'UNTIL_CONDITION_MET' : 'UNTIL_TIMEOUT',
               eventData: {
                 message: conditionMet ? 'Until condition was met' : 'Until condition timed out',
