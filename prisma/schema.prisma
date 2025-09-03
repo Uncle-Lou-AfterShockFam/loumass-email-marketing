@@ -294,17 +294,37 @@ model EmailTemplate {
 }
 
 model Webhook {
-  id        String   @id @default(cuid())
-  userId    String
-  url       String
-  events    String[]
-  secret    String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String        @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  url         String
+  events      String[]
+  secretKey   String
+  status      WebhookStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calls       WebhookCall[]
 
-  @@index([userId, active])
+  @@index([userId, status])
+}
+
+model WebhookCall {
+  id           String           @id @default(cuid())
+  webhookId    String
+  event        String
+  status       WebhookCallStatus @default(PENDING)
+  responseCode Int?
+  responseTime Int?
+  payload      Json
+  response     String?
+  error        String?
+  createdAt    DateTime         @default(now())
+  webhook      Webhook          @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, status])
+  @@index([webhookId, createdAt])
 }
 
 enum CampaignStatus {
@@ -497,4 +517,16 @@ enum AutomationEventType {
   EXECUTION_RESUMED
   UNTIL_CONDITION_MET
   UNTIL_TIMEOUT
+}
+
+enum WebhookStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+enum WebhookCallStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
