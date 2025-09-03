@@ -45,7 +45,7 @@ export default function AutomationFlowBuilder({
       data: { ...node }
     }))
   )
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [selectedNode, setSelectedNode] = useState<any | null>(null)
   const [showNodeEditor, setShowNodeEditor] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
