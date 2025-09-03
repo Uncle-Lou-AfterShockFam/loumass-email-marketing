@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,9 +14,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
+
     const webhook = await prisma.webhook.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: session.user.id
       }
     })
@@ -77,7 +79,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -86,6 +88,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
     const body = await request.json()
     const { name, description, url, events, status } = body
 
@@ -109,7 +112,7 @@ export async function PUT(
 
     const webhook = await prisma.webhook.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: session.user.id
       }
     })
@@ -120,7 +123,7 @@ export async function PUT(
 
     const updatedWebhook = await prisma.webhook.update({
       where: {
-        id: params.id
+        id: resolvedParams.id
       },
       data: {
         name,
@@ -173,7 +176,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -182,9 +185,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
+
     const webhook = await prisma.webhook.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: session.user.id
       }
     })
@@ -196,14 +201,14 @@ export async function DELETE(
     // Delete related webhook calls first
     await prisma.webhookCall.deleteMany({
       where: {
-        webhookId: params.id
+        webhookId: resolvedParams.id
       }
     })
 
     // Delete the webhook
     await prisma.webhook.delete({
       where: {
-        id: params.id
+        id: resolvedParams.id
       }
     })
 

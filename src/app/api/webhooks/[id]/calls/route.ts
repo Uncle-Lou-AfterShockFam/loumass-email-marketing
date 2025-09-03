@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,10 +14,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
+
     // Verify webhook ownership
     const webhook = await prisma.webhook.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: session.user.id
       }
     })
@@ -35,7 +37,7 @@ export async function GET(
     // Get webhook calls
     const calls = await prisma.webhookCall.findMany({
       where: {
-        webhookId: params.id
+        webhookId: resolvedParams.id
       },
       orderBy: {
         createdAt: 'desc'
@@ -47,7 +49,7 @@ export async function GET(
     // Get total count for pagination
     const totalCount = await prisma.webhookCall.count({
       where: {
-        webhookId: params.id
+        webhookId: resolvedParams.id
       }
     })
 

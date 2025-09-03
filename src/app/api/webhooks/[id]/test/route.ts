@@ -6,7 +6,7 @@ import crypto from 'crypto'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,10 +15,12 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
+
     // Verify webhook ownership
     const webhook = await prisma.webhook.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: session.user.id
       }
     })
@@ -38,7 +40,7 @@ export async function POST(
       data: {
         message: 'This is a test webhook call from LOUMASS',
         webhook: {
-          id: webhook.id,
+          id: resolvedParams.id,
           name: webhook.name
         }
       }
