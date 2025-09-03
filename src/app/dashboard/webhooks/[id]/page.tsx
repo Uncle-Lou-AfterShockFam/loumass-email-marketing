@@ -48,11 +48,11 @@ interface WebhookCall {
 export default function WebhookDetailPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const webhookId = params.id
+  const [webhookId, setWebhookId] = useState<string | null>(null)
   
   const [webhook, setWebhook] = useState<Webhook | null>(null)
   const [calls, setCalls] = useState<WebhookCall[]>([])
@@ -70,7 +70,15 @@ export default function WebhookDetailPage({
   })
 
   useEffect(() => {
-    if (status === 'loading') return
+    const resolveParams = async () => {
+      const resolvedParams = await params
+      setWebhookId(resolvedParams.id)
+    }
+    resolveParams()
+  }, [params])
+
+  useEffect(() => {
+    if (status === 'loading' || !webhookId) return
     if (!session?.user?.id) {
       router.push('/auth/signin')
       return
@@ -81,6 +89,7 @@ export default function WebhookDetailPage({
   }, [webhookId, session, status, router])
 
   const fetchWebhook = async () => {
+    if (!webhookId) return
     try {
       setLoading(true)
       const response = await fetch(`/api/webhooks/${webhookId}`)
@@ -114,6 +123,7 @@ export default function WebhookDetailPage({
   }
 
   const fetchWebhookCalls = async () => {
+    if (!webhookId) return
     try {
       const response = await fetch(`/api/webhooks/${webhookId}/calls`)
       
@@ -152,7 +162,7 @@ export default function WebhookDetailPage({
   }
 
   const handleSave = async () => {
-    if (!validateForm()) {
+    if (!validateForm() || !webhookId) {
       return
     }
 
@@ -183,6 +193,7 @@ export default function WebhookDetailPage({
   }
 
   const handleTestWebhook = async () => {
+    if (!webhookId) return
     try {
       setSaving(true)
       const response = await fetch(`/api/webhooks/${webhookId}/test`, {
