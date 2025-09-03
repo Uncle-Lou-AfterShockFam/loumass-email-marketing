@@ -41,7 +41,7 @@ export default function AutomationSettings({ initialData, onComplete }: Automati
     const validation = automationSettingsSchema.safeParse(formData)
     if (!validation.success) {
       const newErrors: Record<string, string> = {}
-      validation.error.errors.forEach((error) => {
+      validation.error.issues.forEach((error) => {
         const path = error.path.join('.')
         newErrors[path] = error.message
       })
