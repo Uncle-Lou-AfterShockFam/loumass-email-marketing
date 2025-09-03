@@ -29,6 +29,7 @@ export default function SequencesPage() {
   const router = useRouter()
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [loading, setLoading] = useState(true)
+  const [processingSequences, setProcessingSequences] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -88,6 +89,31 @@ export default function SequencesPage() {
     }
   }
 
+  const handleProcessSequences = async () => {
+    try {
+      setProcessingSequences(true)
+      const response = await fetch('/api/cron/sequences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to process sequences')
+      }
+
+      const result = await response.json()
+      toast.success(`Processed ${result.processed} enrollments`)
+      await fetchSequences()
+    } catch (error) {
+      console.error('Error processing sequences:', error)
+      toast.error('Failed to process sequences')
+    } finally {
+      setProcessingSequences(false)
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -105,15 +131,36 @@ export default function SequencesPage() {
             Create automated email workflows with conditional logic
           </p>
         </div>
-        <Link
-          href="/dashboard/sequences/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Create Sequence
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleProcessSequences}
+            disabled={processingSequences}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processingSequences ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Process Now
+              </>
+            )}
+          </button>
+          <Link
+            href="/dashboard/sequences/new"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Sequence
+          </Link>
+        </div>
       </div>
 
       {sequences.length === 0 ? (
