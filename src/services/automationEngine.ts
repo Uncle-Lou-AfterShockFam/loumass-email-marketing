@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { AutomationExecutionStatus } from '@prisma/client'
+import { AutomationExecStatus } from '@prisma/client'
 
 interface ExecutionContext {
   automationId: string
