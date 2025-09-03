@@ -171,7 +171,7 @@ export class AutomationEngine {
       console.error(`Error executing ${node.type} node:`, error)
       await this.logExecutionEvent(executionId, 'NODE_ERROR', {
         nodeId: node.id,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
       throw error
     }
