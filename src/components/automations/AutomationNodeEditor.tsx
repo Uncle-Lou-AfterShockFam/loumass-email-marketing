@@ -52,14 +52,14 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
   }
 
   const handleFieldChange = (field: string, value: any) => {
-    setNodeData(prev => ({
+    setNodeData((prev: any) => ({
       ...prev,
       [field]: value
     }))
   }
 
   const handleNestedFieldChange = (section: string, field: string, value: any) => {
-    setNodeData(prev => ({
+    setNodeData((prev: any) => ({
       ...prev,
       [section]: {
         ...prev[section],
