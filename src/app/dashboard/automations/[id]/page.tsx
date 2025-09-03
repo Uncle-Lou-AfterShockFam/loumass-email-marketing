@@ -75,40 +75,98 @@ export default function AutomationPage() {
     }
   }, [session, status, router, automationId])
 
-  // Ensure navigation is not blocked
+  // Force immediate navigation with background cleanup
   useEffect(() => {
-    // Detect navigation start and prevent saves during navigation
     const handleNavigationClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      // Check if the click is on a navigation link
-      if (target.closest('a[href^="/dashboard"]') || target.closest('button[type="button"]')) {
-        console.log('Navigation detected, preventing saves')
+      const navLink = target.closest('a[href^="/dashboard"]')
+      const backButton = target.closest('[class*="back"]') || target.closest('[role="button"]')
+      
+      // Check if the click is on a navigation element
+      if (navLink || backButton) {
+        console.log('Navigation detected - forcing immediate navigation')
+        
+        // Immediately set navigation state to bypass all save operations
         setIsNavigating(true)
         setSaving(false)
+        setHasUnsavedChanges(false)
+        
+        // Set global navigation flag
+        ;(window as any).__navigating = true
+        
         // Clear any pending saves
         if (saveTimeoutRef.current) {
           clearTimeout(saveTimeoutRef.current)
           saveTimeoutRef.current = null
         }
+        
+        // For navigation links, force immediate router navigation
+        if (navLink) {
+          e.preventDefault()
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+          
+          const href = navLink.getAttribute('href')
+          if (href) {
+            console.log('Router push to:', href)
+            
+            // Force immediate navigation - don't wait for cleanup
+            setTimeout(() => {
+              router.push(href)
+            }, 0)
+            
+            return false
+          }
+        }
+        
+        // For back button, navigate to automations list
+        if (backButton && !navLink) {
+          e.preventDefault()
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+          
+          console.log('Back button clicked - navigating to automations')
+          setTimeout(() => {
+            router.push('/dashboard/automations')
+          }, 0)
+          
+          return false
+        }
       }
     }
 
-    // Add event listeners - use capture phase to detect navigation early
-    document.addEventListener('click', handleNavigationClick, true)
+    // Use capture phase to intercept before any other handlers
+    document.addEventListener('click', handleNavigationClick, { capture: true, passive: false })
     
-    // Clear any navigation blocking on unmount
+    // Also handle browser back/forward buttons
+    const handlePopState = () => {
+      console.log('Browser navigation detected')
+      setIsNavigating(true)
+      setSaving(false)
+      setHasUnsavedChanges(false)
+      
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+    }
+    
+    window.addEventListener('popstate', handlePopState)
+    
+    // Cleanup on unmount
     return () => {
-      // Clear any residual event listeners that might block navigation
+      console.log('Cleaning up navigation listeners')
+      document.removeEventListener('click', handleNavigationClick, { capture: true } as any)
+      window.removeEventListener('popstate', handlePopState)
+      
+      // Final cleanup
       setHasUnsavedChanges(false)
       setIsNavigating(false)
-      document.removeEventListener('click', handleNavigationClick, true)
-      
-      // Clear any pending saves
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [])
+  }, [router])
 
   const fetchAutomation = async () => {
     try {
@@ -186,10 +244,22 @@ export default function AutomationPage() {
   }
 
   const handleSaveAutomation = async (updatedAutomation: Partial<Automation>) => {
-    if (!automation || isTransitioning || isNavigating) return
+    // Multiple aggressive checks to prevent saves during navigation
+    if (!automation || isTransitioning || isNavigating || saving) {
+      console.log('Skipping save - invalid state:', { 
+        hasAutomation: !!automation, 
+        isTransitioning, 
+        isNavigating, 
+        saving 
+      })
+      return
+    }
     
     // Don't save if we're in the middle of changing status
-    if (processingAction) return
+    if (processingAction) {
+      console.log('Skipping save - processing action:', processingAction)
+      return
+    }
 
     // Don't save if we're navigating away (check if document is losing visibility)
     if (document.visibilityState === 'hidden') {
@@ -197,7 +267,13 @@ export default function AutomationPage() {
       return
     }
 
-    console.log('Saving automation with data:', updatedAutomation)
+    // Additional check for page unload state
+    if ((window as any).__navigating) {
+      console.log('Skipping save - page is navigating')
+      return
+    }
+
+    console.log('Proceeding with save:', updatedAutomation)
 
     try {
       setSaving(true)
@@ -228,7 +304,7 @@ export default function AutomationPage() {
   }
 
   const handleNodesUpdate = (data: { nodes: any[], edges: any[] }) => {
-    if (!automation || isTransitioning) return
+    if (!automation || isTransitioning || isNavigating) return
     
     // Don't allow modifications to active automations
     if (automation.status === 'ACTIVE') {
