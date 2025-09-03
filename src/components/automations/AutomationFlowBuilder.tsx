@@ -13,9 +13,11 @@ import {
   Background, 
   BackgroundVariant, 
   useReactFlow, 
-  ReactFlowProvider 
+  ReactFlowProvider,
+  Position
 } from '@xyflow/react'
 import AutomationNodeEditor from './AutomationNodeEditor'
+import dagre from 'dagre'
 
 // Custom node types
 import EmailNode from './nodes/EmailNode'
@@ -277,12 +279,16 @@ function AutomationFlowBuilderInner({
   // Update parent component when nodes or edges change
   const handleNodesChange = useCallback(() => {
     // Preserve the full node structure but extract the essential data
-    const updatedNodes = nodes.map(node => ({
-      id: node.id,
-      type: node.data?.type || node.type,
-      position: node.position,
-      ...node.data
-    }))
+    const updatedNodes = nodes.map(node => {
+      // Extract data without position to avoid duplication
+      const { position: dataPosition, ...restData } = node.data || {}
+      return {
+        id: node.id,
+        type: restData.type || node.type,
+        position: node.position, // Use the node's position, not data.position
+        ...restData
+      }
+    })
     
     // Include edges for connections between nodes
     const updatedEdges = edges.map(edge => ({
@@ -306,6 +312,68 @@ function AutomationFlowBuilderInner({
     event.dataTransfer.setData('application/reactflow', nodeType)
     event.dataTransfer.effectAllowed = 'move'
   }
+
+  // Auto-layout function using dagre
+  const autoLayoutNodes = useCallback(() => {
+    const dagreGraph = new dagre.graphlib.Graph()
+    dagreGraph.setDefaultEdgeLabel(() => ({}))
+    
+    // Configure layout
+    dagreGraph.setGraph({
+      rankdir: 'TB', // Top to bottom layout
+      nodesep: 100,  // Horizontal spacing between nodes
+      ranksep: 150,  // Vertical spacing between layers
+      align: 'UL',   // Align to upper left
+      marginx: 50,
+      marginy: 50
+    })
+    
+    // Add nodes to dagre graph
+    nodes.forEach((node) => {
+      dagreGraph.setNode(node.id, { 
+        width: 200,  // Approximate node width
+        height: 100  // Approximate node height
+      })
+    })
+    
+    // Add edges to dagre graph
+    edges.forEach((edge) => {
+      dagreGraph.setEdge(edge.source, edge.target)
+    })
+    
+    // Calculate layout
+    dagre.layout(dagreGraph)
+    
+    // Apply new positions to nodes
+    const layoutedNodes = nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id)
+      
+      // Center the node position (dagre gives center coordinates)
+      const position = {
+        x: nodeWithPosition.x - 100, // Subtract half of node width
+        y: nodeWithPosition.y - 50   // Subtract half of node height
+      }
+      
+      return {
+        ...node,
+        position,
+        // Set position handles for better edge routing
+        targetPosition: Position.Top,
+        sourcePosition: Position.Bottom
+      }
+    })
+    
+    setNodes(layoutedNodes)
+    
+    // Optional: Fit view to show all nodes after layout
+    setTimeout(() => {
+      const reactFlow = document.querySelector('.react-flow')
+      if (reactFlow) {
+        const event = new Event('resize')
+        window.dispatchEvent(event)
+      }
+    }, 50)
+  }, [nodes, edges, setNodes])
 
   return (
     <div className="h-[calc(100vh-200px)] flex relative">
@@ -356,6 +424,22 @@ function AutomationFlowBuilderInner({
 
       {/* Flow Canvas */}
       <div className="flex-1 relative bg-gray-50" ref={reactFlowWrapper}>
+        {/* Auto-layout button */}
+        {!isReadOnly && nodes.length > 0 && (
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={autoLayoutNodes}
+              className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 flex items-center gap-2"
+              title="Auto-arrange nodes for optimal flow visualization"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <span className="text-sm font-medium text-gray-700">Auto-arrange</span>
+            </button>
+          </div>
+        )}
+        
         <ReactFlow
           nodes={nodes}
           edges={edges}
