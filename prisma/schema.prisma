@@ -30,6 +30,7 @@ model User {
   trackingDomain       TrackingDomain?
   webhooks             Webhook[]
   emailEvents          EmailEvent[]
+  automations          Automation[]
 }
 
 model Account {
@@ -346,4 +347,127 @@ enum EventType {
 enum SequenceType {
   STANDALONE        // Independent email sequence
   CAMPAIGN_FOLLOWUP // Campaign-triggered with delay before condition
+}
+
+// Accumbamail-style Automations
+model Automation {
+  id                 String                 @id @default(cuid())
+  userId             String
+  name               String
+  description        String?
+  // Initial trigger event
+  triggerEvent       AutomationTriggerEvent @default(NEW_SUBSCRIBER)
+  triggerData        Json?                  // Config for trigger (list ID, segment, date, etc.)
+  applyToExisting    Boolean                @default(false) // Apply to current subscribers
+  status             AutomationStatus       @default(DRAFT)
+  trackingEnabled    Boolean                @default(true)
+  // Flow configuration
+  nodes              Json                   // Node-based flow structure
+  // Statistics
+  totalEntered       Int                    @default(0)
+  currentlyActive    Int                    @default(0)
+  totalCompleted     Int                    @default(0)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions         AutomationExecution[]
+  nodeStats          AutomationNodeStats[]
+
+  @@index([userId, status])
+  @@index([userId, triggerEvent])
+}
+
+// Individual automation executions per contact
+model AutomationExecution {
+  id             String                 @id @default(cuid())
+  automationId   String
+  contactId      String
+  status         AutomationExecStatus   @default(ACTIVE)
+  currentNodeId  String?                // Current node in the flow
+  enteredAt      DateTime               @default(now())
+  pausedAt       DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  // Execution data
+  variables      Json?                  // Contact-specific variables
+  executionPath  Json?                  // Track path through automation
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  automation     Automation             @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  events         AutomationExecutionEvent[]
+
+  @@unique([automationId, contactId])
+  @@index([automationId, status])
+  @@index([contactId])
+}
+
+// Events that occur during automation execution
+model AutomationExecutionEvent {
+  id           String              @id @default(cuid())
+  executionId  String
+  nodeId       String
+  eventType    AutomationEventType
+  eventData    Json?
+  timestamp    DateTime            @default(now())
+  execution    AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, nodeId])
+  @@index([nodeId, eventType])
+}
+
+// Statistics per automation node
+model AutomationNodeStats {
+  id           String     @id @default(cuid())
+  automationId String
+  nodeId       String
+  totalPassed  Int        @default(0) // Total subscribers who passed through
+  currentPassed Int       @default(0) // Since last run
+  inNode       Int        @default(0) // Currently waiting in node
+  lastUpdated  DateTime   @default(now())
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, nodeId])
+  @@index([automationId])
+}
+
+// Enums for Automation system
+enum AutomationTriggerEvent {
+  NEW_SUBSCRIBER    // When subscriber joins list
+  SPECIFIC_DATE     // At specific date/time
+  SUBSCRIBER_SEGMENT // New subscriber in segment
+  WEBHOOK           // External webhook trigger
+  MANUAL           // Manual trigger
+}
+
+enum AutomationStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  STOPPED
+  ARCHIVED
+}
+
+enum AutomationExecStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+  UNSUBSCRIBED
+}
+
+enum AutomationEventType {
+  ENTERED_NODE
+  EXITED_NODE
+  EMAIL_SENT
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  EMAIL_REPLIED
+  CONDITION_MET
+  CONDITION_FAILED
+  WAIT_STARTED
+  WAIT_COMPLETED
+  WEBHOOK_SENT
+  SMS_SENT
+  FAILED
 }

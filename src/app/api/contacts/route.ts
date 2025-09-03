@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { createContactWithStats } from '@/types/contact'
+import { automationTrigger } from '@/services/automationTrigger'
 
 const createContactSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -59,6 +60,14 @@ export async function POST(request: NextRequest) {
         bounced: false
       }
     })
+
+    // Trigger NEW_SUBSCRIBER automations for this new contact
+    try {
+      await automationTrigger.triggerNewSubscriber(session.user.id, contact.id)
+    } catch (error) {
+      console.error('Error triggering new subscriber automations:', error)
+      // Don't fail contact creation if automation trigger fails
+    }
 
     return NextResponse.json({
       success: true,
