@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { AutomationEventType } from '@prisma/client'
 import { AutomationExecStatus } from '@prisma/client'
 
 interface ExecutionContext {
@@ -128,12 +129,19 @@ export class AutomationEngine {
    */
   private async executeNode(executionId: string, node: any): Promise<void> {
     try {
+      // Get execution to access automationId
+      const execution = await prisma.automationExecution.findUnique({
+        where: { id: executionId },
+        select: { automationId: true }
+      })
+
+      if (!execution) throw new Error('Execution not found')
+
       // Log node entry
       await this.logExecutionEvent(executionId, 'NODE_ENTERED', {
-        nodeId: node.id,
         nodeType: node.type,
         nodeName: node.name || node.type
-      })
+      }, node.id)
 
       switch (node.type) {
         case 'email':
@@ -165,14 +173,13 @@ export class AutomationEngine {
       }
 
       // Update node statistics
-      await this.updateNodeStats(node.id, 'ENTERED')
+      await this.updateNodeStats(execution.automationId, node.id, 'ENTERED')
 
     } catch (error) {
       console.error(`Error executing ${node.type} node:`, error)
       await this.logExecutionEvent(executionId, 'NODE_ERROR', {
-        nodeId: node.id,
         error: error instanceof Error ? error.message : 'Unknown error'
-      })
+      }, node.id)
       throw error
     }
   }
@@ -215,11 +222,10 @@ export class AutomationEngine {
 
       // Log email sent
       await this.logExecutionEvent(executionId, 'EMAIL_SENT', {
-        nodeId: node.id,
         campaignId: campaign.id,
         recipient: execution.contact.email,
         subject: emailConfig.subject
-      })
+      }, node.id)
 
       // Continue to next node
       await this.moveToNextNode(executionId, node)
@@ -328,7 +334,7 @@ export class AutomationEngine {
   private async executeWebhookNode(executionId: string, node: any): Promise<void> {
     const execution = await prisma.automationExecution.findUnique({
       where: { id: executionId },
-      include: { contact: true }
+      include: { contact: true, automation: true }
     })
 
     if (!execution) return
@@ -360,7 +366,7 @@ export class AutomationEngine {
           name: node.name,
           type: node.type
         },
-        ...execution.executionData
+        ...(execution.executionData as Record<string, any> || {})
       }
 
       // Send webhook
@@ -642,7 +648,7 @@ export class AutomationEngine {
     await prisma.automationExecution.update({
       where: { id: executionId },
       data: {
-        status: 'ERROR',
+        status: 'FAILED',
         executionData: {
           error: error instanceof Error ? error.message : 'Unknown error',
           errorAt: new Date().toISOString()
@@ -655,39 +661,40 @@ export class AutomationEngine {
     })
   }
 
-  private async logExecutionEvent(executionId: string, eventType: string, eventData: any): Promise<void> {
+  private async logExecutionEvent(executionId: string, eventType: string, eventData: any, nodeId: string = 'system'): Promise<void> {
     await prisma.automationExecutionEvent.create({
       data: {
         executionId,
-        eventType,
+        nodeId,
+        eventType: eventType as AutomationEventType,
         eventData,
         timestamp: new Date()
       }
     })
   }
 
-  private async updateNodeStats(nodeId: string, action: string): Promise<void> {
+  private async updateNodeStats(automationId: string, nodeId: string, action: string): Promise<void> {
     // Update or create node statistics
-    const today = new Date().toISOString().split('T')[0]
-    
     await prisma.automationNodeStats.upsert({
       where: {
-        nodeId_date: {
-          nodeId,
-          date: today
+        automationId_nodeId: {
+          automationId,
+          nodeId
         }
       },
       update: {
-        enteredCount: action === 'ENTERED' ? { increment: 1 } : undefined,
-        completedCount: action === 'COMPLETED' ? { increment: 1 } : undefined,
-        errorCount: action === 'ERROR' ? { increment: 1 } : undefined
+        totalPassed: action === 'ENTERED' ? { increment: 1 } : undefined,
+        currentPassed: action === 'ENTERED' ? { increment: 1 } : undefined,
+        inNode: action === 'ENTERED' ? { increment: 1 } : action === 'COMPLETED' ? { decrement: 1 } : undefined,
+        lastUpdated: new Date()
       },
       create: {
+        automationId,
         nodeId,
-        date: today,
-        enteredCount: action === 'ENTERED' ? 1 : 0,
-        completedCount: action === 'COMPLETED' ? 1 : 0,
-        errorCount: action === 'ERROR' ? 1 : 0
+        totalPassed: action === 'ENTERED' ? 1 : 0,
+        currentPassed: action === 'ENTERED' ? 1 : 0,
+        inNode: action === 'ENTERED' ? 1 : 0,
+        lastUpdated: new Date()
       }
     })
   }
