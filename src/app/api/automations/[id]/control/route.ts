@@ -11,8 +11,9 @@ const controlActionSchema = z.object({
 // POST /api/automations/[id]/control - Control automation execution
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
