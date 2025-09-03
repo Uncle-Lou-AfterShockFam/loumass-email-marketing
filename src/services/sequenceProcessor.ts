@@ -177,7 +177,7 @@ export class SequenceProcessor {
 
     try {
       // Initialize Gmail service
-      const gmailService = new GmailService(user.gmailToken)
+      const gmailService = new GmailService()
 
       // Prepare email content with variable replacement
       let subject = step.subject || 'No subject'
@@ -187,29 +187,33 @@ export class SequenceProcessor {
       subject = this.replaceVariables(subject, contact)
       content = this.replaceVariables(content, contact)
 
-      // Prepare tracking options
-      const trackingOptions = sequence.trackingEnabled ? {
+      // Prepare email data for GmailService
+      const emailData = {
+        to: [contact.email],
+        subject: subject,
+        htmlContent: content,
+        textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+        fromName: user.name || user.email,
+        threadId: enrollment.gmailThreadId || undefined,
+        messageId: enrollment.gmailMessageId || undefined,
+        trackingId: `seq_${sequence.id}_${enrollment.id}_${step.id}`,
         sequenceId: sequence.id,
-        enrollmentId: enrollment.id,
-        stepId: step.id,
         contactId: contact.id
-      } : undefined
+      }
 
       // Send email via Gmail
-      const result = await gmailService.sendEmail({
-        to: contact.email,
-        subject: subject,
-        html: content,
-        threadId: enrollment.gmailThreadId || undefined,
-        trackingOptions
-      })
+      const result = await gmailService.sendEmail(
+        user.id,
+        user.email,
+        emailData
+      )
 
       // Update enrollment with message info
       await prisma.sequenceEnrollment.update({
         where: { id: enrollment.id },
         data: {
           lastEmailSentAt: new Date(),
-          gmailMessageId: result.id,
+          gmailMessageId: result.messageId,
           gmailThreadId: result.threadId || enrollment.gmailThreadId,
           currentStep: enrollment.currentStep + 1,
           updatedAt: new Date()
