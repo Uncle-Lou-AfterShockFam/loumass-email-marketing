@@ -31,6 +31,7 @@ model User {
   webhooks             Webhook[]
   emailEvents          EmailEvent[]
   automations          Automation[]
+  emailLists           EmailList[]
 }
 
 model Account {
@@ -122,6 +123,7 @@ model Contact {
   sequenceEnrollments    SequenceEnrollment[]
   emailEvents            EmailEvent[]
   automationExecutions   AutomationExecution[]
+  contactLists           ContactList[]
 
   @@unique([userId, email])
   @@index([userId])
@@ -529,4 +531,55 @@ enum WebhookCallStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+// Email Lists and Segments Models
+model EmailList {
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  description     String?
+  customFields    Json?     // [{name, type, options, required}]
+  subscriberCount Int       @default(0)
+  activeCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments        Segment[]
+  contacts        ContactList[]
+  
+  @@index([userId])
+}
+
+model Segment {
+  id              String    @id @default(cuid())
+  listId          String
+  name            String
+  conditions      Json      // [{field, operator, value, logic}]
+  isDynamic       Boolean   @default(true)
+  subscriberCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  list            EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  @@index([listId])
+}
+
+model ContactList {
+  id          String    @id @default(cuid())
+  contactId   String
+  listId      String
+  customData  Json?     // Custom field values
+  status      String    @default("active")
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+  
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  list        EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  @@unique([contactId, listId])
+  @@index([listId, status])
+  @@index([contactId])
 }
