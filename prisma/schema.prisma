@@ -96,26 +96,37 @@ model TrackingDomain {
 }
 
 model Contact {
-  id                  String               @id @default(cuid())
-  userId              String
-  email               String
-  firstName           String?
-  lastName            String?
-  company             String?
-  phone               String?
-  variables           Json?
-  tags                String[]
-  unsubscribed        Boolean              @default(false)
-  bounced             Boolean              @default(false)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipients          Recipient[]
-  sequenceEnrollments SequenceEnrollment[]
-  emailEvents         EmailEvent[]
+  id                     String                  @id @default(cuid())
+  userId                 String
+  email                  String
+  firstName              String?
+  lastName               String?
+  company                String?
+  phone                  String?
+  variables              Json?
+  customFields           Json?                   // Additional custom fields
+  tags                   String[]
+  segments               String[]                // Contact segments for targeting
+  status                 ContactStatus           @default(ACTIVE)
+  unsubscribed           Boolean                 @default(false)
+  unsubscribedAt         DateTime?
+  bounced                Boolean                 @default(false)
+  bouncedAt              DateTime?
+  lastEngagement         DateTime?               // Last email interaction
+  engagementScore        Int                     @default(0)
+  source                 String?                 // How they were added (form, import, api, etc.)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients             Recipient[]
+  sequenceEnrollments    SequenceEnrollment[]
+  emailEvents            EmailEvent[]
+  automationExecutions   AutomationExecution[]
 
   @@unique([userId, email])
   @@index([userId])
+  @@index([userId, status])
+  @@index([userId, segments])
 }
 
 model Campaign {
@@ -344,6 +355,13 @@ enum EventType {
   COMPLAINED
 }
 
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+  INACTIVE
+}
+
 enum SequenceType {
   STANDALONE        // Independent email sequence
   CAMPAIGN_FOLLOWUP // Campaign-triggered with delay before condition
@@ -395,6 +413,7 @@ model AutomationExecution {
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
   automation     Automation             @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  contact        Contact                @relation(fields: [contactId], references: [id], onDelete: Cascade)
   events         AutomationExecutionEvent[]
 
   @@unique([automationId, contactId])
