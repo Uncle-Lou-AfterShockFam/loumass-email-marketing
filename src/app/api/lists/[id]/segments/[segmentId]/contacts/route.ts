@@ -31,13 +31,20 @@ export async function GET(
       return NextResponse.json({ error: 'Segment not found' }, { status: 404 })
     }
 
-    // Get all contacts in the list
-    const contacts = await prisma.contact.findMany({
+    // Get all contacts for this list through ContactList relation
+    const contactListEntries = await prisma.contactList.findMany({
       where: {
         listId: listId,
-        userId: session.user.id
+        list: {
+          userId: session.user.id
+        }
+      },
+      include: {
+        contact: true
       }
     })
+    
+    const contacts = contactListEntries.map(entry => entry.contact)
 
     // Filter contacts based on segment conditions
     let filteredContacts = contacts

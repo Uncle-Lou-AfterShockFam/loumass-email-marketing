@@ -92,12 +92,20 @@ export async function POST(
     // Calculate contact count based on conditions
     let contactCount = 0
     if (conditions?.rules?.length > 0) {
-      const contacts = await prisma.contact.findMany({
+      // Get all contacts for this list through ContactList relation
+      const contactListEntries = await prisma.contactList.findMany({
         where: {
           listId: listId,
-          userId: session.user.id
+          list: {
+            userId: session.user.id
+          }
+        },
+        include: {
+          contact: true
         }
       })
+      
+      const contacts = contactListEntries.map(entry => entry.contact)
 
       contactCount = contacts.filter(contact => {
         return evaluateConditions(contact, conditions)
