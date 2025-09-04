@@ -97,7 +97,7 @@ export async function GET(
     console.log('Tracking type:', isSequence ? 'Sequence' : 'Campaign')
     console.log('Looking for recipient with ID:', campaignOrSequenceId, 'and contact/enrollment ID:', recipientId)
 
-    // Handle campaign click tracking
+    // Handle campaign click tracking  
     if (!isSequence) {
       let recipient = await prisma.recipient.findFirst({
       where: {
@@ -236,6 +236,57 @@ export async function GET(
           where: { id: enrollment.id },
           data: updateData
         })
+      }
+    }
+
+    // Check if this is automation click tracking (if neither campaign nor sequence was found)
+    if (!recipient && !isSequence) {
+      const automationExecution = await prisma.automationExecution.findFirst({
+        where: {
+          automationId: campaignOrSequenceId,
+          contactId: recipientId
+        },
+        include: {
+          contact: true,
+          automation: {
+            include: {
+              user: true
+            }
+          }
+        }
+      })
+
+      console.log('Found automation execution for click:', automationExecution ? `ID: ${automationExecution.id}` : 'Not found')
+
+      if (automationExecution) {
+        // Get location data from IP
+        const location = ip ? await getLocationFromIp(ip) : null
+
+        // Create click tracking event for automation
+        await prisma.emailEvent.create({
+          data: {
+            userId: automationExecution.automation.userId,
+            contactId: automationExecution.contactId,
+            type: 'CLICKED',
+            subject: `Automation: ${automationExecution.automation.name}`,
+            details: `Clicked link in automation email`,
+            eventData: {
+              url,
+              linkIndex,
+              userAgent,
+              ipAddress: ip,
+              timestamp: new Date().toISOString(),
+              location: location || undefined,
+              automationId: automationExecution.automationId,
+              executionId: automationExecution.id,
+              trackingId
+            },
+            ipAddress: ip,
+            userAgent
+          }
+        })
+
+        console.log('Automation click tracking event created')
       }
     }
 

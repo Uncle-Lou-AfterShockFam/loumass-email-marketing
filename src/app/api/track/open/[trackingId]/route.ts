@@ -134,7 +134,7 @@ export async function GET(
     console.log('Tracking type:', isSequence ? 'Sequence' : 'Campaign')
     console.log('Looking for recipient with ID:', campaignOrSequenceId, 'and contact/enrollment ID:', recipientId)
 
-    // Try to find a campaign recipient first
+    // Try to find a campaign recipient first  
     let recipient = await prisma.recipient.findFirst({
       where: {
         campaignId: campaignOrSequenceId,
@@ -151,6 +151,26 @@ export async function GET(
     })
 
     console.log('Found recipient:', recipient ? `ID: ${recipient.id}, Status: ${recipient.status}` : 'Not found')
+
+    // If not found as campaign recipient, check if this is automation tracking
+    let automationExecution = null
+    if (!recipient) {
+      automationExecution = await prisma.automationExecution.findFirst({
+        where: {
+          automationId: campaignOrSequenceId,
+          contactId: recipientId
+        },
+        include: {
+          contact: true,
+          automation: {
+            include: {
+              user: true
+            }
+          }
+        }
+      })
+      console.log('Found automation execution:', automationExecution ? `ID: ${automationExecution.id}, Status: ${automationExecution.status}` : 'Not found')
+    }
 
     if (recipient) {
       // Check if this is the sender's IP or Gmail proxy
@@ -296,6 +316,61 @@ export async function GET(
           })
         }
       }
+    } else if (automationExecution) {
+      // Handle automation tracking
+      console.log('Handling automation open tracking')
+      
+      // Check if this is the sender's IP or Gmail proxy
+      const isSenderIp = await checkIfSenderIp(ip, automationExecution.automation.userId)
+      const isGmailProxy = isGmailProxyIp(ip)
+      
+      // Check if this is the first open event for this automation execution
+      const previousOpens = await prisma.emailEvent.count({
+        where: {
+          userId: automationExecution.automation.userId,
+          contactId: automationExecution.contactId,
+          type: 'OPENED',
+          eventData: {
+            path: ['automationId'],
+            equals: automationExecution.automationId
+          }
+        }
+      })
+      
+      // First Gmail proxy open is pre-fetch, subsequent ones are real
+      const isPreFetch = isGmailProxy && previousOpens === 0
+      const isRealUserOpen = !isPreFetch && (!isSenderIp || automationExecution.automation.status === 'ACTIVE')
+      
+      // Get location data from IP
+      const location = ip ? await getLocationFromIp(ip) : null
+      
+      // Always track the event for visibility
+      await prisma.emailEvent.create({
+        data: {
+          userId: automationExecution.automation.userId,
+          contactId: automationExecution.contactId,
+          type: 'OPENED',
+          subject: `Automation: ${automationExecution.automation.name}`,
+          details: `Opened email from automation step`,
+          eventData: {
+            userAgent,
+            ipAddress: ip,
+            timestamp: new Date().toISOString(),
+            isSenderIp,
+            isGmailProxy,
+            isPreFetch,
+            openNumber: previousOpens + 1,
+            location: location || undefined,
+            automationId: automationExecution.automationId,
+            executionId: automationExecution.id,
+            trackingId
+          },
+          ipAddress: ip,
+          userAgent
+        }
+      })
+      
+      console.log('Automation open tracking event created')
     }
 
     // Return the tracking pixel with aggressive no-cache headers

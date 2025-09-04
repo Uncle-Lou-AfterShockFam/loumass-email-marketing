@@ -85,8 +85,15 @@ export class EmailNodeProcessor {
         }
       }
 
-      // Generate tracking ID for this email
-      const trackingId = `automation_${execution.automation.id}_${execution.id}_${Date.now()}`
+      // Generate tracking ID in the format: automationId:contactId:timestamp
+      const trackingData = `${execution.automation.id}:${execution.contact.id}:${Date.now()}`
+      const trackingId = Buffer.from(trackingData).toString('base64url')
+
+      // Add tracking to email content (pixel and click tracking)
+      let finalContent = processedEmail.content
+      if (execution.automation.trackingEnabled !== false) { // Default to enabled unless explicitly disabled
+        finalContent = await this.addTrackingToEmail(processedEmail.content, trackingId, execution.automation.userId)
+      }
 
       // Send email using GmailService
       const emailResult = await this.gmailService.sendEmail(
@@ -95,7 +102,7 @@ export class EmailNodeProcessor {
         {
           to: [execution.contact.email],
           subject: processedEmail.subject,
-          htmlContent: processedEmail.content,
+          htmlContent: finalContent,
           textContent: processedEmail.content,
           trackingId,
           contactId: execution.contact.id,
@@ -168,5 +175,107 @@ export class EmailNodeProcessor {
         error: error instanceof Error ? error.message : 'Unknown email error'
       }
     }
+  }
+
+  private async addTrackingToEmail(html: string, trackingId: string, userId: string): Promise<string> {
+    console.log('=== AUTOMATION addTrackingToEmail CALLED ===')
+    console.log('Input HTML length:', html.length)
+    console.log('Tracking ID:', trackingId)
+    
+    // Fetch user's tracking domain from database
+    const userTrackingDomain = await prisma.trackingDomain.findUnique({
+      where: { userId },
+      select: { domain: true, verified: true }
+    })
+    
+    // Use user's verified domain, or fall back to default
+    let baseUrl: string
+    if (userTrackingDomain?.verified && userTrackingDomain.domain) {
+      baseUrl = `https://${userTrackingDomain.domain}`.trim()
+      console.log('Using user tracking domain:', baseUrl)
+    } else {
+      baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://loumassbeta.vercel.app').trim()
+      console.log('Using default tracking domain:', baseUrl)
+    }
+    
+    console.log('Base URL for tracking:', baseUrl)
+    
+    // Add open tracking pixel with cache-busting parameter
+    const cacheBuster = Math.random().toString(36).substring(7)
+    const pixelUrl = `${baseUrl}/api/track/open/${trackingId}?cb=${cacheBuster}`
+    const pixelHtml = `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`
+    
+    console.log('Automation pixel URL:', pixelUrl)
+    
+    // STEP 1: Convert plain text URLs to HTML links FIRST
+    console.log('Converting plain text URLs to HTML links...')
+    let trackedHtml = html
+    
+    // Check if content is plain text (no HTML tags)
+    const hasHtmlTags = /<[^>]+>/.test(html)
+    
+    if (!hasHtmlTags) {
+      console.log('Content appears to be plain text, converting to HTML...')
+      // Convert line breaks to <br> tags
+      trackedHtml = trackedHtml.replace(/\n/g, '<br>')
+      
+      // Then convert URLs to links
+      trackedHtml = trackedHtml.replace(/(https?:\/\/[^\s<>'"]+)/gi, '<a href="$1">$1</a>')
+      
+      // Wrap in proper HTML structure
+      trackedHtml = `<html><body>${trackedHtml}${pixelHtml}</body></html>`
+      
+      console.log('Converted plain text to HTML with pixel')
+    } else {
+      // Content already has HTML, process normally
+      console.log('Content already has HTML tags')
+      
+      // Convert HTTP/HTTPS URLs that are not already inside HTML tags
+      const urlRegex = /(?<!<[^>]*)(https?:\/\/[^\s<>'"]+)/gi
+      let urlsConverted = 0
+      
+      trackedHtml = trackedHtml.replace(urlRegex, (match) => {
+        urlsConverted++
+        return `<a href="${match}">${match}</a>`
+      })
+      
+      console.log(`Converted ${urlsConverted} plain text URLs to HTML links`)
+      
+      // STEP 2: Ensure HTML has proper structure
+      if (!trackedHtml.includes('<html') && !trackedHtml.includes('<body')) {
+        trackedHtml = `<html><body>${trackedHtml}</body></html>`
+      }
+      
+      // STEP 3: Insert pixel before closing body tag
+      if (trackedHtml.includes('</body>')) {
+        console.log('Found </body> tag, inserting pixel before it')
+        trackedHtml = trackedHtml.replace('</body>', `${pixelHtml}</body>`)
+      } else {
+        console.log('No </body> tag found, appending pixel to end')
+        trackedHtml = trackedHtml + pixelHtml
+      }
+    }
+    
+    // STEP 4: Replace all HTML links for click tracking
+    const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+    let linkCount = 0
+    
+    trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
+      // Don't track unsubscribe links or mailto links
+      if (url.includes('unsubscribe') || url.includes('mailto:')) {
+        return match
+      }
+      
+      linkCount++
+      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
+      console.log(`Automation link ${linkCount}: ${url} -> ${trackedUrl}`)
+      return match.replace(url, trackedUrl)
+    })
+    
+    console.log('=== AUTOMATION addTrackingToEmail COMPLETE ===')
+    console.log('Final HTML length:', trackedHtml.length)
+    console.log('Links tracked:', linkCount)
+    
+    return trackedHtml
   }
 }
