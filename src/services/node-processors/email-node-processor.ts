@@ -7,6 +7,13 @@ interface EmailNodeData {
   subject?: string
   content?: string
   sendFromTemplate: boolean
+  emailTemplate?: {
+    subject?: string
+    content?: string
+  }
+  email?: {
+    fromName?: string
+  }
 }
 
 interface ProcessResult {
@@ -48,10 +55,10 @@ export class EmailNodeProcessor {
           content: template.content
         }
       } else {
-        // Use inline content
+        // Use inline content from the node's emailTemplate data
         emailContent = {
-          subject: nodeData.subject || '',
-          content: nodeData.content || ''
+          subject: nodeData.emailTemplate?.subject || nodeData.subject || '',
+          content: nodeData.emailTemplate?.content || nodeData.content || ''
         }
       }
 
@@ -91,7 +98,8 @@ export class EmailNodeProcessor {
           htmlContent: processedEmail.content,
           textContent: processedEmail.content,
           trackingId,
-          contactId: execution.contact.id
+          contactId: execution.contact.id,
+          fromName: nodeData.email?.fromName || 'LOUMASS'
         }
       )
 

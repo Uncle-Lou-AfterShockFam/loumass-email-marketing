@@ -223,13 +223,11 @@ export class AutomationExecutor {
   private async processNode(execution: any, node: NodeData) {
     switch (node.type) {
       case 'email':
-        // For email nodes, pass emailTemplate data if available, otherwise fallback to node.data
-        const emailData = node.emailTemplate ? {
-          subject: node.emailTemplate.subject || '',
-          content: node.emailTemplate.htmlContent || node.emailTemplate.textContent || '',
-          htmlContent: node.emailTemplate.htmlContent,
-          textContent: node.emailTemplate.textContent
-        } : node.data
+        // Pass complete node.data with emailTemplate merged
+        const emailData = {
+          ...node.data,
+          emailTemplate: node.emailTemplate || node.data.emailTemplate
+        }
         return await this.emailProcessor.process(execution, emailData)
       
       case 'delay':

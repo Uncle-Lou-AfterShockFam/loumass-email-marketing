@@ -24,10 +24,18 @@ export class TemplateProcessor {
     contact: any,
     variables: Record<string, any> = {}
   ): Promise<ProcessedTemplate> {
+    // Create a context that allows both {{contact.firstName}} and {{firstName}} formats
     const context = {
       contact,
       variables,
-      ...variables // Allow top-level access to variables
+      ...variables, // Allow top-level access to variables
+      // Add contact fields at root level for simpler syntax
+      firstName: contact.firstName || '',
+      lastName: contact.lastName || '',
+      email: contact.email || '',
+      company: contact.company || '',
+      phone: contact.phone || '',
+      // Preserve nested access as well
     }
 
     const processedSubject = this.processString(template.subject, context)
