@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; segmentId: string } }
+  { params }: { params: Promise<{ id: string; segmentId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,8 +14,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const listId = params.id
-    const segmentId = params.segmentId
+    const resolvedParams = await params
+    const listId = resolvedParams.id
+    const segmentId = resolvedParams.segmentId
 
     // Verify the list belongs to the user
     const list = await prisma.emailList.findFirst({
@@ -59,7 +60,7 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string; segmentId: string } }
+  { params }: { params: Promise<{ id: string; segmentId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -68,8 +69,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const listId = params.id
-    const segmentId = params.segmentId
+    const resolvedParams = await params
+    const listId = resolvedParams.id
+    const segmentId = resolvedParams.segmentId
     const { name, description, conditions } = await req.json()
 
     // Verify the list belongs to the user
