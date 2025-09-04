@@ -376,7 +376,6 @@ model AutomationExecution {
   contact       Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
   events        AutomationExecutionEvent[]
 
-  @@unique([automationId, contactId])
   @@index([automationId, status])
   @@index([contactId])
 }
