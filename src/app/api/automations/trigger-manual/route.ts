@@ -3,7 +3,7 @@ import { AutomationExecutor } from '@/services/automation-executor'
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('Manual automation trigger requested...')
+    console.log('Manual automation trigger endpoint called...')
     
     const executor = new AutomationExecutor()
     await executor.executeAutomations()
