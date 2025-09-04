@@ -53,12 +53,13 @@ export default function ContactSelector({ selectedContactIds, onChange, error }:
       if (!response.ok) throw new Error('Failed to load contacts')
 
       const data = await response.json()
-      setContacts(data.contacts)
+      setContacts(Array.isArray(data.contacts) ? data.contacts : [])
       setTotalCount(data.total)
 
       // Extract unique tags
       const tags = new Set<string>()
-      data.contacts.forEach((contact: Contact) => {
+      const safeContacts = Array.isArray(data.contacts) ? data.contacts : []
+      safeContacts.forEach((contact: Contact) => {
         contact.tags.forEach(tag => tags.add(tag))
       })
       setAvailableTags(Array.from(tags).sort())

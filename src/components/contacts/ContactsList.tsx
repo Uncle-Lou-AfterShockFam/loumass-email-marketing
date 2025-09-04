@@ -34,7 +34,7 @@ export default function ContactsList({ contacts, tags }: ContactsListProps) {
   }, [])
 
   // Filter and search contacts
-  const filteredContacts = contacts.filter(contact => {
+  const filteredContacts = (Array.isArray(contacts) ? contacts : []).filter(contact => {
     const matchesSearch = !searchQuery || 
       contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||

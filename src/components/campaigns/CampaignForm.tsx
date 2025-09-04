@@ -84,9 +84,10 @@ export default function CampaignForm({
   const [contactSearch, setContactSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
-  const allTags = Array.from(new Set(contacts.flatMap(c => c.tags)))
+  const safeContacts = Array.isArray(contacts) ? contacts : []
+  const allTags = Array.from(new Set(safeContacts.flatMap(c => c.tags)))
 
-  const filteredContacts = contacts.filter(contact => {
+  const filteredContacts = safeContacts.filter(contact => {
     const matchesSearch = contactSearch === '' || 
       contact.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
       contact.firstName?.toLowerCase().includes(contactSearch.toLowerCase()) ||
@@ -494,7 +495,7 @@ export default function CampaignForm({
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex flex-wrap gap-2">
               {selectedContacts.slice(0, 10).map(contactId => {
-                const contact = contacts.find(c => c.id === contactId)
+                const contact = safeContacts.find(c => c.id === contactId)
                 return contact ? (
                   <span key={contactId} className="px-3 py-1 bg-gray-100 text-gray-800 dark:text-gray-200 rounded-full text-sm">
                     {contact.email}
