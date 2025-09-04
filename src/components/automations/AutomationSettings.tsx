@@ -96,7 +96,7 @@ export default function AutomationSettings({ initialData, onComplete }: Automati
               type="datetime-local"
               value={formData.triggerData.specificDate || ''}
               onChange={(e) => handleTriggerDataChange('specificDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
             />
           </div>
         )
@@ -110,7 +110,7 @@ export default function AutomationSettings({ initialData, onComplete }: Automati
             <select
               value={formData.triggerData.segmentId || ''}
               onChange={(e) => handleTriggerDataChange('segmentId', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
             >
               <option value="">Select a segment</option>
               {/* TODO: Load actual segments */}
@@ -132,7 +132,7 @@ export default function AutomationSettings({ initialData, onComplete }: Automati
               value={formData.triggerData.webhookUrl || ''}
               onChange={(e) => handleTriggerDataChange('webhookUrl', e.target.value)}
               placeholder="https://your-app.com/webhook"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
             />
             <p className="text-xs text-gray-500 mt-1">
               This URL will be called to trigger the automation
@@ -185,7 +185,7 @@ export default function AutomationSettings({ initialData, onComplete }: Automati
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Optional description for your automation"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
           </div>

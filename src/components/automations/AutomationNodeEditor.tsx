@@ -112,7 +112,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           <select
             value={nodeData.emailTemplate?.templateId || ''}
             onChange={(e) => handleNestedFieldChange('emailTemplate', 'templateId', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           >
             <option value="">Choose a template...</option>
             <option value="welcome">Welcome Email</option>
@@ -130,7 +130,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               type="text"
               value={nodeData.emailTemplate?.subject || ''}
               onChange={(e) => handleNestedFieldChange('emailTemplate', 'subject', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               placeholder="Email subject"
             />
           </div>
@@ -142,7 +142,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             <textarea
               value={nodeData.emailTemplate?.content || ''}
               onChange={(e) => handleNestedFieldChange('emailTemplate', 'content', e.target.value)}
-              className="w-full p-2 h-32 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 h-32 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               placeholder="Write your email content here..."
             />
           </div>
@@ -158,7 +158,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             type="text"
             value={nodeData.email?.fromName || ''}
             onChange={(e) => handleNestedFieldChange('email', 'fromName', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             placeholder="Your Name"
           />
         </div>
@@ -171,7 +171,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             type="email"
             value={nodeData.email?.replyTo || ''}
             onChange={(e) => handleNestedFieldChange('email', 'replyTo', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             placeholder="reply@example.com"
           />
         </div>
@@ -214,7 +214,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             value={nodeData.wait?.duration || 1}
             onChange={(e) => handleNestedFieldChange('wait', 'duration', parseInt(e.target.value))}
             min="1"
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           />
         </div>
         
@@ -225,7 +225,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           <select
             value={nodeData.wait?.unit || 'days'}
             onChange={(e) => handleNestedFieldChange('wait', 'unit', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           >
             <option value="minutes">Minutes</option>
             <option value="hours">Hours</option>
@@ -284,7 +284,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         <select
           value={nodeData.condition?.type || 'rules'}
           onChange={(e) => handleNestedFieldChange('condition', 'type', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
         >
           <option value="rules">Rules-based</option>
           <option value="behavior">Behavior-based</option>
@@ -303,7 +303,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                 ...nodeData.condition?.behavior,
                 action: e.target.value 
               })}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             >
               <option value="">Select action</option>
               <option value="opens_campaign">Opens email</option>
@@ -333,7 +333,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                   }
                 })}
                 min="1"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -349,7 +349,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                     unit: e.target.value
                   }
                 })}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 <option value="hours">Hours</option>
                 <option value="days">Days</option>
@@ -401,7 +401,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                     <select
                       value={rule.field || 'email'}
                       onChange={(e) => updateRule(rule.id, 'field', e.target.value)}
-                      className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
                       <option value="email">Email</option>
                       <option value="firstName">First Name</option>
@@ -424,7 +424,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                     <select
                       value={rule.operator || 'equals'}
                       onChange={(e) => updateRule(rule.id, 'operator', e.target.value)}
-                      className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
                       {rule.field === 'email' || rule.field === 'firstName' || rule.field === 'lastName' || rule.field === 'company' || rule.field === 'phone' ? (
                         <>
@@ -479,7 +479,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                       <select
                         value={rule.value || ''}
                         onChange={(e) => updateRule(rule.id, 'value', e.target.value)}
-                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                       >
                         <option value="">Select status</option>
                         <option value="ACTIVE">Active</option>
@@ -494,7 +494,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                         onChange={(e) => updateRule(rule.id, 'value', parseInt(e.target.value))}
                         min="0"
                         max="100"
-                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                         placeholder="0-100"
                       />
                     ) : rule.field === 'createdAt' || rule.field === 'lastEngagement' ? (
@@ -508,7 +508,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                               duration: parseInt(e.target.value)
                             })}
                             min="1"
-                            className="w-1/2 text-xs p-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                            className="w-1/2 text-xs p-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                           />
                           <select
                             value={rule.value?.unit || 'days'}
@@ -516,7 +516,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                               ...rule.value,
                               unit: e.target.value
                             })}
-                            className="w-1/2 text-xs p-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                            className="w-1/2 text-xs p-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                           >
                             <option value="days">days</option>
                             <option value="weeks">weeks</option>
@@ -528,7 +528,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                           type="date"
                           value={rule.value || ''}
                           onChange={(e) => updateRule(rule.id, 'value', e.target.value)}
-                          className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                         />
                       )
                     ) : rule.operator !== 'is_empty' && rule.operator !== 'is_not_empty' ? (
@@ -536,7 +536,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                         type="text"
                         value={rule.value || ''}
                         onChange={(e) => updateRule(rule.id, 'value', e.target.value)}
-                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full text-xs p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                         placeholder={
                           rule.field === 'tags' || rule.field === 'segments' 
                             ? 'comma,separated,values' 
@@ -581,7 +581,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           type="url"
           value={nodeData.webhook?.url || ''}
           onChange={(e) => handleNestedFieldChange('webhook', 'url', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder="https://your-webhook-url.com"
         />
       </div>
@@ -593,7 +593,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         <select
           value={nodeData.webhook?.method || 'POST'}
           onChange={(e) => handleNestedFieldChange('webhook', 'method', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
         >
           <option value="GET">GET</option>
           <option value="POST">POST</option>
@@ -617,7 +617,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             }
           }}
           rows={3}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder='{"Content-Type": "application/json"}'
         />
       </div>
@@ -634,7 +634,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           type="text"
           value={nodeData.sms?.sender || ''}
           onChange={(e) => handleNestedFieldChange('sms', 'sender', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder="Your Business Name"
         />
       </div>
@@ -648,7 +648,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           onChange={(e) => handleNestedFieldChange('sms', 'message', e.target.value)}
           rows={4}
           maxLength={160}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder="Your SMS message..."
         />
         <div className="text-xs text-gray-500 text-right">
@@ -667,7 +667,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         <select
           value={nodeData.until?.type || 'behavior'}
           onChange={(e) => handleNestedFieldChange('until', 'type', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
         >
           <option value="behavior">Behavior-based</option>
           <option value="rules">Rules-based</option>
@@ -682,7 +682,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           <select
             value={nodeData.until?.behavior?.action || ''}
             onChange={(e) => handleNestedFieldChange('until', 'behavior', { action: e.target.value })}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           >
             <option value="">Select action</option>
             <option value="opens_campaign">Opens email</option>
@@ -704,7 +704,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               duration: parseInt(e.target.value) 
             })}
             min="1"
-            className="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           />
           <select
             value={nodeData.until?.maxWait?.unit || 'days'}
@@ -712,7 +712,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               ...nodeData.until?.maxWait,
               unit: e.target.value 
             })}
-            className="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           >
             <option value="hours">Hours</option>
             <option value="days">Days</option>
@@ -733,7 +733,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           type="datetime-local"
           value={nodeData.when?.datetime || ''}
           onChange={(e) => handleNestedFieldChange('when', 'datetime', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
         />
       </div>
     </div>
@@ -748,7 +748,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         <select
           value={nodeData.moveTo?.type || 'segment'}
           onChange={(e) => handleNestedFieldChange('moveTo', 'type', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
         >
           <option value="segment">Segment</option>
           <option value="list">List</option>
@@ -767,7 +767,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               handleNestedFieldChange('moveTo', 'segmentId', e.target.value)
               handleNestedFieldChange('moveTo', 'segmentName', (selectedSegment as any)?.name || '')
             }}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           >
             <option value="">Select segment</option>
             {segments.map((segment: any) => (
@@ -791,7 +791,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           type="text"
           value={nodeData.template?.name || ''}
           onChange={(e) => handleNestedFieldChange('template', 'name', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder="My Email Template"
         />
       </div>
@@ -804,7 +804,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           type="text"
           value={nodeData.template?.subject || ''}
           onChange={(e) => handleNestedFieldChange('template', 'subject', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           placeholder="Email subject..."
         />
       </div>
@@ -816,7 +816,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         <textarea
           value={nodeData.template?.content || ''}
           onChange={(e) => handleNestedFieldChange('template', 'content', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
           rows={8}
           placeholder="Write your email template here. You can use variables like {{firstName}}, {{company}}, etc."
         />
@@ -837,7 +837,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                   updatedVars[index] = { ...variable, name: e.target.value }
                   handleNestedFieldChange('template', 'variables', updatedVars)
                 }}
-                className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 placeholder="Variable name (e.g., firstName)"
               />
               <input
@@ -848,7 +848,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                   updatedVars[index] = { ...variable, defaultValue: e.target.value }
                   handleNestedFieldChange('template', 'variables', updatedVars)
                 }}
-                className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 placeholder="Default value"
               />
               <button
@@ -953,7 +953,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               type="text"
               value={nodeData.name || ''}
               onChange={(e) => handleFieldChange('name', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               placeholder="Enter node name"
             />
           </div>
