@@ -8,31 +8,30 @@ datasource db {
 }
 
 model User {
-  id                   String          @id @default(cuid())
-  email                String          @unique
-  name                 String?
-  password             String?
-  emailVerified        DateTime?
-  image                String?
-  // OAuth Credentials - each user brings their own
-  googleClientId       String?         // User's Google OAuth Client ID
-  googleClientSecret   String?         // User's Google OAuth Client Secret (encrypted)
-  oauthConfigured      Boolean         @default(false) // Whether OAuth is configured
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  accounts             Account[]
-  campaigns            Campaign[]
-  contacts             Contact[]
-  emailTemplates       EmailTemplate[]
-  gmailToken           GmailToken?
-  sequences            Sequence[]
-  sessions             Session[]
-  trackingDomain       TrackingDomain?
-  webhooks             Webhook[]
-  emailEvents          EmailEvent[]
-  automations          Automation[]
-  emailLists           EmailList[]
-  segments             Segment[]
+  id                 String          @id @default(cuid())
+  email              String          @unique
+  name               String?
+  password           String?
+  emailVerified      DateTime?
+  image              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  googleClientId     String?
+  googleClientSecret String?
+  oauthConfigured    Boolean         @default(false)
+  accounts           Account[]
+  automations        Automation[]
+  campaigns          Campaign[]
+  contacts           Contact[]
+  emailEvents        EmailEvent[]
+  emailLists         EmailList[]
+  emailTemplates     EmailTemplate[]
+  gmailToken         GmailToken?
+  segments           Segment[]
+  sequences          Sequence[]
+  sessions           Session[]
+  trackingDomain     TrackingDomain?
+  webhooks           Webhook[]
 }
 
 model Account {
@@ -70,18 +69,18 @@ model VerificationToken {
 }
 
 model GmailToken {
-  id            String   @id @default(cuid())
-  userId        String   @unique
+  id            String    @id @default(cuid())
+  userId        String    @unique
   email         String
   accessToken   String
   refreshToken  String
   expiresAt     DateTime
   scope         String?
-  lastHistoryId String?  // For Gmail push notifications
-  watchExpiry   DateTime? // When the Gmail watch expires
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastHistoryId String?
+  watchExpiry   DateTime?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model TrackingDomain {
@@ -98,33 +97,33 @@ model TrackingDomain {
 }
 
 model Contact {
-  id                     String                  @id @default(cuid())
-  userId                 String
-  email                  String
-  firstName              String?
-  lastName               String?
-  company                String?
-  phone                  String?
-  variables              Json?
-  customFields           Json?                   // Additional custom fields
-  tags                   String[]
-  segments               String[]                // Contact segments for targeting
-  status                 ContactStatus           @default(ACTIVE)
-  unsubscribed           Boolean                 @default(false)
-  unsubscribedAt         DateTime?
-  bounced                Boolean                 @default(false)
-  bouncedAt              DateTime?
-  lastEngagement         DateTime?               // Last email interaction
-  engagementScore        Int                     @default(0)
-  source                 String?                 // How they were added (form, import, api, etc.)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipients             Recipient[]
-  sequenceEnrollments    SequenceEnrollment[]
-  emailEvents            EmailEvent[]
-  automationExecutions   AutomationExecution[]
-  contactLists           ContactList[]
+  id                   String                @id @default(cuid())
+  userId               String
+  email                String
+  firstName            String?
+  lastName             String?
+  company              String?
+  phone                String?
+  variables            Json?
+  tags                 String[]
+  unsubscribed         Boolean               @default(false)
+  bounced              Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  bouncedAt            DateTime?
+  customFields         Json?
+  engagementScore      Int                   @default(0)
+  lastEngagement       DateTime?
+  segments             String[]
+  source               String?
+  status               ContactStatus         @default(ACTIVE)
+  unsubscribedAt       DateTime?
+  automationExecutions AutomationExecution[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactLists         ContactList[]
+  emailEvents          EmailEvent[]
+  recipients           Recipient[]
+  sequenceEnrollments  SequenceEnrollment[]
 
   @@unique([userId, email])
   @@index([userId])
@@ -138,7 +137,6 @@ model Campaign {
   name             String
   subject          String
   content          String
-  attachments      Json?          // Store file attachments as JSON
   status           CampaignStatus @default(DRAFT)
   scheduledFor     DateTime?
   sentAt           DateTime?
@@ -150,12 +148,13 @@ model Campaign {
   failedCount      Int            @default(0)
   trackingEnabled  Boolean        @default(true)
   trackingDomainId String?
-  sequenceId       String?
   errorMessage     String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  sequenceId       String?
+  attachments      Json?
+  sequence         Sequence?      @relation(fields: [sequenceId], references: [id])
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sequence         Sequence?      @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
   emailEvents      EmailEvent[]
   recipients       Recipient[]
 
@@ -163,101 +162,102 @@ model Campaign {
 }
 
 model Recipient {
-  id             String          @id @default(cuid())
-  campaignId     String
-  contactId      String
-  status         RecipientStatus @default(PENDING)
-  sentAt         DateTime?
-  openedAt       DateTime?
-  clickedAt      DateTime?
-  repliedAt      DateTime?
-  bouncedAt      DateTime?
-  variables      Json?
-  errorMessage   String?
-  gmailMessageId String?
-  gmailThreadId  String?
-  messageIdHeader String? // Actual Message-ID header for threading
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  emailEvents    EmailEvent[]
-  campaign       Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact        Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  campaignId      String
+  contactId       String
+  status          RecipientStatus @default(PENDING)
+  sentAt          DateTime?
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  repliedAt       DateTime?
+  bouncedAt       DateTime?
+  variables       Json?
+  errorMessage    String?
+  gmailMessageId  String?
+  gmailThreadId   String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  messageIdHeader String?
+  emailEvents     EmailEvent[]
+  campaign        Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact         Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, contactId])
   @@index([campaignId, status])
 }
 
 model Sequence {
-  id               String               @id @default(cuid())
-  userId           String
-  name             String
-  description      String?
-  triggerType      String               @default("manual")
-  sequenceType     SequenceType         @default(STANDALONE) // New field for sequence categorization
-  steps            Json
-  trackingEnabled  Boolean              @default(true)
-  status           SequenceStatus       @default(DRAFT)
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaigns        Campaign[]
-  enrollments      SequenceEnrollment[]
-  emailEvents      EmailEvent[]
+  id              String               @id @default(cuid())
+  userId          String
+  name            String
+  status          SequenceStatus       @default(DRAFT)
+  triggerType     String               @default("manual")
+  steps           Json
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  description     String?
+  trackingEnabled Boolean              @default(true)
+  sequenceType    SequenceType         @default(STANDALONE)
+  campaigns       Campaign[]
+  emailEvents     EmailEvent[]
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments     SequenceEnrollment[]
 
   @@index([userId])
   @@index([userId, sequenceType])
 }
 
 model SequenceEnrollment {
-  id             String           @id @default(cuid())
-  sequenceId     String
-  contactId      String
-  status         EnrollmentStatus @default(ACTIVE)
-  currentStep    Int              @default(0)
-  completedAt    DateTime?
-  pausedAt       DateTime?
-  lastEmailSentAt DateTime?
-  lastOpenedAt   DateTime?
-  lastClickedAt  DateTime?
-  lastRepliedAt  DateTime?
-  openCount      Int              @default(0)
-  clickCount     Int              @default(0)
-  replyCount     Int              @default(0)
-  gmailMessageId String?
-  gmailThreadId  String?
-  messageIdHeader String? // Actual Message-ID header for threading
-  triggerCampaignId String? // Campaign that triggered this enrollment
-  triggerRecipientId String? // Recipient ID from the campaign
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  contact        Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  sequence       Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  sequenceEvents SequenceEvent[]
+  id                 String           @id @default(cuid())
+  sequenceId         String
+  contactId          String
+  status             EnrollmentStatus @default(ACTIVE)
+  currentStep        Int              @default(0)
+  completedAt        DateTime?
+  pausedAt           DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  clickCount         Int              @default(0)
+  gmailMessageId     String?
+  gmailThreadId      String?
+  lastClickedAt      DateTime?
+  lastEmailSentAt    DateTime?
+  lastOpenedAt       DateTime?
+  lastRepliedAt      DateTime?
+  openCount          Int              @default(0)
+  replyCount         Int              @default(0)
+  messageIdHeader    String?
+  triggerCampaignId  String?
+  triggerRecipientId String?
+  contact            Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sequence           Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceEvents     SequenceEvent[]
+
   @@unique([sequenceId, contactId])
   @@index([sequenceId, status])
 }
 
 model EmailEvent {
-  id             String        @id @default(cuid())
-  userId         String?       // Made optional for migration
-  campaignId     String?
-  sequenceId     String?
-  contactId      String?
-  recipientId    String?
-  type           EventType?    // Made optional for migration (was eventType)
-  eventType      EventType?    // Keep old field for backwards compatibility
-  subject        String?
-  details        String?
-  timestamp      DateTime?     @default(now())
-  eventData      Json?
-  ipAddress      String?
-  userAgent      String?
-  createdAt      DateTime      @default(now())
-  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaign       Campaign?     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  sequence       Sequence?     @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
-  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  recipient      Recipient?    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  campaignId  String?
+  recipientId String?
+  eventType   EventType?
+  eventData   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime   @default(now())
+  contactId   String?
+  details     String?
+  sequenceId  String?
+  subject     String?
+  timestamp   DateTime?  @default(now())
+  type        EventType?
+  userId      String?
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact     Contact?   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  recipient   Recipient? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  sequence    Sequence?  @relation(fields: [sequenceId], references: [id])
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
   @@index([campaignId, type])
@@ -267,15 +267,15 @@ model EmailEvent {
 }
 
 model SequenceEvent {
-  id           String              @id @default(cuid())
+  id           String             @id @default(cuid())
   enrollmentId String
   stepIndex    Int
   eventType    EventType
   eventData    Json?
   ipAddress    String?
   userAgent    String?
-  createdAt    DateTime            @default(now())
-  enrollment   SequenceEnrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  enrollment   SequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   @@index([enrollmentId, eventType])
   @@index([enrollmentId, stepIndex])
@@ -299,14 +299,14 @@ model EmailTemplate {
 model Webhook {
   id          String        @id @default(cuid())
   userId      String
-  name        String
-  description String?
   url         String
   events      String[]
-  secretKey   String
-  status      WebhookStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  description String?
+  name        String
+  secretKey   String
+  status      WebhookStatus @default(ACTIVE)
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   calls       WebhookCall[]
 
@@ -314,7 +314,7 @@ model Webhook {
 }
 
 model WebhookCall {
-  id           String           @id @default(cuid())
+  id           String            @id @default(cuid())
   webhookId    String
   event        String
   status       WebhookCallStatus @default(PENDING)
@@ -323,11 +323,140 @@ model WebhookCall {
   payload      Json
   response     String?
   error        String?
-  createdAt    DateTime         @default(now())
-  webhook      Webhook          @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
+  webhook      Webhook           @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@index([webhookId, status])
   @@index([webhookId, createdAt])
+}
+
+model Automation {
+  id              String                 @id @default(cuid())
+  userId          String
+  name            String
+  description     String?
+  triggerEvent    AutomationTriggerEvent @default(NEW_SUBSCRIBER)
+  triggerData     Json?
+  applyToExisting Boolean                @default(false)
+  status          AutomationStatus       @default(DRAFT)
+  trackingEnabled Boolean                @default(true)
+  nodes           Json
+  totalEntered    Int                    @default(0)
+  currentlyActive Int                    @default(0)
+  totalCompleted  Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions      AutomationExecution[]
+  nodeStats       AutomationNodeStats[]
+
+  @@index([userId, status])
+  @@index([userId, triggerEvent])
+}
+
+model AutomationExecution {
+  id            String                     @id @default(cuid())
+  automationId  String
+  contactId     String
+  status        AutomationExecStatus       @default(ACTIVE)
+  currentNodeId String?
+  enteredAt     DateTime                   @default(now())
+  pausedAt      DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+  variables     Json?
+  executionPath Json?
+  executionData Json?
+  waitUntil     DateTime?
+  startedAt     DateTime                   @default(now())
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  automation    Automation                 @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  contact       Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  events        AutomationExecutionEvent[]
+
+  @@unique([automationId, contactId])
+  @@index([automationId, status])
+  @@index([contactId])
+}
+
+model AutomationExecutionEvent {
+  id          String              @id @default(cuid())
+  executionId String
+  nodeId      String
+  eventType   AutomationEventType
+  eventData   Json?
+  timestamp   DateTime            @default(now())
+  execution   AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, nodeId])
+  @@index([nodeId, eventType])
+}
+
+model AutomationNodeStats {
+  id            String     @id @default(cuid())
+  automationId  String
+  nodeId        String
+  totalPassed   Int        @default(0)
+  currentPassed Int        @default(0)
+  inNode        Int        @default(0)
+  lastUpdated   DateTime   @default(now())
+  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, nodeId])
+  @@index([automationId])
+}
+
+model EmailList {
+  id              String        @id @default(cuid())
+  userId          String
+  name            String
+  description     String?
+  customFields    Json?
+  subscriberCount Int           @default(0)
+  activeCount     Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  contacts        ContactList[]
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments        Segment[]
+
+  @@index([userId])
+}
+
+model Segment {
+  id           String    @id @default(cuid())
+  listId       String
+  name         String
+  conditions   Json
+  isDynamic    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  contactCount Int       @default(0)
+  description  String?
+  userId       String
+  list         EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@index([userId])
+}
+
+model ContactList {
+  id             String    @id @default(cuid())
+  contactId      String
+  listId         String
+  customData     Json?
+  status         String    @default("active")
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  contact        Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  list           EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, listId])
+  @@index([listId, status])
+  @@index([contactId])
 }
 
 enum CampaignStatus {
@@ -366,7 +495,6 @@ enum EnrollmentStatus {
   FAILED
 }
 
-
 enum EventType {
   SENT
   DELIVERED
@@ -386,103 +514,16 @@ enum ContactStatus {
 }
 
 enum SequenceType {
-  STANDALONE        // Independent email sequence
-  CAMPAIGN_FOLLOWUP // Campaign-triggered with delay before condition
+  STANDALONE
+  CAMPAIGN_FOLLOWUP
 }
 
-// Accumbamail-style Automations
-model Automation {
-  id                 String                 @id @default(cuid())
-  userId             String
-  name               String
-  description        String?
-  // Initial trigger event
-  triggerEvent       AutomationTriggerEvent @default(NEW_SUBSCRIBER)
-  triggerData        Json?                  // Config for trigger (list ID, segment, date, etc.)
-  applyToExisting    Boolean                @default(false) // Apply to current subscribers
-  status             AutomationStatus       @default(DRAFT)
-  trackingEnabled    Boolean                @default(true)
-  // Flow configuration
-  nodes              Json                   // Node-based flow structure
-  // Statistics
-  totalEntered       Int                    @default(0)
-  currentlyActive    Int                    @default(0)
-  totalCompleted     Int                    @default(0)
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  executions         AutomationExecution[]
-  nodeStats          AutomationNodeStats[]
-
-  @@index([userId, status])
-  @@index([userId, triggerEvent])
-}
-
-// Individual automation executions per contact
-model AutomationExecution {
-  id             String                 @id @default(cuid())
-  automationId   String
-  contactId      String
-  status         AutomationExecStatus   @default(ACTIVE)
-  currentNodeId  String?                // Current node in the flow
-  enteredAt      DateTime               @default(now())
-  pausedAt       DateTime?
-  completedAt    DateTime?
-  failedAt       DateTime?
-  failureReason  String?
-  // Execution data
-  variables      Json?                  // Contact-specific variables
-  executionPath  Json?                  // Track path through automation
-  executionData  Json?                  // Additional execution data
-  waitUntil      DateTime?              // When to resume waiting executions
-  startedAt      DateTime               @default(now())
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  automation     Automation             @relation(fields: [automationId], references: [id], onDelete: Cascade)
-  contact        Contact                @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  events         AutomationExecutionEvent[]
-
-  @@unique([automationId, contactId])
-  @@index([automationId, status])
-  @@index([contactId])
-}
-
-// Events that occur during automation execution
-model AutomationExecutionEvent {
-  id           String              @id @default(cuid())
-  executionId  String
-  nodeId       String
-  eventType    AutomationEventType
-  eventData    Json?
-  timestamp    DateTime            @default(now())
-  execution    AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-
-  @@index([executionId, nodeId])
-  @@index([nodeId, eventType])
-}
-
-// Statistics per automation node
-model AutomationNodeStats {
-  id           String     @id @default(cuid())
-  automationId String
-  nodeId       String
-  totalPassed  Int        @default(0) // Total subscribers who passed through
-  currentPassed Int       @default(0) // Since last run
-  inNode       Int        @default(0) // Currently waiting in node
-  lastUpdated  DateTime   @default(now())
-  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
-
-  @@unique([automationId, nodeId])
-  @@index([automationId])
-}
-
-// Enums for Automation system
 enum AutomationTriggerEvent {
-  NEW_SUBSCRIBER    // When subscriber joins list
-  SPECIFIC_DATE     // At specific date/time
-  SUBSCRIBER_SEGMENT // New subscriber in segment
-  WEBHOOK           // External webhook trigger
-  MANUAL           // Manual trigger
+  NEW_SUBSCRIBER
+  SPECIFIC_DATE
+  SUBSCRIBER_SEGMENT
+  WEBHOOK
+  MANUAL
 }
 
 enum AutomationStatus {
@@ -532,59 +573,4 @@ enum WebhookCallStatus {
   PENDING
   SUCCESS
   FAILED
-}
-
-// Email Lists and Segments Models
-model EmailList {
-  id              String    @id @default(cuid())
-  userId          String
-  name            String
-  description     String?
-  customFields    Json?     // [{name, type, options, required}]
-  subscriberCount Int       @default(0)
-  activeCount     Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  segments        Segment[]
-  contacts        ContactList[]
-  
-  @@index([userId])
-}
-
-model Segment {
-  id              String    @id @default(cuid())
-  listId          String
-  userId          String    // Add userId for easier querying
-  name            String
-  description     String?
-  conditions      Json      // {match: 'all' | 'any', rules: [{field, operator, value}]}
-  isDynamic       Boolean   @default(true)
-  contactCount    Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  list            EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([listId])
-  @@index([userId])
-}
-
-model ContactList {
-  id          String    @id @default(cuid())
-  contactId   String
-  listId      String
-  customData  Json?     // Custom field values
-  status      String    @default("active")
-  subscribedAt DateTime @default(now())
-  unsubscribedAt DateTime?
-  
-  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  list        EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  
-  @@unique([contactId, listId])
-  @@index([listId, status])
-  @@index([contactId])
 }
