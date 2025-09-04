@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ContactWithStats, ContactTag, ContactStatus } from '@/types/contact'
 
 interface ContactsListProps {
@@ -15,7 +15,23 @@ export default function ContactsList({ contacts, tags }: ContactsListProps) {
   const [sortBy, setSortBy] = useState<'name' | 'email' | 'company' | 'lastEngagement'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const itemsPerPage = 10
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Filter and search contacts
   const filteredContacts = contacts.filter(contact => {
@@ -89,6 +105,54 @@ export default function ContactsList({ contacts, tags }: ContactsListProps) {
 
   const getEngagementRate = (contact: ContactWithStats) => {
     return contact.engagementRate
+  }
+
+  const handleEditContact = (contact: ContactWithStats) => {
+    // TODO: Open edit modal or navigate to edit page
+    console.log('Edit contact:', contact)
+    alert(`Edit functionality for ${contact.displayName} - Coming soon!`)
+  }
+
+  const handleDeleteContact = async (contact: ContactWithStats) => {
+    if (confirm(`Are you sure you want to delete ${contact.displayName}?`)) {
+      try {
+        const response = await fetch(`/api/contacts/${contact.id}`, {
+          method: 'DELETE'
+        })
+        if (response.ok) {
+          // Refresh the page or remove from local state
+          window.location.reload()
+        } else {
+          alert('Failed to delete contact')
+        }
+      } catch (error) {
+        console.error('Error deleting contact:', error)
+        alert('Error deleting contact')
+      }
+    }
+  }
+
+  const handleToggleSubscription = async (contact: ContactWithStats) => {
+    const newStatus = contact.status === 'SUBSCRIBED' ? 'UNSUBSCRIBED' : 'SUBSCRIBED'
+    try {
+      const response = await fetch(`/api/contacts/${contact.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (response.ok) {
+        window.location.reload()
+      } else {
+        alert('Failed to update contact status')
+      }
+    } catch (error) {
+      console.error('Error updating contact:', error)
+      alert('Error updating contact status')
+    }
+  }
+
+  const toggleDropdown = (contactId: string) => {
+    setDropdownOpen(dropdownOpen === contactId ? null : contactId)
   }
 
   return (
@@ -304,14 +368,66 @@ export default function ContactsList({ contacts, tags }: ContactsListProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="text-blue-600 hover:text-blue-900 transition">
+                    <button 
+                      onClick={() => handleEditContact(contact)}
+                      className="text-blue-600 hover:text-blue-900 transition"
+                    >
                       Edit
                     </button>
-                    <button className="text-gray-400 hover:text-gray-600 transition">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
+                    <div className="relative" ref={dropdownRef}>
+                      <button 
+                        onClick={() => toggleDropdown(contact.id)}
+                        className="text-gray-400 hover:text-gray-600 transition"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </button>
+                      {dropdownOpen === contact.id && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                          <div className="py-1">
+                            <button
+                              onClick={() => {
+                                handleEditContact(contact)
+                                setDropdownOpen(null)
+                              }}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                            >
+                              Edit Contact
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleToggleSubscription(contact)
+                                setDropdownOpen(null)
+                              }}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                            >
+                              {contact.status === 'SUBSCRIBED' ? 'Unsubscribe' : 'Subscribe'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(contact.email)
+                                setDropdownOpen(null)
+                                alert('Email copied to clipboard!')
+                              }}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                            >
+                              Copy Email
+                            </button>
+                            <div className="border-t border-gray-100"></div>
+                            <button
+                              onClick={() => {
+                                handleDeleteContact(contact)
+                                setDropdownOpen(null)
+                              }}
+                              className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                            >
+                              Delete Contact
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
