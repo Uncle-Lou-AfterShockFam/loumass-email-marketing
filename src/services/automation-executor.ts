@@ -11,6 +11,11 @@ interface NodeData {
   id: string
   type: string
   data: any
+  emailTemplate?: {
+    subject?: string
+    htmlContent?: string
+    textContent?: string
+  }
 }
 
 interface EdgeData {
