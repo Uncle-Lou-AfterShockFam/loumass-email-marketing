@@ -141,6 +141,13 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
+    // 🚨 DEBUG: Log the exact request data
+    console.log('🔍 AUTOMATION CREATION DEBUG:', {
+      requestBody: JSON.stringify(body, null, 2),
+      nodesType: Array.isArray(body.nodes) ? 'array' : 'object',
+      nodesLength: Array.isArray(body.nodes) ? body.nodes.length : body.nodes?.nodes?.length || 0
+    })
+    
     // Validate request data
     const validationResult = createAutomationSchema.safeParse(body)
     if (!validationResult.success) {
@@ -170,8 +177,17 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // 🚨 DEBUG: Log flow data before trigger addition
+    console.log('📊 FLOW DATA BEFORE TRIGGER:', {
+      nodesCount: flowData.nodes.length,
+      edgesCount: flowData.edges.length,
+      nodeTypes: flowData.nodes.map((n: any) => n.type)
+    })
+    
     // Auto-add trigger node and connect to first node if missing
     const hasTriggerNode = flowData.nodes.some((n: any) => n.type === 'trigger')
+    console.log('🔍 HAS TRIGGER CHECK:', { hasTriggerNode, nodeCount: flowData.nodes.length })
+    
     if (!hasTriggerNode && flowData.nodes.length > 0) {
       const triggerNode = {
         id: `trigger-${Date.now()}`,
@@ -196,8 +212,27 @@ export async function POST(request: NextRequest) {
           target: firstUserNode.id,
           type: 'smoothstep'
         })
+        console.log('✅ TRIGGER ADDED:', { 
+          triggerNodeId: triggerNode.id, 
+          connectedToNodeId: firstUserNode.id,
+          totalNodes: flowData.nodes.length,
+          totalEdges: flowData.edges.length
+        })
+      } else {
+        console.log('⚠️ NO CONNECTION: Only trigger node exists')
       }
+    } else if (hasTriggerNode) {
+      console.log('✅ TRIGGER EXISTS: Skipping auto-add')
+    } else {
+      console.log('❌ NO NODES: Cannot add trigger to empty automation')
     }
+    
+    // 🚨 DEBUG: Log final flow data
+    console.log('🎯 FINAL FLOW DATA:', {
+      nodesCount: flowData.nodes.length,
+      edgesCount: flowData.edges.length,
+      finalNodeTypes: flowData.nodes.map((n: any) => ({ id: n.id, type: n.type }))
+    })
     
     // Validate automation logic
     const emailNodes = flowData.nodes.filter((n: any) => n.type === 'email')

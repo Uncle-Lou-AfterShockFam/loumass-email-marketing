@@ -6,7 +6,7 @@ export async function GET() {
       status: 'ok', 
       timestamp: new Date().toISOString(),
       message: 'LOUMASS API is working',
-      version: 'v1.2-force-trigger-deploy'
+      version: 'v1.3-AUTOMATION-TRIGGER-FIX'
     })
   } catch (error) {
     return NextResponse.json(
