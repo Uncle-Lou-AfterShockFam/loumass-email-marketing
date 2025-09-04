@@ -449,6 +449,7 @@ function AutomationFlowBuilderInner({
           setSelectedNode(null)
         }}
         onSave={handleNodeSave}
+        currentAutomation={automationData}
       />
     </div>
   )

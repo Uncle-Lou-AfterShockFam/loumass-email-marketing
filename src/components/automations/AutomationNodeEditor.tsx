@@ -8,9 +8,10 @@ interface AutomationNodeEditorProps {
   isOpen: boolean
   onClose: () => void
   onSave: (nodeData: any) => void
+  currentAutomation?: any
 }
 
-export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: AutomationNodeEditorProps) {
+export default function AutomationNodeEditor({ node, isOpen, onClose, onSave, currentAutomation }: AutomationNodeEditorProps) {
   const [nodeData, setNodeData] = useState(node?.data || {})
   const [templates, setTemplates] = useState<any[]>([] as any[])
   const [contacts, setContacts] = useState<any[]>([] as any[])
@@ -89,6 +90,25 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         id: emailNode.id,
         name: emailNode.name || emailNode.emailTemplate?.subject || `Email Step ${index + 1}`,
         subject: emailNode.emailTemplate?.subject || 'Untitled Email'
+      }))
+  }
+
+  // Helper function to get email steps from the current automation
+  const getCurrentAutomationEmailSteps = () => {
+    if (!currentAutomation) return []
+    
+    // Handle both old array format and new object format
+    const nodes = Array.isArray(currentAutomation.nodes) 
+      ? currentAutomation.nodes 
+      : (currentAutomation.nodes as any)?.nodes || []
+    
+    // Filter for email nodes and create options
+    return nodes
+      .filter((node: any) => node.type === 'email')
+      .map((emailNode: any, index: number) => ({
+        id: emailNode.id,
+        name: emailNode.name || emailNode.data?.subject || emailNode.emailTemplate?.subject || `Email Step ${index + 1}`,
+        subject: emailNode.data?.subject || emailNode.emailTemplate?.subject || 'Untitled Email'
       }))
   }
 
@@ -442,10 +462,11 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 <option value="">Any email from this automation</option>
-                <option value="email-1">Welcome Email (Step 1)</option>
-                <option value="email-2">Follow-up Email (Step 3)</option>
-                <option value="email-3">Special Offer (Step 5)</option>
-                <option value="email-4">Testimonial Email (Step 7)</option>
+                {getCurrentAutomationEmailSteps().map((emailStep: any) => (
+                  <option key={emailStep.id} value={emailStep.id}>
+                    {emailStep.name} {emailStep.subject && `(${emailStep.subject})`}
+                  </option>
+                ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 Choose a specific email step, or leave blank for any email in this automation
