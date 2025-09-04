@@ -32,6 +32,7 @@ model User {
   emailEvents          EmailEvent[]
   automations          Automation[]
   emailLists           EmailList[]
+  segments             Segment[]
 }
 
 model Account {
@@ -555,16 +556,20 @@ model EmailList {
 model Segment {
   id              String    @id @default(cuid())
   listId          String
+  userId          String    // Add userId for easier querying
   name            String
-  conditions      Json      // [{field, operator, value, logic}]
+  description     String?
+  conditions      Json      // {match: 'all' | 'any', rules: [{field, operator, value}]}
   isDynamic       Boolean   @default(true)
-  subscriberCount Int       @default(0)
+  contactCount    Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   list            EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@index([listId])
+  @@index([userId])
 }
 
 model ContactList {

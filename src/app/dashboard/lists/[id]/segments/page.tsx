@@ -5,11 +5,20 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Users, Filter, Edit, Trash2, Settings } from 'lucide-react'
 import Link from 'next/link'
 
+interface Condition {
+  field: string
+  operator: string
+  value: string
+}
+
 interface Segment {
   id: string
   name: string
   description: string | null
-  conditions: any
+  conditions: {
+    match: 'all' | 'any'
+    rules: Condition[]
+  }
   contactCount: number
   createdAt: string
 }
@@ -20,6 +29,16 @@ interface EmailList {
   description: string | null
 }
 
+interface Contact {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  phone?: string
+  company?: string
+  tags?: string[]
+}
+
 export default function ListSegmentsPage() {
   const params = useParams()
   const router = useRouter()
@@ -27,8 +46,18 @@ export default function ListSegmentsPage() {
   const [segments, setSegments] = useState<Segment[]>([])
   const [loading, setLoading] = useState(true)
   const [showNewSegmentModal, setShowNewSegmentModal] = useState(false)
+  const [showEditSegmentModal, setShowEditSegmentModal] = useState(false)
+  const [editingSegment, setEditingSegment] = useState<Segment | null>(null)
   const [newSegmentName, setNewSegmentName] = useState('')
   const [newSegmentDescription, setNewSegmentDescription] = useState('')
+  const [conditions, setConditions] = useState<{ match: 'all' | 'any', rules: Condition[] }>({
+    match: 'all',
+    rules: [{ field: 'email', operator: 'contains', value: '' }]
+  })
+  const [showContactsModal, setShowContactsModal] = useState(false)
+  const [viewingSegment, setViewingSegment] = useState<Segment | null>(null)
+  const [segmentContacts, setSegmentContacts] = useState<Contact[]>([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -80,7 +109,7 @@ export default function ListSegmentsPage() {
         body: JSON.stringify({
           name: newSegmentName,
           description: newSegmentDescription,
-          conditions: {} // Default empty conditions
+          conditions: conditions
         })
       })
 
@@ -89,10 +118,55 @@ export default function ListSegmentsPage() {
         setShowNewSegmentModal(false)
         setNewSegmentName('')
         setNewSegmentDescription('')
+        setConditions({
+          match: 'all',
+          rules: [{ field: 'email', operator: 'contains', value: '' }]
+        })
       }
     } catch (error) {
       console.error('Error creating segment:', error)
     }
+  }
+
+  const updateSegment = async () => {
+    if (!editingSegment || !newSegmentName.trim()) return
+
+    try {
+      const res = await fetch(`/api/lists/${params.id}/segments/${editingSegment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSegmentName,
+          description: newSegmentDescription,
+          conditions: conditions
+        })
+      })
+
+      if (res.ok) {
+        await fetchSegments()
+        setShowEditSegmentModal(false)
+        setEditingSegment(null)
+        setNewSegmentName('')
+        setNewSegmentDescription('')
+        setConditions({
+          match: 'all',
+          rules: [{ field: 'email', operator: 'contains', value: '' }]
+        })
+      }
+    } catch (error) {
+      console.error('Error updating segment:', error)
+    }
+  }
+
+  const openEditModal = (segment: Segment) => {
+    setEditingSegment(segment)
+    setNewSegmentName(segment.name)
+    setNewSegmentDescription(segment.description || '')
+    setConditions(segment.conditions || {
+      match: 'all',
+      rules: [{ field: 'email', operator: 'contains', value: '' }]
+    })
+    setShowEditSegmentModal(true)
   }
 
   const deleteSegment = async (id: string) => {
@@ -117,6 +191,45 @@ export default function ListSegmentsPage() {
       day: 'numeric',
       year: 'numeric'
     })
+  }
+
+  const addCondition = () => {
+    setConditions({
+      ...conditions,
+      rules: [...conditions.rules, { field: 'email', operator: 'contains', value: '' }]
+    })
+  }
+
+  const removeCondition = (index: number) => {
+    setConditions({
+      ...conditions,
+      rules: conditions.rules.filter((_, i) => i !== index)
+    })
+  }
+
+  const updateCondition = (index: number, field: keyof Condition, value: string) => {
+    const newRules = [...conditions.rules]
+    newRules[index] = { ...newRules[index], [field]: value }
+    setConditions({ ...conditions, rules: newRules })
+  }
+
+  const viewSegmentContacts = async (segment: Segment) => {
+    setViewingSegment(segment)
+    setShowContactsModal(true)
+    setLoadingContacts(true)
+    setSegmentContacts([])
+
+    try {
+      const res = await fetch(`/api/lists/${params.id}/segments/${segment.id}/contacts`)
+      if (res.ok) {
+        const contacts = await res.json()
+        setSegmentContacts(Array.isArray(contacts) ? contacts : [])
+      }
+    } catch (error) {
+      console.error('Error fetching segment contacts:', error)
+    } finally {
+      setLoadingContacts(false)
+    }
   }
 
   if (loading) {
@@ -195,7 +308,7 @@ export default function ListSegmentsPage() {
                     </button>
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                       <button
-                        onClick={() => {/* TODO: Edit segment */}}
+                        onClick={() => openEditModal(segment)}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
                       >
                         <Edit className="w-4 h-4" />
@@ -223,7 +336,10 @@ export default function ListSegmentsPage() {
                 <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                   <span className="text-xs text-gray-500">Created {formatDate(segment.createdAt)}</span>
                   <div className="flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-700 text-xs font-medium">
+                    <button 
+                      onClick={() => viewSegmentContacts(segment)}
+                      className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                    >
                       View Contacts
                     </button>
                   </div>
@@ -237,7 +353,7 @@ export default function ListSegmentsPage() {
       {/* New Segment Modal */}
       {showNewSegmentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Create New Segment</h2>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -263,12 +379,96 @@ export default function ListSegmentsPage() {
                 placeholder="Describe this segment..."
               />
             </div>
+
+            {/* Conditions Section */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Segment Conditions
+              </label>
+              
+              <div className="mb-3">
+                <span className="text-sm text-gray-600">Match </span>
+                <select
+                  value={conditions.match}
+                  onChange={(e) => setConditions({ ...conditions, match: e.target.value as 'all' | 'any' })}
+                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                >
+                  <option value="all">all</option>
+                  <option value="any">any</option>
+                </select>
+                <span className="text-sm text-gray-600"> of the following conditions:</span>
+              </div>
+
+              <div className="space-y-2">
+                {conditions.rules.map((rule, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={rule.field}
+                      onChange={(e) => updateCondition(index, 'field', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="email">Email</option>
+                      <option value="firstName">First Name</option>
+                      <option value="lastName">Last Name</option>
+                      <option value="tags">Tags</option>
+                      <option value="source">Source</option>
+                      <option value="status">Status</option>
+                      <option value="createdAt">Created Date</option>
+                    </select>
+                    
+                    <select
+                      value={rule.operator}
+                      onChange={(e) => updateCondition(index, 'operator', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="contains">contains</option>
+                      <option value="equals">equals</option>
+                      <option value="startsWith">starts with</option>
+                      <option value="endsWith">ends with</option>
+                      <option value="doesNotContain">does not contain</option>
+                      <option value="isEmpty">is empty</option>
+                      <option value="isNotEmpty">is not empty</option>
+                    </select>
+                    
+                    <input
+                      type="text"
+                      value={rule.value}
+                      onChange={(e) => updateCondition(index, 'value', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="Value"
+                      disabled={rule.operator === 'isEmpty' || rule.operator === 'isNotEmpty'}
+                    />
+                    
+                    <button
+                      onClick={() => removeCondition(index)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      disabled={conditions.rules.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                onClick={addCondition}
+                className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add Condition
+              </button>
+            </div>
+
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => {
                   setShowNewSegmentModal(false)
                   setNewSegmentName('')
                   setNewSegmentDescription('')
+                  setConditions({
+                    match: 'all',
+                    rules: [{ field: 'email', operator: 'contains', value: '' }]
+                  })
                 }}
                 className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
@@ -282,6 +482,220 @@ export default function ListSegmentsPage() {
                 Create Segment
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Segment Modal */}
+      {showEditSegmentModal && editingSegment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Segment</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Segment Name
+              </label>
+              <input
+                type="text"
+                value={newSegmentName}
+                onChange={(e) => setNewSegmentName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Active Subscribers"
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description (optional)
+              </label>
+              <textarea
+                value={newSegmentDescription}
+                onChange={(e) => setNewSegmentDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="Describe this segment..."
+              />
+            </div>
+
+            {/* Conditions Section */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Segment Conditions
+              </label>
+              
+              <div className="mb-3">
+                <span className="text-sm text-gray-600">Match </span>
+                <select
+                  value={conditions.match}
+                  onChange={(e) => setConditions({ ...conditions, match: e.target.value as 'all' | 'any' })}
+                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                >
+                  <option value="all">all</option>
+                  <option value="any">any</option>
+                </select>
+                <span className="text-sm text-gray-600"> of the following conditions:</span>
+              </div>
+
+              <div className="space-y-2">
+                {conditions.rules.map((rule, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={rule.field}
+                      onChange={(e) => updateCondition(index, 'field', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="email">Email</option>
+                      <option value="firstName">First Name</option>
+                      <option value="lastName">Last Name</option>
+                      <option value="tags">Tags</option>
+                      <option value="source">Source</option>
+                      <option value="status">Status</option>
+                      <option value="createdAt">Created Date</option>
+                    </select>
+                    
+                    <select
+                      value={rule.operator}
+                      onChange={(e) => updateCondition(index, 'operator', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="contains">contains</option>
+                      <option value="equals">equals</option>
+                      <option value="startsWith">starts with</option>
+                      <option value="endsWith">ends with</option>
+                      <option value="doesNotContain">does not contain</option>
+                      <option value="isEmpty">is empty</option>
+                      <option value="isNotEmpty">is not empty</option>
+                    </select>
+                    
+                    <input
+                      type="text"
+                      value={rule.value}
+                      onChange={(e) => updateCondition(index, 'value', e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="Value"
+                      disabled={rule.operator === 'isEmpty' || rule.operator === 'isNotEmpty'}
+                    />
+                    
+                    <button
+                      onClick={() => removeCondition(index)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      disabled={conditions.rules.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                onClick={addCondition}
+                className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add Condition
+              </button>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowEditSegmentModal(false)
+                  setEditingSegment(null)
+                  setNewSegmentName('')
+                  setNewSegmentDescription('')
+                  setConditions({
+                    match: 'all',
+                    rules: [{ field: 'email', operator: 'contains', value: '' }]
+                  })
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateSegment}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={!newSegmentName.trim()}
+              >
+                Update Segment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Contacts Modal */}
+      {showContactsModal && viewingSegment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Contacts in "{viewingSegment.name}"</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {segmentContacts.length} contact{segmentContacts.length !== 1 ? 's' : ''} match your conditions
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowContactsModal(false)
+                  setViewingSegment(null)
+                  setSegmentContacts([])
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loadingContacts ? (
+              <div className="text-center py-8">
+                <div className="text-gray-500">Loading contacts...</div>
+              </div>
+            ) : segmentContacts.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-gray-500">No contacts match the segment conditions</div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Phone
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {segmentContacts.map((contact) => (
+                      <tr key={contact.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {contact.firstName} {contact.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {contact.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {contact.company || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {contact.phone || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

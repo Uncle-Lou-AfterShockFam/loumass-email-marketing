@@ -12,9 +12,9 @@ interface AutomationNodeEditorProps {
 
 export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: AutomationNodeEditorProps) {
   const [nodeData, setNodeData] = useState(node?.data || {})
-  const [templates, setTemplates] = useState<any[]>([])
-  const [contacts, setContacts] = useState<any[]>([])
-  const [segments, setSegments] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([] as any[])
+  const [contacts, setContacts] = useState<any[]>([] as any[])
+  const [segments, setSegments] = useState<any[]>([] as any[])
 
   useEffect(() => {
     if (node) {
@@ -40,8 +40,8 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           fetch('/api/segments').then(res => res.json())
         ]).then(([contactsData, segmentsData]) => {
           // Ensure data is arrays to prevent filter errors
-          setContacts(Array.isArray(contactsData) ? contactsData : [])
-          setSegments(Array.isArray(segmentsData) ? segmentsData : [])
+          setContacts(Array.isArray(contactsData) ? contactsData as any[] : [] as any[])
+          setSegments(Array.isArray(segmentsData) ? segmentsData as any[] : [] as any[])
         }).catch(console.error)
       }
     }

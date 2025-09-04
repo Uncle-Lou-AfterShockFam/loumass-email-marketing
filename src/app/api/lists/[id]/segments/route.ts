@@ -29,24 +29,24 @@ export async function GET(
       return NextResponse.json({ error: 'List not found' }, { status: 404 })
     }
 
-    // For now, return empty array since Segment model isn't fully implemented
-    // TODO: Once Segment model is added to schema, implement:
-    // const segments = await prisma.segment.findMany({
-    //   where: {
-    //     listId: listId,
-    //     userId: session.user.id
-    //   },
-    //   select: {
-    //     id: true,
-    //     name: true,
-    //     description: true,
-    //     conditions: true,
-    //     contactCount: true,
-    //     createdAt: true
-    //   }
-    // })
-
-    const segments: any[] = []
+    // Fetch segments from database
+    const segments = await prisma.segment.findMany({
+      where: {
+        listId: listId,
+        userId: session.user.id
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        conditions: true,
+        contactCount: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
 
     return NextResponse.json(segments)
   } catch (error) {
@@ -89,29 +89,34 @@ export async function POST(
       return NextResponse.json({ error: 'List not found' }, { status: 404 })
     }
 
-    // TODO: Once Segment model is added to schema, implement:
-    // const segment = await prisma.segment.create({
-    //   data: {
-    //     name,
-    //     description,
-    //     conditions: conditions || {},
-    //     contactCount: 0, // Calculate based on conditions
-    //     listId,
-    //     userId: session.user.id
-    //   }
-    // })
+    // Calculate contact count based on conditions
+    let contactCount = 0
+    if (conditions?.rules?.length > 0) {
+      const contacts = await prisma.contact.findMany({
+        where: {
+          listId: listId,
+          userId: session.user.id
+        }
+      })
 
-    // For now, return a mock response
-    const mockSegment = {
-      id: 'mock-segment-id',
-      name,
-      description,
-      conditions: conditions || {},
-      contactCount: 0,
-      createdAt: new Date().toISOString()
+      contactCount = contacts.filter(contact => {
+        return evaluateConditions(contact, conditions)
+      }).length
     }
 
-    return NextResponse.json(mockSegment, { status: 201 })
+    // Create segment in database
+    const segment = await prisma.segment.create({
+      data: {
+        name,
+        description: description || null,
+        conditions: conditions || { match: 'all', rules: [] },
+        contactCount,
+        listId,
+        userId: session.user.id
+      }
+    })
+
+    return NextResponse.json(segment, { status: 201 })
   } catch (error) {
     console.error('Error creating segment:', error)
     return NextResponse.json(
@@ -119,4 +124,45 @@ export async function POST(
       { status: 500 }
     )
   }
+}
+
+// Helper function to evaluate segment conditions
+function evaluateConditions(contact: any, conditions: any): boolean {
+  if (!conditions?.rules || conditions.rules.length === 0) {
+    return false
+  }
+
+  const results = conditions.rules.map((rule: any) => {
+    const contactValue = contact[rule.field]?.toString().toLowerCase() || ''
+    const ruleValue = rule.value?.toString().toLowerCase() || ''
+
+    switch (rule.operator) {
+      case 'equals':
+        return contactValue === ruleValue
+      case 'notEquals':
+        return contactValue !== ruleValue
+      case 'contains':
+        return contactValue.includes(ruleValue)
+      case 'notContains':
+        return !contactValue.includes(ruleValue)
+      case 'startsWith':
+        return contactValue.startsWith(ruleValue)
+      case 'endsWith':
+        return contactValue.endsWith(ruleValue)
+      case 'greaterThan':
+        return parseFloat(contactValue) > parseFloat(ruleValue)
+      case 'lessThan':
+        return parseFloat(contactValue) < parseFloat(ruleValue)
+      case 'isEmpty':
+        return !contactValue
+      case 'isNotEmpty':
+        return !!contactValue
+      default:
+        return false
+    }
+  })
+
+  return conditions.match === 'all' 
+    ? results.every(r => r) 
+    : results.some(r => r)
 }
