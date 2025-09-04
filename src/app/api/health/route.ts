@@ -5,7 +5,8 @@ export async function GET() {
     return NextResponse.json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      message: 'LOUMASS API is working'
+      message: 'LOUMASS API is working',
+      version: 'v1.1-trigger-fix'
     })
   } catch (error) {
     return NextResponse.json(
