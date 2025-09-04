@@ -3,6 +3,47 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Helper function to evaluate segment conditions
+function evaluateConditions(contact: any, conditions: any): boolean {
+  if (!conditions?.rules || conditions.rules.length === 0) {
+    return false
+  }
+
+  const results = conditions.rules.map((rule: any) => {
+    const contactValue = contact[rule.field]?.toString().toLowerCase() || ''
+    const ruleValue = rule.value?.toString().toLowerCase() || ''
+
+    switch (rule.operator) {
+      case 'equals':
+        return contactValue === ruleValue
+      case 'notEquals':
+        return contactValue !== ruleValue
+      case 'contains':
+        return contactValue.includes(ruleValue)
+      case 'notContains':
+        return !contactValue.includes(ruleValue)
+      case 'startsWith':
+        return contactValue.startsWith(ruleValue)
+      case 'endsWith':
+        return contactValue.endsWith(ruleValue)
+      case 'greaterThan':
+        return parseFloat(contactValue) > parseFloat(ruleValue)
+      case 'lessThan':
+        return parseFloat(contactValue) < parseFloat(ruleValue)
+      case 'isEmpty':
+        return !contactValue
+      case 'isNotEmpty':
+        return !!contactValue
+      default:
+        return false
+    }
+  })
+
+  return conditions.match === 'all' 
+    ? results.every((r: boolean) => r) 
+    : results.some((r: boolean) => r)
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,7 +67,8 @@ export async function GET(
           include: {
             contact: true
           }
-        }
+        },
+        segments: true
       }
     })
 
@@ -34,7 +76,30 @@ export async function GET(
       return NextResponse.json({ error: 'List not found' }, { status: 404 })
     }
 
-    return NextResponse.json(list)
+    // Calculate segment membership for each contact
+    const contactsWithSegments = list.contacts.map(contactEntry => {
+      const contact = contactEntry.contact
+      const belongsToSegments: string[] = []
+
+      list.segments?.forEach(segment => {
+        if (segment.conditions?.rules?.length > 0) {
+          const isMatch = evaluateConditions(contact, segment.conditions)
+          if (isMatch) {
+            belongsToSegments.push(segment.name)
+          }
+        }
+      })
+
+      return {
+        ...contactEntry,
+        segments: belongsToSegments
+      }
+    })
+
+    return NextResponse.json({
+      ...list,
+      contacts: contactsWithSegments
+    })
   } catch (error) {
     console.error('Error fetching list:', error)
     return NextResponse.json({ error: 'Failed to fetch list' }, { status: 500 })

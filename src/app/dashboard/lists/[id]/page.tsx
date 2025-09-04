@@ -20,6 +20,14 @@ interface ContactListEntry {
   status: string
   subscribedAt: string
   contact: Contact
+  segments?: string[]
+}
+
+interface Segment {
+  id: string
+  name: string
+  description: string | null
+  contactCount: number
 }
 
 interface EmailList {
@@ -30,7 +38,7 @@ interface EmailList {
   subscriberCount: number
   activeCount: number
   contacts: ContactListEntry[]
-  segments?: any[]
+  segments?: Segment[]
 }
 
 export default function ListDetailPage() {
@@ -42,6 +50,7 @@ export default function ListDetailPage() {
   const [showAddContactsModal, setShowAddContactsModal] = useState(false)
   const [availableContacts, setAvailableContacts] = useState<Contact[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [segmentFilter, setSegmentFilter] = useState<string>('all')
 
   useEffect(() => {
     if (params.id) {
@@ -136,7 +145,8 @@ export default function ListDetailPage() {
     a.click()
   }
 
-  const filteredContacts = (Array.isArray(availableContacts) ? availableContacts : []).filter(contact => {
+  // Filter contacts in the add modal
+  const filteredAvailableContacts = (Array.isArray(availableContacts) ? availableContacts : []).filter(contact => {
     const inList = list?.contacts.some(c => c.contact.id === contact.id)
     if (inList) return false
     
@@ -148,6 +158,13 @@ export default function ListDetailPage() {
       contact.company?.toLowerCase().includes(search)
     )
   })
+
+  // Filter contacts in the main list by segment
+  const filteredListContacts = list?.contacts.filter(entry => {
+    if (segmentFilter === 'all') return true
+    if (segmentFilter === 'no-segments') return !entry.segments || entry.segments.length === 0
+    return entry.segments?.includes(segmentFilter)
+  }) || []
 
   if (loading) {
     return (
@@ -228,6 +245,28 @@ export default function ListDetailPage() {
         </div>
       </div>
 
+      {/* Segment Filter */}
+      <div className="mb-4">
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-gray-700">
+            Filter by segment:
+          </label>
+          <select
+            value={segmentFilter}
+            onChange={(e) => setSegmentFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+          >
+            <option value="all">All contacts ({list?.contacts.length || 0})</option>
+            <option value="no-segments">No segments ({list?.contacts.filter(c => !c.segments || c.segments.length === 0).length || 0})</option>
+            {list?.segments?.map(segment => (
+              <option key={segment.id} value={segment.name}>
+                {segment.name} ({list.contacts.filter(c => c.segments?.includes(segment.name)).length})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -238,6 +277,9 @@ export default function ListDetailPage() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Company
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Segments
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -251,16 +293,20 @@ export default function ListDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {list.contacts.length === 0 ? (
+              {filteredListContacts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-lg font-medium mb-1">No contacts yet</p>
-                    <p className="text-sm">Add contacts to this list to get started</p>
+                    <p className="text-lg font-medium mb-1">
+                      {segmentFilter === 'all' ? 'No contacts yet' : 'No contacts match this filter'}
+                    </p>
+                    <p className="text-sm">
+                      {segmentFilter === 'all' ? 'Add contacts to this list to get started' : 'Try selecting a different segment filter'}
+                    </p>
                   </td>
                 </tr>
               ) : (
-                list.contacts.map((entry) => (
+                filteredListContacts.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div>
@@ -274,6 +320,22 @@ export default function ListDetailPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {entry.contact.company || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {entry.segments && entry.segments.length > 0 ? (
+                          entry.segments.map((segmentName, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
+                            >
+                              {segmentName}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-xs">No segments</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -326,12 +388,12 @@ export default function ListDetailPage() {
 
             <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg mb-4">
               <div className="divide-y divide-gray-200">
-                {filteredContacts.length === 0 ? (
+                {filteredAvailableContacts.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
                     No contacts available to add
                   </div>
                 ) : (
-                  filteredContacts.map((contact) => (
+                  filteredAvailableContacts.map((contact) => (
                     <label
                       key={contact.id}
                       className="flex items-center p-3 hover:bg-gray-50 cursor-pointer"
