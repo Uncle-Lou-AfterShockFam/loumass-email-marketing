@@ -81,14 +81,31 @@ export default function AutomationPage() {
   // Fetch contacts when settings tab is active
   useEffect(() => {
     if (activeTab === 'settings' && session?.user?.id) {
+      console.log('Fetching contacts for settings tab...')
       fetch('/api/contacts')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Failed to fetch contacts: ${res.status}`)
+          }
+          return res.json()
+        })
         .then(data => {
+          console.log('Contacts response:', data)
           if (Array.isArray(data)) {
             setContacts(data)
+            console.log(`Loaded ${data.length} contacts`)
+          } else if (data.contacts && Array.isArray(data.contacts)) {
+            // Handle paginated response
+            setContacts(data.contacts)
+            console.log(`Loaded ${data.contacts.length} contacts from paginated response`)
+          } else {
+            console.warn('Unexpected contacts response format:', data)
           }
         })
-        .catch(console.error)
+        .catch(error => {
+          console.error('Error fetching contacts:', error)
+          toast.error('Failed to load contacts')
+        })
     }
   }, [activeTab, session])
 
@@ -248,7 +265,15 @@ export default function AutomationPage() {
 
       const result = await response.json()
       toast.success(result.message)
-      await fetchAutomation()
+      
+      // Update the local automation state with the response
+      if (result.automation) {
+        setAutomation(result.automation)
+      } else {
+        // Fallback to fetching if no automation in response
+        await fetchAutomation()
+      }
+      
       await fetchStats()
     } catch (error: any) {
       console.error('Error controlling automation:', error)

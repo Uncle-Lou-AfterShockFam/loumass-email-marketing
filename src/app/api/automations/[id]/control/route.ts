@@ -162,16 +162,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: `Automation ${action}ed successfully`,
-      automation: {
-        id: updatedAutomation.id,
-        name: updatedAutomation.name,
-        status: updatedAutomation.status,
-        totalEntered: updatedAutomation.totalEntered,
-        currentlyActive: updatedAutomation.currentlyActive,
-        totalCompleted: updatedAutomation.totalCompleted,
-        totalExecutions: updatedAutomation._count.executions,
-        updatedAt: updatedAutomation.updatedAt
-      }
+      automation: updatedAutomation
     })
 
   } catch (error) {
