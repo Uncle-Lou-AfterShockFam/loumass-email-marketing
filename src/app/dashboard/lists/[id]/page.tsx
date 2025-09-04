@@ -30,7 +30,7 @@ interface EmailList {
   subscriberCount: number
   activeCount: number
   contacts: ContactListEntry[]
-  segments: any[]
+  segments?: any[]
 }
 
 export default function ListDetailPage() {
@@ -192,7 +192,7 @@ export default function ListDetailPage() {
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-gray-400" />
                 <span className="text-sm">
-                  <strong className="text-gray-900">{list.segments.length}</strong> segments
+                  <strong className="text-gray-900">{list.segments?.length || 0}</strong> segments
                 </span>
               </div>
             </div>

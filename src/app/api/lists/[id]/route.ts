@@ -22,7 +22,6 @@ export async function GET(
         userId: session.user.id
       },
       include: {
-        segments: true,
         contacts: {
           include: {
             contact: true
