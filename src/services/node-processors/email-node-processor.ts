@@ -121,6 +121,29 @@ export class EmailNodeProcessor {
         }
       })
 
+      // Update node statistics
+      const currentNodeId = execution.currentNodeId || 'email-node'
+      await prisma.automationNodeStats.upsert({
+        where: {
+          automationId_nodeId: {
+            automationId: execution.automation.id,
+            nodeId: currentNodeId
+          }
+        },
+        update: {
+          totalPassed: { increment: 1 },
+          currentPassed: { increment: 1 },
+          lastUpdated: new Date()
+        },
+        create: {
+          automationId: execution.automation.id,
+          nodeId: currentNodeId,
+          totalPassed: 1,
+          currentPassed: 1,
+          inNode: 0
+        }
+      })
+
       // Update execution data with email info
       const updatedExecutionData = {
         ...executionData,

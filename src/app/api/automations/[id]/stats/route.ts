@@ -132,6 +132,40 @@ export async function GET(
       take: 100
     })
 
+    // Get email events related to this automation
+    const emailEvents = await prisma.emailEvent.findMany({
+      where: {
+        eventData: {
+          path: ['automationId'],
+          equals: params.id
+        }
+      },
+      select: {
+        type: true,
+        subject: true,
+        createdAt: true,
+        contact: {
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 50
+    })
+
+    // Count email event types
+    const emailEventCounts = {
+      sent: emailEvents.filter(e => e.type === 'SENT').length,
+      opened: emailEvents.filter(e => e.type === 'OPENED').length,
+      clicked: emailEvents.filter(e => e.type === 'CLICKED').length,
+      unsubscribed: emailEvents.filter(e => e.type === 'UNSUBSCRIBED').length
+    }
+
     // Group events by node and type for analytics
     const eventsByNode: Record<string, Record<string, number>> = {}
     executionEvents.forEach(event => {
@@ -187,7 +221,18 @@ export async function GET(
           date,
           entered: data.entered,
           completed: data.completed
-        })).sort((a, b) => a.date.localeCompare(b.date))
+        })).sort((a, b) => a.date.localeCompare(b.date)),
+        
+        // Email events
+        emailEvents: {
+          counts: emailEventCounts,
+          recent: emailEvents.slice(0, 10).map(e => ({
+            type: e.type,
+            subject: e.subject,
+            contact: e.contact,
+            createdAt: e.createdAt
+          }))
+        }
       }
     })
 
