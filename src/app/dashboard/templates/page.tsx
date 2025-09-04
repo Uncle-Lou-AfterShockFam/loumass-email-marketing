@@ -48,10 +48,20 @@ export default function TemplatesPage() {
       const res = await fetch('/api/templates')
       if (res.ok) {
         const data = await res.json()
-        setTemplates(data)
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setTemplates(data)
+        } else {
+          console.error('Templates API returned non-array:', data)
+          setTemplates([])
+        }
+      } else {
+        console.error('Templates API error:', res.status)
+        setTemplates([])
       }
     } catch (error) {
       console.error('Error fetching templates:', error)
+      setTemplates([])
     } finally {
       setLoading(false)
     }
@@ -152,9 +162,9 @@ export default function TemplatesPage() {
     })
   }
 
-  const filteredTemplates = templates.filter(
+  const filteredTemplates = Array.isArray(templates) ? templates.filter(
     template => selectedCategory === 'all' || template.category === selectedCategory
-  )
+  ) : []
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {

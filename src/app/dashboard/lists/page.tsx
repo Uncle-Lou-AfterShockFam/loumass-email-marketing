@@ -33,10 +33,20 @@ export default function ListsPage() {
       const res = await fetch('/api/lists')
       if (res.ok) {
         const data = await res.json()
-        setLists(data)
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setLists(data)
+        } else {
+          console.error('Lists API returned non-array:', data)
+          setLists([])
+        }
+      } else {
+        console.error('Lists API error:', res.status)
+        setLists([])
       }
     } catch (error) {
       console.error('Error fetching lists:', error)
+      setLists([])
     } finally {
       setLoading(false)
     }
