@@ -52,7 +52,7 @@ export default function EventsTab({ campaignId }: EventsTabProps) {
       const response = await fetch(`/api/campaigns/${campaignId}/events`)
       if (response.ok) {
         const data = await response.json()
-        setEvents(data.events)
+        setEvents(Array.isArray(data.events) ? data.events : [])
       }
     } catch (error) {
       console.error('Failed to fetch events:', error)

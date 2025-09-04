@@ -39,7 +39,7 @@ export default function SequenceSelector({
       if (response.ok) {
         const data = await response.json()
         // Only show active sequences
-        const activeSequences = data.sequences.filter((seq: Sequence) => 
+        const activeSequences = (Array.isArray(data.sequences) ? data.sequences : []).filter((seq: Sequence) => 
           seq.status === 'ACTIVE' && seq.steps && seq.steps.length > 0
         )
         setSequences(activeSequences)

@@ -47,7 +47,7 @@ export default function InteractionsPage() {
       if (!response.ok) throw new Error('Failed to fetch interactions')
       
       const data = await response.json()
-      setInteractions(data.interactions)
+      setInteractions(Array.isArray(data.interactions) ? data.interactions : [])
       setStats(data.stats)
     } catch (error) {
       console.error('Error fetching interactions:', error)
