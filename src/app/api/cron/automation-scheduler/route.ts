@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { automationTrigger } from '@/services/automationTrigger'
+import { AutomationExecutor } from '@/services/automation-executor'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
@@ -23,7 +24,11 @@ export async function GET(request: NextRequest) {
     // 3. Check until conditions
     await checkUntilConditions()
 
-    // 4. Clean up old execution events (optional)
+    // 4. Execute active automations
+    const executor = new AutomationExecutor()
+    await executor.executeAutomations()
+
+    // 5. Clean up old execution events (optional)
     await cleanupOldEvents()
 
     return NextResponse.json({ 
