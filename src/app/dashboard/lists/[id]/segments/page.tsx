@@ -354,27 +354,27 @@ export default function ListSegmentsPage() {
       {showNewSegmentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Create New Segment</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Create New Segment</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Segment Name
               </label>
               <input
                 type="text"
                 value={newSegmentName}
                 onChange={(e) => setNewSegmentName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="e.g., Active Subscribers"
               />
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Description (optional)
               </label>
               <textarea
                 value={newSegmentDescription}
                 onChange={(e) => setNewSegmentDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 rows={3}
                 placeholder="Describe this segment..."
               />
@@ -382,7 +382,7 @@ export default function ListSegmentsPage() {
 
             {/* Conditions Section */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
                 Segment Conditions
               </label>
               
@@ -391,7 +391,7 @@ export default function ListSegmentsPage() {
                 <select
                   value={conditions.match}
                   onChange={(e) => setConditions({ ...conditions, match: e.target.value as 'all' | 'any' })}
-                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                 >
                   <option value="all">all</option>
                   <option value="any">any</option>
@@ -405,7 +405,7 @@ export default function ListSegmentsPage() {
                     <select
                       value={rule.field}
                       onChange={(e) => updateCondition(index, 'field', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                     >
                       <option value="email">Email</option>
                       <option value="firstName">First Name</option>
@@ -419,7 +419,7 @@ export default function ListSegmentsPage() {
                     <select
                       value={rule.operator}
                       onChange={(e) => updateCondition(index, 'operator', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                     >
                       <option value="contains">contains</option>
                       <option value="equals">equals</option>
@@ -434,7 +434,7 @@ export default function ListSegmentsPage() {
                       type="text"
                       value={rule.value}
                       onChange={(e) => updateCondition(index, 'value', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                       placeholder="Value"
                       disabled={rule.operator === 'isEmpty' || rule.operator === 'isNotEmpty'}
                     />
@@ -490,27 +490,27 @@ export default function ListSegmentsPage() {
       {showEditSegmentModal && editingSegment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Edit Segment</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Edit Segment</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Segment Name
               </label>
               <input
                 type="text"
                 value={newSegmentName}
                 onChange={(e) => setNewSegmentName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="e.g., Active Subscribers"
               />
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Description (optional)
               </label>
               <textarea
                 value={newSegmentDescription}
                 onChange={(e) => setNewSegmentDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 rows={3}
                 placeholder="Describe this segment..."
               />
@@ -518,7 +518,7 @@ export default function ListSegmentsPage() {
 
             {/* Conditions Section */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
                 Segment Conditions
               </label>
               
@@ -527,7 +527,7 @@ export default function ListSegmentsPage() {
                 <select
                   value={conditions.match}
                   onChange={(e) => setConditions({ ...conditions, match: e.target.value as 'all' | 'any' })}
-                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                  className="mx-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                 >
                   <option value="all">all</option>
                   <option value="any">any</option>
@@ -541,7 +541,7 @@ export default function ListSegmentsPage() {
                     <select
                       value={rule.field}
                       onChange={(e) => updateCondition(index, 'field', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                     >
                       <option value="email">Email</option>
                       <option value="firstName">First Name</option>
@@ -555,7 +555,7 @@ export default function ListSegmentsPage() {
                     <select
                       value={rule.operator}
                       onChange={(e) => updateCondition(index, 'operator', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                     >
                       <option value="contains">contains</option>
                       <option value="equals">equals</option>
@@ -570,7 +570,7 @@ export default function ListSegmentsPage() {
                       type="text"
                       value={rule.value}
                       onChange={(e) => updateCondition(index, 'value', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 bg-white"
                       placeholder="Value"
                       disabled={rule.operator === 'isEmpty' || rule.operator === 'isNotEmpty'}
                     />
@@ -627,12 +627,30 @@ export default function ListSegmentsPage() {
       {showContactsModal && viewingSegment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-xl font-bold">Contacts in "{viewingSegment.name}"</h2>
-                <p className="text-sm text-gray-500 mt-1">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900">Contacts in "{viewingSegment.name}"</h2>
+                <p className="text-sm text-gray-600 mt-1">
                   {segmentContacts.length} contact{segmentContacts.length !== 1 ? 's' : ''} match your conditions
                 </p>
+                
+                {/* Display Conditions */}
+                {viewingSegment.conditions && viewingSegment.conditions.rules && viewingSegment.conditions.rules.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs font-medium text-blue-900 mb-1">Segment Conditions:</p>
+                    <p className="text-sm text-blue-800">
+                      Match <span className="font-semibold">{viewingSegment.conditions.match}</span> of the following:
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {viewingSegment.conditions.rules.map((rule: any, index: number) => (
+                        <li key={index} className="text-sm text-blue-700">
+                          • <span className="font-medium">{rule.field}</span> {rule.operator} 
+                          {rule.value && <span className="font-medium"> "{rule.value}"</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => {
@@ -640,7 +658,7 @@ export default function ListSegmentsPage() {
                   setViewingSegment(null)
                   setSegmentContacts([])
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 ml-4"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
