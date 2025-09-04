@@ -70,8 +70,24 @@ export async function POST(
         }
         
         // Validate that automation has at least one email node before starting
-        const nodes = Array.isArray(automation.nodes) ? automation.nodes : []
+        let nodes: any[] = []
+        
+        // Handle different node storage formats
+        if (Array.isArray(automation.nodes)) {
+          // Direct array format
+          nodes = automation.nodes
+        } else if (automation.nodes && typeof automation.nodes === 'object') {
+          // Object format with nodes property
+          if (Array.isArray(automation.nodes.nodes)) {
+            nodes = automation.nodes.nodes
+          }
+        }
+        
+        console.log('Checking nodes for automation:', automation.id, 'nodes:', nodes.length)
+        
         const emailNodes = nodes.filter((n: any) => n.type === 'email')
+        console.log('Found email nodes:', emailNodes.length)
+        
         if (emailNodes.length === 0) {
           return NextResponse.json({ 
             error: 'Cannot start automation without email nodes' 
