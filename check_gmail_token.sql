@@ -1,0 +1,1 @@
+SELECT email, "expiresAt", "lastHistoryId" FROM "GmailToken" WHERE "userId" = 'cmevnl4ub00008oy13oo09459';

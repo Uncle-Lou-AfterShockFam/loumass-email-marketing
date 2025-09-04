@@ -97,9 +97,11 @@ export async function GET(
     console.log('Tracking type:', isSequence ? 'Sequence' : 'Campaign')
     console.log('Looking for recipient with ID:', campaignOrSequenceId, 'and contact/enrollment ID:', recipientId)
 
+    let recipient: any = null
+
     // Handle campaign click tracking  
     if (!isSequence) {
-      let recipient = await prisma.recipient.findFirst({
+      recipient = await prisma.recipient.findFirst({
       where: {
         campaignId: campaignOrSequenceId,
         contactId: recipientId

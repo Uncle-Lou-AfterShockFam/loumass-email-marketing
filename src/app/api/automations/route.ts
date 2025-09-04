@@ -7,7 +7,7 @@ import { z } from 'zod'
 // Validation schema for automation node
 const automationNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(['wait', 'email', 'sms', 'condition', 'until', 'webhook', 'when', 'move_to']),
+  type: z.enum(['trigger', 'wait', 'email', 'sms', 'condition', 'until', 'webhook', 'when', 'move_to']),
   name: z.string().optional(),
   
   // Email template node
@@ -154,10 +154,53 @@ export async function POST(request: NextRequest) {
     const { name, description, triggerEvent, triggerData, applyToExisting, trackingEnabled, nodes, status } = validationResult.data
 
     // Handle both old array format and new object format
-    const nodesList = Array.isArray(nodes) ? nodes : nodes.nodes || []
+    let flowData: { nodes: any[], edges: any[] }
+    
+    if (Array.isArray(nodes)) {
+      // Old format: convert to new format with automatic trigger
+      flowData = {
+        nodes: nodes,
+        edges: []
+      }
+    } else {
+      // New format
+      flowData = {
+        nodes: nodes.nodes || [],
+        edges: nodes.edges || []
+      }
+    }
+    
+    // Auto-add trigger node and connect to first node if missing
+    const hasTriggerNode = flowData.nodes.some((n: any) => n.type === 'trigger')
+    if (!hasTriggerNode && flowData.nodes.length > 0) {
+      const triggerNode = {
+        id: `trigger-${Date.now()}`,
+        type: 'trigger',
+        name: 'Automation Start',
+        position: { x: 50, y: 100 },
+        data: {
+          label: 'Automation Start',
+          triggerType: triggerEvent
+        }
+      }
+      
+      // Add trigger at the beginning
+      flowData.nodes.unshift(triggerNode)
+      
+      // Connect trigger to first user-created node
+      if (flowData.nodes.length > 1) {
+        const firstUserNode = flowData.nodes[1]
+        flowData.edges.push({
+          id: `trigger-to-${firstUserNode.id}`,
+          source: triggerNode.id,
+          target: firstUserNode.id,
+          type: 'smoothstep'
+        })
+      }
+    }
     
     // Validate automation logic
-    const emailNodes = nodesList.filter((n: any) => n.type === 'email')
+    const emailNodes = flowData.nodes.filter((n: any) => n.type === 'email')
     if (emailNodes.length === 0) {
       return NextResponse.json({ 
         error: 'Automation must contain at least one email node' 
@@ -165,7 +208,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check that condition nodes are properly configured
-    for (const node of nodesList.filter((n: any) => n.type === 'condition')) {
+    for (const node of flowData.nodes.filter((n: any) => n.type === 'condition')) {
       if (status === 'ACTIVE' && node.condition) {
         if (node.condition.type === 'behavior' && !node.condition.behavior?.campaignRef) {
           return NextResponse.json({
@@ -185,7 +228,7 @@ export async function POST(request: NextRequest) {
         triggerData: triggerData || {},
         applyToExisting,
         trackingEnabled,
-        nodes,
+        nodes: flowData,
         status
       },
       include: {
@@ -220,7 +263,7 @@ export async function POST(request: NextRequest) {
         currentlyActive: automation.currentlyActive,
         totalCompleted: automation.totalCompleted,
         totalExecutions: automation._count.executions,
-        nodeCount: Array.isArray(nodes) ? nodes.length : (nodes.nodes?.length || 0),
+        nodeCount: flowData.nodes.length,
         createdAt: automation.createdAt,
         updatedAt: automation.updatedAt
       }
