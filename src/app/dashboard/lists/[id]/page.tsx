@@ -71,7 +71,9 @@ export default function ListDetailPage() {
       const res = await fetch('/api/contacts')
       if (res.ok) {
         const data = await res.json()
-        setAvailableContacts(data)
+        // Ensure data is an array or extract contacts property
+        const contacts = Array.isArray(data) ? data : (Array.isArray(data.contacts) ? data.contacts : [])
+        setAvailableContacts(contacts)
       }
     } catch (error) {
       console.error('Error fetching contacts:', error)
@@ -134,7 +136,7 @@ export default function ListDetailPage() {
     a.click()
   }
 
-  const filteredContacts = availableContacts.filter(contact => {
+  const filteredContacts = (Array.isArray(availableContacts) ? availableContacts : []).filter(contact => {
     const inList = list?.contacts.some(c => c.contact.id === contact.id)
     if (inList) return false
     
