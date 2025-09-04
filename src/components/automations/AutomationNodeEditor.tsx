@@ -15,6 +15,7 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
   const [templates, setTemplates] = useState<any[]>([] as any[])
   const [contacts, setContacts] = useState<any[]>([] as any[])
   const [segments, setSegments] = useState<any[]>([] as any[])
+  const [automations, setAutomations] = useState<any[]>([] as any[])
 
   useEffect(() => {
     if (node) {
@@ -33,15 +34,17 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           .catch(console.error)
       }
       
-      // Fetch segments and contacts for condition and moveTo nodes
+      // Fetch segments, contacts, and automations for condition and moveTo nodes
       if (node?.type === 'moveTo' || node?.type === 'condition') {
         Promise.all([
           fetch('/api/contacts').then(res => res.json()),
-          fetch('/api/segments').then(res => res.json())
-        ]).then(([contactsData, segmentsData]) => {
+          fetch('/api/segments').then(res => res.json()),
+          fetch('/api/automations').then(res => res.json())
+        ]).then(([contactsData, segmentsData, automationsData]) => {
           // Ensure data is arrays to prevent filter errors
           setContacts(Array.isArray(contactsData) ? contactsData as any[] : [] as any[])
           setSegments(Array.isArray(segmentsData) ? segmentsData as any[] : [] as any[])
+          setAutomations(Array.isArray(automationsData?.automations) ? automationsData.automations as any[] : [] as any[])
         }).catch(console.error)
       }
     }
@@ -67,6 +70,26 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
         [field]: value
       }
     }))
+  }
+
+  // Helper function to extract email steps from an automation
+  const getEmailStepsFromAutomation = (automationId: string) => {
+    const automation = automations.find(auto => auto.id === automationId)
+    if (!automation) return []
+    
+    // Handle both old array format and new object format
+    const nodes = Array.isArray(automation.nodes) 
+      ? automation.nodes 
+      : (automation.nodes as any)?.nodes || []
+    
+    // Filter for email nodes and create options
+    return nodes
+      .filter((node: any) => node.type === 'email')
+      .map((emailNode: any, index: number) => ({
+        id: emailNode.id,
+        name: emailNode.name || emailNode.emailTemplate?.subject || `Email Step ${index + 1}`,
+        subject: emailNode.emailTemplate?.subject || 'Untitled Email'
+      }))
   }
 
   if (!isOpen || !node) return null
@@ -619,11 +642,11 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 >
                   <option value="">Select an automation</option>
-                  <option value="automation-1">Welcome Series Automation</option>
-                  <option value="automation-2">Abandoned Cart Recovery</option>
-                  <option value="automation-3">Lead Nurturing Flow</option>
-                  <option value="automation-4">Customer Onboarding</option>
-                  <option value="automation-5">Re-engagement Campaign</option>
+                  {automations.map(automation => (
+                    <option key={automation.id} value={automation.id}>
+                      {automation.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -642,49 +665,11 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   >
                     <option value="">Any email from this automation</option>
-                    {nodeData.condition?.behavior?.specificAutomation === 'automation-1' && (
-                      <>
-                        <option value="welcome-step1">Step 1: Welcome & Introduction</option>
-                        <option value="welcome-step2">Step 2: Account Setup Guide</option>
-                        <option value="welcome-step3">Step 3: First Steps Tutorial</option>
-                        <option value="welcome-step4">Step 4: Feature Highlights</option>
-                        <option value="welcome-step5">Step 5: Community Invitation</option>
-                      </>
-                    )}
-                    {nodeData.condition?.behavior?.specificAutomation === 'automation-2' && (
-                      <>
-                        <option value="cart-step1">Step 1: Cart Reminder</option>
-                        <option value="cart-step2">Step 2: Special Discount Offer</option>
-                        <option value="cart-step3">Step 3: Last Chance</option>
-                        <option value="cart-step4">Step 4: Alternative Products</option>
-                      </>
-                    )}
-                    {nodeData.condition?.behavior?.specificAutomation === 'automation-3' && (
-                      <>
-                        <option value="nurture-step1">Step 1: Problem Introduction</option>
-                        <option value="nurture-step2">Step 2: Solution Overview</option>
-                        <option value="nurture-step3">Step 3: Case Studies</option>
-                        <option value="nurture-step4">Step 4: Testimonials</option>
-                        <option value="nurture-step5">Step 5: Call to Action</option>
-                      </>
-                    )}
-                    {nodeData.condition?.behavior?.specificAutomation === 'automation-4' && (
-                      <>
-                        <option value="onboard-step1">Step 1: Welcome & Next Steps</option>
-                        <option value="onboard-step2">Step 2: Account Configuration</option>
-                        <option value="onboard-step3">Step 3: Training Resources</option>
-                        <option value="onboard-step4">Step 4: Success Checklist</option>
-                        <option value="onboard-step5">Step 5: Support & Contact</option>
-                      </>
-                    )}
-                    {nodeData.condition?.behavior?.specificAutomation === 'automation-5' && (
-                      <>
-                        <option value="reengage-step1">Step 1: We Miss You</option>
-                        <option value="reengage-step2">Step 2: What's New</option>
-                        <option value="reengage-step3">Step 3: Special Offer</option>
-                        <option value="reengage-step4">Step 4: Final Attempt</option>
-                      </>
-                    )}
+                    {getEmailStepsFromAutomation(nodeData.condition?.behavior?.specificAutomation).map((emailStep: any) => (
+                      <option key={emailStep.id} value={emailStep.id}>
+                        {emailStep.name}
+                      </option>
+                    ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     Track behavior from this specific email step in the automation
