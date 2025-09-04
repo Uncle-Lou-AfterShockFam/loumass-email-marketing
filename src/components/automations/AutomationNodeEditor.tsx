@@ -39,8 +39,9 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
           fetch('/api/contacts').then(res => res.json()),
           fetch('/api/segments').then(res => res.json())
         ]).then(([contactsData, segmentsData]) => {
-          setContacts(contactsData)
-          setSegments(segmentsData)
+          // Ensure data is arrays to prevent filter errors
+          setContacts(Array.isArray(contactsData) ? contactsData : [])
+          setSegments(Array.isArray(segmentsData) ? segmentsData : [])
         }).catch(console.error)
       }
     }
