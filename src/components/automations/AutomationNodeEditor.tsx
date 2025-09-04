@@ -402,51 +402,202 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
             </div>
           )}
 
-          {/* Specific Email/Campaign Selection - Show when 'any_campaign' or 'any_sequence' is selected */}
-          {nodeData.condition?.behavior?.emailSource === 'any_campaign' && (
+          {/* Specific Automation Email Selection */}
+          {(nodeData.condition?.behavior?.emailSource === 'any_automation_email' || 
+            nodeData.condition?.behavior?.emailSource === 'last_automation_email') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Specific Campaign (Optional)
+                Specific Email from This Automation (Optional)
               </label>
               <select
-                value={nodeData.condition?.behavior?.specificCampaign || ''}
+                value={nodeData.condition?.behavior?.specificAutomationEmail || ''}
                 onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
                   ...nodeData.condition?.behavior,
-                  specificCampaign: e.target.value 
+                  specificAutomationEmail: e.target.value 
                 })}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
-                <option value="">Any campaign</option>
-                <option value="campaign-1">Welcome Campaign</option>
-                <option value="campaign-2">Product Launch</option>
-                <option value="campaign-3">Newsletter</option>
+                <option value="">Any email from this automation</option>
+                <option value="email-1">Welcome Email (Step 1)</option>
+                <option value="email-2">Follow-up Email (Step 3)</option>
+                <option value="email-3">Special Offer (Step 5)</option>
+                <option value="email-4">Testimonial Email (Step 7)</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Leave blank to track from any campaign
+                Choose a specific email step, or leave blank for any email in this automation
               </p>
             </div>
           )}
 
+          {/* Specific Campaign Selection - Enhanced with individual email selection */}
+          {nodeData.condition?.behavior?.emailSource === 'any_campaign' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specific Campaign (Optional)
+                </label>
+                <select
+                  value={nodeData.condition?.behavior?.specificCampaign || ''}
+                  onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                    ...nodeData.condition?.behavior,
+                    specificCampaign: e.target.value,
+                    specificCampaignEmail: '' // Reset email when campaign changes
+                  })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">Any campaign</option>
+                  <option value="campaign-1">Welcome Campaign</option>
+                  <option value="campaign-2">Product Launch Campaign</option>
+                  <option value="campaign-3">Newsletter Campaign</option>
+                  <option value="campaign-4">Black Friday Sale</option>
+                  <option value="campaign-5">Customer Survey</option>
+                </select>
+              </div>
+              
+              {/* Show specific email selection when a campaign is chosen */}
+              {nodeData.condition?.behavior?.specificCampaign && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specific Email from Campaign (Optional)
+                  </label>
+                  <select
+                    value={nodeData.condition?.behavior?.specificCampaignEmail || ''}
+                    onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                      ...nodeData.condition?.behavior,
+                      specificCampaignEmail: e.target.value 
+                    })}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Any email from this campaign</option>
+                    {nodeData.condition?.behavior?.specificCampaign === 'campaign-1' && (
+                      <>
+                        <option value="welcome-intro">Welcome - Introduction Email</option>
+                        <option value="welcome-features">Welcome - Feature Overview</option>
+                        <option value="welcome-cta">Welcome - Get Started CTA</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificCampaign === 'campaign-2' && (
+                      <>
+                        <option value="launch-announcement">Product Launch - Announcement</option>
+                        <option value="launch-features">Product Launch - Features Deep Dive</option>
+                        <option value="launch-pricing">Product Launch - Pricing & Offers</option>
+                        <option value="launch-testimonials">Product Launch - Customer Stories</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificCampaign === 'campaign-3' && (
+                      <>
+                        <option value="newsletter-jan">January Newsletter</option>
+                        <option value="newsletter-feb">February Newsletter</option>
+                        <option value="newsletter-mar">March Newsletter</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificCampaign === 'campaign-4' && (
+                      <>
+                        <option value="bf-early-access">Black Friday - Early Access</option>
+                        <option value="bf-main-sale">Black Friday - Main Sale</option>
+                        <option value="bf-last-chance">Black Friday - Last Chance</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificCampaign === 'campaign-5' && (
+                      <>
+                        <option value="survey-invitation">Survey - Invitation</option>
+                        <option value="survey-reminder">Survey - Reminder</option>
+                        <option value="survey-thank-you">Survey - Thank You</option>
+                      </>
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Track behavior from this specific email only
+                  </p>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500">
+                Leave campaign blank to track from any campaign
+              </p>
+            </div>
+          )}
+
+          {/* Enhanced Sequence Selection */}
           {nodeData.condition?.behavior?.emailSource === 'any_sequence' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Specific Sequence (Optional)
-              </label>
-              <select
-                value={nodeData.condition?.behavior?.specificSequence || ''}
-                onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
-                  ...nodeData.condition?.behavior,
-                  specificSequence: e.target.value 
-                })}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-              >
-                <option value="">Any sequence</option>
-                <option value="sequence-1">Onboarding Sequence</option>
-                <option value="sequence-2">Sales Follow-up</option>
-                <option value="sequence-3">Re-engagement</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Leave blank to track from any sequence
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specific Sequence (Optional)
+                </label>
+                <select
+                  value={nodeData.condition?.behavior?.specificSequence || ''}
+                  onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                    ...nodeData.condition?.behavior,
+                    specificSequence: e.target.value,
+                    specificSequenceEmail: '' // Reset email when sequence changes
+                  })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">Any sequence</option>
+                  <option value="sequence-1">Onboarding Sequence</option>
+                  <option value="sequence-2">Sales Follow-up Sequence</option>
+                  <option value="sequence-3">Re-engagement Sequence</option>
+                  <option value="sequence-4">Post-Purchase Sequence</option>
+                </select>
+              </div>
+              
+              {/* Show specific email selection when a sequence is chosen */}
+              {nodeData.condition?.behavior?.specificSequence && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specific Email from Sequence (Optional)
+                  </label>
+                  <select
+                    value={nodeData.condition?.behavior?.specificSequenceEmail || ''}
+                    onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                      ...nodeData.condition?.behavior,
+                      specificSequenceEmail: e.target.value 
+                    })}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Any email from this sequence</option>
+                    {nodeData.condition?.behavior?.specificSequence === 'sequence-1' && (
+                      <>
+                        <option value="onboard-day1">Day 1: Welcome & Setup</option>
+                        <option value="onboard-day3">Day 3: Getting Started Guide</option>
+                        <option value="onboard-day7">Day 7: Tips & Tricks</option>
+                        <option value="onboard-day14">Day 14: Check-in & Support</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificSequence === 'sequence-2' && (
+                      <>
+                        <option value="sales-immediate">Immediate Follow-up</option>
+                        <option value="sales-day2">Day 2: Value Proposition</option>
+                        <option value="sales-day5">Day 5: Objection Handling</option>
+                        <option value="sales-day10">Day 10: Final Offer</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificSequence === 'sequence-3' && (
+                      <>
+                        <option value="reengage-miss-you">We Miss You Email</option>
+                        <option value="reengage-whats-new">What's New & Updates</option>
+                        <option value="reengage-special-offer">Special Comeback Offer</option>
+                        <option value="reengage-final">Final Goodbye</option>
+                      </>
+                    )}
+                    {nodeData.condition?.behavior?.specificSequence === 'sequence-4' && (
+                      <>
+                        <option value="postpurchase-thank-you">Thank You & Receipt</option>
+                        <option value="postpurchase-setup">Setup Instructions</option>
+                        <option value="postpurchase-tips">Usage Tips</option>
+                        <option value="postpurchase-upsell">Related Products</option>
+                      </>
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Track behavior from this specific email in the sequence
+                  </p>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500">
+                Leave sequence blank to track from any sequence
               </p>
             </div>
           )}
