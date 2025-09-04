@@ -118,7 +118,7 @@ export default function NewWebhookPage() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${
+                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-white ${
                   errors.name ? 'border-red-300' : ''
                 }`}
                 placeholder="My Webhook"
@@ -137,7 +137,7 @@ export default function NewWebhookPage() {
                 rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="Webhook for tracking email events..."
               />
             </div>
@@ -151,7 +151,7 @@ export default function NewWebhookPage() {
                 id="url"
                 value={formData.url}
                 onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${
+                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-white ${
                   errors.url ? 'border-red-300' : ''
                 }`}
                 placeholder="https://your-app.com/webhooks/loumass"
@@ -202,7 +202,7 @@ export default function NewWebhookPage() {
               id="status"
               value={formData.status}
               onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-white"
             >
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>

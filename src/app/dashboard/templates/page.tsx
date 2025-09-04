@@ -345,7 +345,7 @@ export default function TemplatesPage() {
                       type="text"
                       value={templateForm.name}
                       onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                       placeholder="e.g., Welcome Email"
                     />
                   </div>
@@ -356,7 +356,7 @@ export default function TemplatesPage() {
                     <select
                       value={templateForm.category}
                       onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     >
                       {TEMPLATE_CATEGORIES.map(cat => (
                         <option key={cat.value} value={cat.value}>
@@ -375,7 +375,7 @@ export default function TemplatesPage() {
                     type="text"
                     value={templateForm.subject}
                     onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     placeholder="e.g., Welcome to {{contact.company || 'our platform'}}"
                   />
                 </div>
@@ -387,7 +387,7 @@ export default function TemplatesPage() {
                   <textarea
                     value={templateForm.content}
                     onChange={(e) => setTemplateForm({ ...templateForm, content: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm text-gray-900 bg-white"
                     rows={15}
                     placeholder="Hi {{contact.firstName || 'there'}},
 

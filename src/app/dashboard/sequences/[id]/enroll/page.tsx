@@ -270,7 +270,7 @@ export default function EnrollPage() {
               <select
                 value={selectedCampaign}
                 onChange={(e) => handleCampaignSelect(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 aria-label="Select campaign"
               >
                 <option value="">Choose a campaign...</option>

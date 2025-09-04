@@ -291,7 +291,7 @@ export default function EditCampaignPage() {
                 type="text"
                 id="name"
                 {...form.register('name')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 placeholder="Enter campaign name"
               />
               {form.formState.errors.name && (
@@ -307,7 +307,7 @@ export default function EditCampaignPage() {
                 type="text"
                 id="subject"
                 {...form.register('subject')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 placeholder="Enter email subject"
               />
               {form.formState.errors.subject && (
