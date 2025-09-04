@@ -12,9 +12,9 @@ interface AutomationNodeEditorProps {
 
 export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: AutomationNodeEditorProps) {
   const [nodeData, setNodeData] = useState(node?.data || {})
-  const [templates, setTemplates] = useState([])
-  const [contacts, setContacts] = useState([])
-  const [segments, setSegments] = useState([])
+  const [templates, setTemplates] = useState<any[]>([])
+  const [contacts, setContacts] = useState<any[]>([])
+  const [segments, setSegments] = useState<any[]>([])
 
   useEffect(() => {
     if (node) {
