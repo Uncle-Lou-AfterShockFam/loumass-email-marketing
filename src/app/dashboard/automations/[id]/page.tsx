@@ -36,6 +36,24 @@ interface AutomationStats {
     currentPassed: number
     inNode: number
   }>
+  emailEvents?: {
+    counts: {
+      sent: number
+      opened: number
+      clicked: number
+      unsubscribed: number
+    }
+    recent: Array<{
+      type: string
+      subject: string
+      contact: {
+        email: string
+        firstName?: string
+        lastName?: string
+      }
+      createdAt: string
+    }>
+  }
 }
 
 export default function AutomationPage() {

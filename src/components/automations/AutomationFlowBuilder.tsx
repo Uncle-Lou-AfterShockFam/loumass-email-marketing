@@ -261,7 +261,7 @@ function AutomationFlowBuilderInner({
     const updatedNodes = nodes.map(node => {
       // Extract data without position to avoid duplication
       const { position: dataPosition, ...restData } = node.data || {}
-      const nodeUpdate = {
+      const nodeUpdate: any = {
         id: node.id,
         type: restData.type || node.type,
         position: node.position, // Use the node's position, not data.position
