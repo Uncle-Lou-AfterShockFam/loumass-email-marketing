@@ -367,11 +367,11 @@ model AutomationExecution {
   failureReason String?
   variables     Json?
   executionPath Json?
-  executionData Json?
-  waitUntil     DateTime?
-  startedAt     DateTime                   @default(now())
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
+  executionData Json?
+  startedAt     DateTime                   @default(now())
+  waitUntil     DateTime?
   automation    Automation                 @relation(fields: [automationId], references: [id], onDelete: Cascade)
   contact       Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
   events        AutomationExecutionEvent[]
