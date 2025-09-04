@@ -104,6 +104,6 @@ function evaluateConditions(contact: any, conditions: any): boolean {
   })
 
   return conditions.match === 'all' 
-    ? results.every(r => r) 
-    : results.some(r => r)
+    ? results.every((r: boolean) => r) 
+    : results.some((r: boolean) => r)
 }
