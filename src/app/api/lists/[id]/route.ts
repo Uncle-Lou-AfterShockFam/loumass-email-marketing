@@ -82,8 +82,9 @@ export async function GET(
       const belongsToSegments: string[] = []
 
       list.segments?.forEach(segment => {
-        if (segment.conditions?.rules?.length > 0) {
-          const isMatch = evaluateConditions(contact, segment.conditions)
+        const conditions = segment.conditions as any
+        if (conditions?.rules?.length > 0) {
+          const isMatch = evaluateConditions(contact, conditions)
           if (isMatch) {
             belongsToSegments.push(segment.name)
           }
