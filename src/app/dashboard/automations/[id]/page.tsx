@@ -51,6 +51,9 @@ export default function AutomationPage() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [contacts, setContacts] = useState<any[]>([])
+  const [enrolling, setEnrolling] = useState(false)
+  const [selectedContactId, setSelectedContactId] = useState<string>('')
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const automationId = params?.id as string
@@ -74,6 +77,20 @@ export default function AutomationPage() {
       }
     }
   }, [session, status, router, automationId])
+
+  // Fetch contacts when settings tab is active
+  useEffect(() => {
+    if (activeTab === 'settings' && session?.user?.id) {
+      fetch('/api/contacts')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setContacts(data)
+          }
+        })
+        .catch(console.error)
+    }
+  }, [activeTab, session])
 
   // Force immediate navigation with background cleanup
   useEffect(() => {
@@ -240,6 +257,38 @@ export default function AutomationPage() {
       setProcessingAction(null)
       // Keep transitioning true for a bit to prevent immediate saves
       setTimeout(() => setIsTransitioning(false), 1000)
+    }
+  }
+
+  const handleManualEnroll = async () => {
+    if (!selectedContactId || enrolling) return
+    
+    setEnrolling(true)
+    try {
+      const response = await fetch(`/api/automations/${automationId}/enroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ contactIds: [selectedContactId] })
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to enroll contact')
+      }
+
+      toast.success('Contact enrolled successfully!')
+      setSelectedContactId('')
+      
+      // Refresh stats
+      fetchStats()
+    } catch (error: any) {
+      console.error('Error enrolling contact:', error)
+      toast.error(error.message || 'Failed to enroll contact')
+    } finally {
+      setEnrolling(false)
     }
   }
 
@@ -711,17 +760,91 @@ export default function AutomationPage() {
 
               <div className="pt-6 border-t border-gray-200">
                 <h4 className="text-sm font-medium text-gray-900 mb-4">Trigger Configuration</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <span className="text-xl mr-3">{getTriggerIcon(automation.triggerEvent)}</span>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {automation.triggerEvent.replace('_', ' ')}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Automation starts when this event occurs
-                      </div>
+                
+                {/* Trigger Type Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Trigger Event</label>
+                  <select
+                    value={automation.triggerEvent}
+                    onChange={(e) => {
+                      const triggerEvent = e.target.value
+                      setAutomation(prev => prev ? { ...prev, triggerEvent } : null)
+                      handleSaveAutomation({ triggerEvent })
+                    }}
+                    disabled={automation.status !== 'DRAFT'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white disabled:bg-gray-100"
+                  >
+                    <option value="NEW_SUBSCRIBER">New Subscriber</option>
+                    <option value="SPECIFIC_DATE">Specific Date</option>
+                    <option value="SUBSCRIBER_SEGMENT">Subscriber Segment</option>
+                    <option value="WEBHOOK">Webhook</option>
+                    <option value="MANUAL">Manual Enrollment</option>
+                  </select>
+                  {automation.status !== 'DRAFT' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Trigger can only be changed when automation is in draft status
+                    </p>
+                  )}
+                </div>
+
+                {/* Apply to Existing Subscribers */}
+                <div className="mb-4">
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        checked={automation.applyToExisting}
+                        onChange={(e) => {
+                          const applyToExisting = e.target.checked
+                          setAutomation(prev => prev ? { ...prev, applyToExisting } : null)
+                          handleSaveAutomation({ applyToExisting })
+                        }}
+                        disabled={automation.status !== 'DRAFT'}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                      />
                     </div>
+                    <div className="ml-3">
+                      <label className="text-sm font-medium text-gray-700">Apply to Existing Contacts</label>
+                      <p className="text-sm text-gray-500">
+                        When starting automation, enroll existing contacts that match the trigger criteria
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Manual Enrollment Section */}
+                <div className="pt-6 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-4">Manual Enrollment (Testing)</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Contact</label>
+                      <select
+                        value={selectedContactId}
+                        onChange={(e) => setSelectedContactId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      >
+                        <option value="">Choose a contact...</option>
+                        {contacts.map(contact => (
+                          <option key={contact.id} value={contact.id}>
+                            {contact.name || contact.email} ({contact.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <button
+                      onClick={handleManualEnroll}
+                      disabled={!selectedContactId || enrolling || automation.status !== 'ACTIVE'}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {enrolling ? 'Enrolling...' : 'Enroll Contact'}
+                    </button>
+                    
+                    {automation.status !== 'ACTIVE' && (
+                      <p className="text-xs text-gray-500">
+                        Automation must be active to manually enroll contacts
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
