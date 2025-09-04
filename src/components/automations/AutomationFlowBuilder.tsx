@@ -165,43 +165,6 @@ function AutomationFlowBuilderInner({
           body: {}
         }
       }
-    },
-    {
-      type: 'until',
-      label: 'Wait Until',
-      icon: '⏳',
-      description: 'Wait until a condition is met or timeout',
-      defaultData: {
-        until: {
-          condition: {
-            type: 'opened',
-            field: 'email'
-          },
-          timeout: {
-            days: 7,
-            hours: 0,
-            minutes: 0
-          },
-          checkInterval: {
-            hours: 1,
-            minutes: 0
-          }
-        }
-      }
-    },
-    {
-      type: 'template',
-      label: 'Create Template',
-      icon: '📝',
-      description: 'Create a reusable email template',
-      defaultData: {
-        template: {
-          name: 'New Template',
-          subject: 'Template Subject',
-          content: 'Template content here...',
-          variables: []
-        }
-      }
     }
   ]
 

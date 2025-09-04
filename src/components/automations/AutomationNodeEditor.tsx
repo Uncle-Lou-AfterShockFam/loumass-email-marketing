@@ -202,40 +202,96 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
     </div>
   )
 
-  const renderWaitEditor = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Wait Duration
-          </label>
-          <input
-            type="number"
-            value={nodeData.wait?.duration || 1}
-            onChange={(e) => handleNestedFieldChange('wait', 'duration', parseInt(e.target.value))}
-            min="1"
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-          />
-        </div>
+  const renderWaitEditor = () => {
+    // Get current values, supporting both old and new data structures
+    const getCurrentWaitValues = () => {
+      if (nodeData.wait?.duration !== undefined && nodeData.wait?.unit !== undefined) {
+        // New format: convert to display values
+        const duration = nodeData.wait.duration || 1
+        const unit = nodeData.wait.unit || 'minutes'
+        return { duration, unit }
+      } else if (nodeData.wait?.days !== undefined || nodeData.wait?.hours !== undefined || nodeData.wait?.minutes !== undefined) {
+        // Old format: convert to new format for editing
+        const days = nodeData.wait.days || 0
+        const hours = nodeData.wait.hours || 0
+        const minutes = nodeData.wait.minutes || 0
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Time Unit
-          </label>
-          <select
-            value={nodeData.wait?.unit || 'days'}
-            onChange={(e) => handleNestedFieldChange('wait', 'unit', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-          >
-            <option value="minutes">Minutes</option>
-            <option value="hours">Hours</option>
-            <option value="days">Days</option>
-            <option value="weeks">Weeks</option>
-          </select>
+        if (days > 0) return { duration: days, unit: 'days' }
+        if (hours > 0) return { duration: hours, unit: 'hours' }
+        return { duration: minutes || 1, unit: 'minutes' }
+      }
+      return { duration: 1, unit: 'minutes' }
+    }
+
+    const { duration, unit } = getCurrentWaitValues()
+
+    const handleWaitChange = (field: 'duration' | 'unit', value: any) => {
+      const currentDuration = field === 'duration' ? value : duration
+      const currentUnit = field === 'unit' ? value : unit
+      
+      // Convert to the old format that WaitNode expects
+      const waitData = {
+        mode: 'fixed',
+        days: 0,
+        hours: 0,
+        minutes: 0
+      }
+      
+      // Set the appropriate field based on unit
+      switch (currentUnit) {
+        case 'days':
+          waitData.days = parseInt(currentDuration) || 0
+          break
+        case 'hours':
+          waitData.hours = parseInt(currentDuration) || 0
+          break
+        case 'weeks':
+          waitData.days = (parseInt(currentDuration) || 0) * 7
+          break
+        case 'minutes':
+        default:
+          waitData.minutes = parseInt(currentDuration) || 0
+          break
+      }
+      
+      handleNestedFieldChange('wait', '', waitData)
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Wait Duration
+            </label>
+            <input
+              type="number"
+              value={duration}
+              onChange={(e) => handleWaitChange('duration', e.target.value)}
+              min="1"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Time Unit
+            </label>
+            <select
+              value={unit}
+              onChange={(e) => handleWaitChange('unit', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+            >
+              <option value="minutes">Minutes</option>
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+            </select>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const addRule = () => {
     const currentRules = nodeData.condition?.rules?.conditions || []
@@ -316,6 +372,84 @@ export default function AutomationNodeEditor({ node, isOpen, onClose, onSave }: 
               <option value="unsubscribes">Unsubscribes</option>
             </select>
           </div>
+
+          {/* Email Source Selection - Only show for email-related actions */}
+          {nodeData.condition?.behavior?.action && 
+           (nodeData.condition.behavior.action.includes('opens') || 
+            nodeData.condition.behavior.action.includes('clicks') || 
+            nodeData.condition.behavior.action.includes('replies')) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Track From Email
+              </label>
+              <select
+                value={nodeData.condition?.behavior?.emailSource || 'last_automation_email'}
+                onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                  ...nodeData.condition?.behavior,
+                  emailSource: e.target.value 
+                })}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              >
+                <option value="last_automation_email">Last email from this automation</option>
+                <option value="any_automation_email">Any email from this automation</option>
+                <option value="any_campaign">Any email from campaigns</option>
+                <option value="any_sequence">Any email from sequences</option>
+                <option value="any_email">Any email (automation, campaign, or sequence)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Choose which emails to track behavior from
+              </p>
+            </div>
+          )}
+
+          {/* Specific Email/Campaign Selection - Show when 'any_campaign' or 'any_sequence' is selected */}
+          {nodeData.condition?.behavior?.emailSource === 'any_campaign' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specific Campaign (Optional)
+              </label>
+              <select
+                value={nodeData.condition?.behavior?.specificCampaign || ''}
+                onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                  ...nodeData.condition?.behavior,
+                  specificCampaign: e.target.value 
+                })}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              >
+                <option value="">Any campaign</option>
+                <option value="campaign-1">Welcome Campaign</option>
+                <option value="campaign-2">Product Launch</option>
+                <option value="campaign-3">Newsletter</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Leave blank to track from any campaign
+              </p>
+            </div>
+          )}
+
+          {nodeData.condition?.behavior?.emailSource === 'any_sequence' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specific Sequence (Optional)
+              </label>
+              <select
+                value={nodeData.condition?.behavior?.specificSequence || ''}
+                onChange={(e) => handleNestedFieldChange('condition', 'behavior', { 
+                  ...nodeData.condition?.behavior,
+                  specificSequence: e.target.value 
+                })}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              >
+                <option value="">Any sequence</option>
+                <option value="sequence-1">Onboarding Sequence</option>
+                <option value="sequence-2">Sales Follow-up</option>
+                <option value="sequence-3">Re-engagement</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Leave blank to track from any sequence
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
