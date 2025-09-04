@@ -229,11 +229,27 @@ function AutomationFlowBuilderInner({
     if (!selectedNode) return
     
     setNodes((nds) =>
-      nds.map((node) =>
-        node.id === selectedNode.id
-          ? { ...node, data: { ...node.data, ...updatedData } }
-          : node
-      )
+      nds.map((node) => {
+        if (node.id === selectedNode.id) {
+          // For email nodes, handle emailTemplate separately
+          if (node.type === 'email' && updatedData.emailTemplate) {
+            // Convert single content field to htmlContent and textContent
+            const emailTemplate = updatedData.emailTemplate
+            if (emailTemplate.content && (!emailTemplate.htmlContent || !emailTemplate.textContent)) {
+              emailTemplate.htmlContent = emailTemplate.content.replace(/\n/g, '<br>')
+              emailTemplate.textContent = emailTemplate.content
+              delete emailTemplate.content
+            }
+            return { 
+              ...node, 
+              data: { ...node.data, ...updatedData },
+              emailTemplate: emailTemplate
+            }
+          }
+          return { ...node, data: { ...node.data, ...updatedData } }
+        }
+        return node
+      })
     )
     setShowNodeEditor(false)
     setSelectedNode(null)
@@ -245,12 +261,19 @@ function AutomationFlowBuilderInner({
     const updatedNodes = nodes.map(node => {
       // Extract data without position to avoid duplication
       const { position: dataPosition, ...restData } = node.data || {}
-      return {
+      const nodeUpdate = {
         id: node.id,
         type: restData.type || node.type,
         position: node.position, // Use the node's position, not data.position
         ...restData
       }
+      
+      // Preserve emailTemplate at the root level for email nodes
+      if (node.type === 'email' && (node as any).emailTemplate) {
+        nodeUpdate.emailTemplate = (node as any).emailTemplate
+      }
+      
+      return nodeUpdate
     })
     
     // Include edges for connections between nodes

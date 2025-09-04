@@ -688,6 +688,56 @@ export default function AutomationPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-6">Automation Analytics</h3>
             
+            {stats?.emailEvents && (
+              <div className="space-y-4 mb-6">
+                <h4 className="font-medium text-gray-900">Email Performance</h4>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{stats.emailEvents.counts.sent || 0}</div>
+                    <div className="text-sm text-gray-600">Emails Sent</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">{stats.emailEvents.counts.opened || 0}</div>
+                    <div className="text-sm text-gray-600">Opened</div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">{stats.emailEvents.counts.clicked || 0}</div>
+                    <div className="text-sm text-gray-600">Clicked</div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600">{stats.emailEvents.counts.unsubscribed || 0}</div>
+                    <div className="text-sm text-gray-600">Unsubscribed</div>
+                  </div>
+                </div>
+                
+                {stats.emailEvents.recent && stats.emailEvents.recent.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">Recent Email Activity</h5>
+                    <div className="space-y-2">
+                      {stats.emailEvents.recent.slice(0, 5).map((event: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between py-2 border-b">
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-900">
+                              {event.contact?.firstName} {event.contact?.lastName}
+                            </span>
+                            <span className="text-sm text-gray-500 ml-2">({event.contact?.email})</span>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            event.type === 'SENT' ? 'bg-blue-100 text-blue-800' :
+                            event.type === 'OPENED' ? 'bg-green-100 text-green-800' :
+                            event.type === 'CLICKED' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {event.type}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {stats?.nodeStats && stats.nodeStats.length > 0 ? (
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Node Performance</h4>
