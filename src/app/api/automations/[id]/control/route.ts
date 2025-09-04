@@ -61,6 +61,13 @@ export async function POST(
         if (automation.status === 'ACTIVE') {
           return NextResponse.json({ error: 'Automation is already running' }, { status: 400 })
         }
+        if (automation.status === 'PAUSED') {
+          return NextResponse.json({ error: 'Use resume to continue a paused automation' }, { status: 400 })
+        }
+        // Allow starting from DRAFT or STOPPED status
+        if (!['DRAFT', 'STOPPED'].includes(automation.status)) {
+          return NextResponse.json({ error: 'Can only start automation from draft or stopped status' }, { status: 400 })
+        }
         
         // Validate that automation has at least one email node before starting
         const nodes = Array.isArray(automation.nodes) ? automation.nodes : []

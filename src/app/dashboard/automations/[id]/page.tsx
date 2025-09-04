@@ -495,7 +495,16 @@ export default function AutomationPage() {
         )
       case 'STOPPED':
         return (
-          <span className="text-sm text-gray-500">Automation stopped</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleControlAutomation('start')}
+              disabled={isProcessing}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            >
+              {processingAction === 'start' ? 'Restarting...' : 'Restart Automation'}
+            </button>
+            <span className="text-sm text-gray-500">Automation is stopped</span>
+          </div>
         )
       default:
         return null
