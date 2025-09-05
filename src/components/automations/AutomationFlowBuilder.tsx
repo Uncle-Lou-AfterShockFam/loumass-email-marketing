@@ -20,6 +20,7 @@ import AutomationNodeEditor from './AutomationNodeEditor'
 import dagre from 'dagre'
 
 // Custom node types
+import TriggerNode from './nodes/TriggerNode'
 import EmailNode from './nodes/EmailNode'
 import WaitNode from './nodes/WaitNode'
 import ConditionNode from './nodes/ConditionNode'
@@ -31,6 +32,7 @@ import MoveToNode from './nodes/MoveToNode'
 import TemplateNode from './nodes/TemplateNode'
 
 const nodeTypes = {
+  trigger: TriggerNode,
   email: EmailNode,
   wait: WaitNode,
   condition: ConditionNode,
