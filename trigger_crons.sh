@@ -1,63 +1,81 @@
 #!/bin/bash
 
-# Manual Cron Job Trigger Script
-# This triggers the cron jobs manually to process sequences and automations
+# Comprehensive test script for LOUMASS cron jobs and processing
+# This script tests all the main processing endpoints
 
-# Configuration
-if [ "$1" == "production" ]; then
-    API_URL="https://loumassbeta.vercel.app/api"
-    echo "🌐 Triggering PRODUCTION cron jobs"
-else
-    API_URL="http://localhost:3000/api"
-    echo "💻 Triggering LOCAL cron jobs (use './trigger_crons.sh production' for prod)"
+echo "🚀 LOUMASS COMPREHENSIVE PROCESSING TEST"
+echo "========================================"
+echo "Time: $(date)"
+echo ""
+
+# Read CRON_SECRET from user input if not set
+if [ -z "$CRON_SECRET" ]; then
+    echo "⚠️  CRON_SECRET environment variable not set!"
+    echo "Please enter your CRON_SECRET from Vercel:"
+    read -s CRON_SECRET
+    echo ""
 fi
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-echo -e "${YELLOW}🔄 Manual Cron Job Trigger${NC}"
-echo "================================"
-
-# Function to trigger a cron job
-trigger_cron() {
-    local endpoint=$1
-    local name=$2
+# Test functions
+test_endpoint() {
+    local name="$1"
+    local url="$2"
+    local method="$3"
+    local auth_header="$4"
     
-    echo -e "\n${YELLOW}Triggering ${name}...${NC}"
+    echo "Testing $name..."
+    echo "URL: $url"
     
-    response=$(curl -s -X POST "${API_URL}${endpoint}" \
-        -H "Content-Type: application/json")
-    
-    if echo "$response" | grep -q "success.*true"; then
-        echo -e "${GREEN}✅ ${name} triggered successfully${NC}"
-        echo "$response" | grep -E '"processed"|"enrolled"|"sent"|"result"' || echo "$response"
+    if [ "$method" = "POST" ]; then
+        if [ -n "$auth_header" ]; then
+            response=$(curl -s -X POST "$url" -H "$auth_header" -H "Content-Type: application/json" 2>/dev/null)
+        else
+            response=$(curl -s -X POST "$url" -H "Content-Type: application/json" 2>/dev/null)
+        fi
     else
-        echo -e "${RED}❌ ${name} failed${NC}"
-        echo "$response"
+        if [ -n "$auth_header" ]; then
+            response=$(curl -s "$url" -H "$auth_header" 2>/dev/null)
+        else
+            response=$(curl -s "$url" 2>/dev/null)
+        fi
     fi
+    
+    # Check if response contains success indicators
+    if echo "$response" | grep -q '"success":true\|"message".*success\|"timestamp"' 2>/dev/null; then
+        echo "✅ SUCCESS: $response" | head -c 200
+        echo "..."
+    elif echo "$response" | grep -q '"error"' 2>/dev/null; then
+        echo "❌ ERROR: $response" | head -c 200 
+        echo "..."
+    else
+        echo "❓ UNKNOWN: $response" | head -c 200
+        echo "..."
+    fi
+    echo ""
 }
 
-# Trigger sequence processor
-trigger_cron "/cron/sequences" "Sequence Processor"
+BASE_URL="https://loumassbeta.vercel.app"
+AUTH_HEADER="Authorization: Bearer $CRON_SECRET"
 
-# Trigger automation scheduler
-trigger_cron "/cron/automation-scheduler" "Automation Scheduler"
+echo "1. MANUAL PROCESSING TESTS (No Auth Required)"
+echo "---------------------------------------------------"
+test_endpoint "Manual Automation Execution" "$BASE_URL/api/automations/trigger-manual" "POST" ""
+test_endpoint "Manual Automation Process" "$BASE_URL/api/automations/execute" "POST" ""
 
-# Also trigger the old automation execute endpoint if it exists
-echo -e "\n${YELLOW}Triggering legacy automation executor...${NC}"
-curl -s -X POST "${API_URL}/automations/execute" \
-    -H "Content-Type: application/json" \
-    -H "x-cron-secret: manual-trigger" | grep -E '"success"|"error"' || echo "No response"
+echo ""
+echo "2. CRON JOB TESTS (Requires CRON_SECRET)"
+echo "---------------------------------------------------"
+test_endpoint "Process Campaigns Cron" "$BASE_URL/api/cron/process-campaigns" "GET" "$AUTH_HEADER"
+test_endpoint "Process Sequences Cron" "$BASE_URL/api/cron/process-sequences" "GET" "$AUTH_HEADER" 
+test_endpoint "Automation Scheduler Cron" "$BASE_URL/api/cron/automation-scheduler" "GET" "$AUTH_HEADER"
 
-echo -e "\n${GREEN}═════════════════════════════════${NC}"
-echo -e "${GREEN}✅ All cron jobs triggered!${NC}"
-echo -e "${GREEN}═════════════════════════════════${NC}"
+echo ""
+echo "3. CRON JOB TESTS (POST Method)"
+echo "---------------------------------------------------" 
+test_endpoint "Automation Scheduler POST" "$BASE_URL/api/cron/automation-scheduler" "POST" "$AUTH_HEADER"
 
-echo -e "\n${YELLOW}📍 Next steps:${NC}"
-echo "1. Check sequences: ${API_URL%/api}/dashboard/sequences"
-echo "2. Check automations: ${API_URL%/api}/dashboard/automations"
-echo "3. Check interactions: ${API_URL%/api}/dashboard/interactions"
-echo "4. Check server logs for processing details"
+echo ""
+echo "✅ Testing completed! Check the results above."
+echo "📝 If you see SUCCESS messages, the system is working!"
+echo "📝 If you see ERROR messages, there may be configuration issues."
+echo ""
