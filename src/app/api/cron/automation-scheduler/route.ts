@@ -257,3 +257,9 @@ async function cleanupOldEvents() {
     console.error('Error cleaning up old events:', error)
   }
 }
+
+// Add POST method for manual triggering
+export async function POST(request: NextRequest) {
+  console.log('Manual trigger of automation scheduler')
+  return GET(request)
+}
