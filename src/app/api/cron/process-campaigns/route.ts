@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   try {
     // Verify the request is authorized (using a secret key)
     const authHeader = request.headers.get('authorization')
-    const expectedKey = process.env.CRON_SECRET_KEY
+    const expectedKey = process.env.CRON_SECRET
     
     if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {
       return NextResponse.json(

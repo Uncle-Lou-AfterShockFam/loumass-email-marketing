@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
     console.log(`=== CRON JOB AUTH CHECK ===`)
     console.log(`Auth Header: ${authHeader || 'Missing'}`)
     console.log(`User Agent: ${userAgent || 'Missing'}`)
-    console.log(`Expected: Bearer ${process.env.CRON_SECRET_KEY}`)
+    console.log(`Expected: Bearer ${process.env.CRON_SECRET}`)
     console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
     
     // In production, check if it's from Vercel cron or has correct auth
     if (process.env.NODE_ENV === 'production') {
       const isVercelCron = userAgent?.includes('vercel-cron') || userAgent?.includes('Vercel-Cron')
-      const hasValidAuth = authHeader === `Bearer ${process.env.CRON_SECRET_KEY}`
+      const hasValidAuth = authHeader === `Bearer ${process.env.CRON_SECRET}`
       
       if (!isVercelCron && !hasValidAuth) {
         console.error('Unauthorized cron job request - Not from Vercel cron and invalid auth')
