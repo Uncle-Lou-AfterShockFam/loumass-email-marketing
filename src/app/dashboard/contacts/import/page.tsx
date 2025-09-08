@@ -103,7 +103,7 @@ export default function ImportContactsPage() {
               )}
             </div>
             {fileError && (
-              <Alert variant="destructive">
+              <Alert className="border-red-200 bg-red-50 text-red-800">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{fileError}</AlertDescription>
               </Alert>
