@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/automation-scheduler",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/token-refresh",
+      "schedule": "*/30 * * * *"
     }
   ]
 }
