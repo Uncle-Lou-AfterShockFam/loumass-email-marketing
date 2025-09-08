@@ -1,6 +1,7 @@
 export async function GET() {
   return Response.json({ 
     message: "🚀 COMPREHENSIVE ENVIRONMENT VARIABLE CHECK",
+    version: "2.0.0-deployed",
     timestamp: new Date().toISOString(),
     env: {
       // Authentication
