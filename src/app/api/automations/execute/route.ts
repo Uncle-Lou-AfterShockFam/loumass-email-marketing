@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       timestamp: new Date().toISOString(),
-      message: 'Automation execution cycle completed'
+      message: 'Automation execution cycle completed',
+      deployment: 'v1.7-AUTOMATION-EXECUTION-FIXED-DEPLOYED',
+      fixesApplied: ['currentNodeId enrollment fix', 'recovery logic', 'direct database repair']
     })
 
   } catch (error) {
