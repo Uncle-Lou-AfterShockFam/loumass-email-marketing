@@ -14,18 +14,68 @@ export async function POST() {
       )
     }
 
-    // Delete Gmail token
-    await prisma.gmailToken.delete({
-      where: { userId: session.user.id }
-    }).catch(() => {
-      // Ignore error if token doesn't exist
+    console.log(`🔌 Disconnecting Gmail for user: ${session.user.id}`)
+
+    // Remove Gmail token from database
+    const deletedTokens = await prisma.gmailToken.deleteMany({
+      where: {
+        userId: session.user.id
+      }
     })
 
-    return NextResponse.json({ success: true })
+    console.log(`🗑️ Deleted ${deletedTokens.count} Gmail tokens`)
+
+    // Get existing user variables to preserve historical data
+    const existingUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { variables: true }
+    })
+
+    const existingVariables = existingUser?.variables || {}
+
+    // Update user variables to reflect disconnection
+    const disconnectionDate = new Date().toISOString()
+    const updatedVariables = {
+      ...existingVariables,
+      // Mark Gmail as disconnected
+      gmailConnected: false,
+      gmailDisconnectionDate: disconnectionDate,
+      lastGmailDisconnectionDate: disconnectionDate,
+      
+      // Preserve historical data but clear current connection info
+      previousGmailEmail: existingVariables.gmailEmail, // Preserve for analytics
+      gmailEmail: null, // Clear current email
+      
+      // Update disconnection tracking
+      gmailDisconnectionCount: ((existingVariables.gmailDisconnectionCount as number) || 0) + 1,
+      
+      // Clear sensitive current connection data
+      oauthScopes: null,
+      tokenType: null,
+      lastTokenRefresh: null
+    }
+
+    // Update user with disconnection variables
+    await prisma.user.update({
+      where: {
+        id: session.user.id
+      },
+      data: {
+        variables: updatedVariables
+      }
+    })
+
+    console.log(`✅ Gmail disconnected and user variables updated for user: ${session.user.id}`)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Gmail account disconnected successfully',
+      timestamp: disconnectionDate
+    })
   } catch (error) {
     console.error('Gmail disconnect error:', error)
     return NextResponse.json(
-      { error: 'Failed to disconnect Gmail' },
+      { error: 'Failed to disconnect Gmail account' },
       { status: 500 }
     )
   }

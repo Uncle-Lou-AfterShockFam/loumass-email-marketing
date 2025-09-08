@@ -17,8 +17,8 @@ export async function GET() {
       NEON_DATABASE_URL: process.env.NEON_DATABASE_URL ? 'SET' : 'MISSING',
       
       // Cron Jobs
-      CRON_SECRET: process.env.CRON_SECRET ? 'SET' : 'MISSING',
-      CRON_SECRET_KEY: process.env.CRON_SECRET_KEY ? 'SET (OLD NAME)' : 'NOT SET',
+      CRON_SECRET: process.env.CRON_SECRET ? `SET (${process.env.CRON_SECRET.substring(0, 10)}...)` : 'MISSING',
+      CRON_SECRET_KEY: process.env.CRON_SECRET_KEY ? `SET (OLD NAME: ${process.env.CRON_SECRET_KEY.substring(0, 10)}...)` : 'NOT SET',
       
       // App URLs
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || 'MISSING',

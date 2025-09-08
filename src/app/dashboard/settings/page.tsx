@@ -1,10 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import GmailConnection from '@/components/settings/GmailConnection'
+import AutomaticGmailConnection from '@/components/settings/AutomaticGmailConnection'
 import TrackingDomain from '@/components/settings/TrackingDomain'
 import AccountSettings from '@/components/settings/AccountSettings'
-import OAuthCredentials from '@/components/settings/OAuthCredentials'
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -13,12 +12,12 @@ export default async function SettingsPage() {
     return null
   }
 
-  const [gmailToken, user, trackingDomain] = await Promise.all([
-    prisma.gmailToken.findUnique({
-      where: { userId: session.user.id }
-    }),
+  const [user, trackingDomain] = await Promise.all([
     prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: session.user.id },
+      include: {
+        gmailToken: true // Include Gmail token data
+      }
     }),
     prisma.trackingDomain.findFirst({
       where: { userId: session.user.id }
@@ -33,12 +32,8 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        <OAuthCredentials />
-        
-        <GmailConnection 
-          isConnected={!!gmailToken}
-          email={gmailToken?.email}
-        />
+        {/* 🚀 NEW AUTOMATIC GMAIL CONNECTION - No manual OAuth setup needed! */}
+        <AutomaticGmailConnection />
 
         <TrackingDomain 
           domain={trackingDomain}
