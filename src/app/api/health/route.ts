@@ -8,7 +8,7 @@ export async function GET() {
       message: 'LOUMASS API is working',
       version: 'v1.8-AUTO-REFRESH-GMAIL-TOKENS',
       deploymentTime: new Date().toISOString(),
-      commitId: '69c51f4',
+      commitId: 'df27cad',
       automationFixStatus: 'DEPLOYED_WITH_AUTO_TOKEN_REFRESH',
       fixesIncluded: [
         'currentNodeId setting', 
