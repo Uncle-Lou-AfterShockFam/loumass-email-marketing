@@ -345,7 +345,7 @@ export class AutomationExecutor {
       throw new Error('Automation not found')
     }
 
-    const automationFlow = automation.nodes as AutomationFlow
+    const automationFlow = automation.nodes as unknown as AutomationFlow
     const triggerNode = automationFlow.nodes.find(n => n.type === 'trigger')
     
     if (!triggerNode) {
