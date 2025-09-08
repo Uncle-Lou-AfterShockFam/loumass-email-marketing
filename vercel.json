@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/sequences",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/1 * * * *"
     },
     {
       "path": "/api/cron/automation-scheduler",
