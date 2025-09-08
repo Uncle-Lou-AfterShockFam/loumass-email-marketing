@@ -190,19 +190,21 @@ export class EmailNodeProcessor {
         }
       }
       
-      // Log the error for debugging
+      // Log the error for debugging - using BOUNCED as closest event type for failures
+      // Store actual failure reason in eventData
       await prisma.emailEvent.create({
         data: {
           userId: execution.automation.userId,
           contactId: execution.contact.id,
-          type: 'FAILED',
+          type: 'BOUNCED', // Using BOUNCED to indicate email failure
           subject: execution.executionData?.lastEmail?.subject || 'Email Failed',
           details: `Failed via automation: ${execution.automation.name}`,
           eventData: {
             automationId: execution.automation.id,
             executionId: execution.id,
             error: errorMessage,
-            failedAt: new Date().toISOString()
+            failedAt: new Date().toISOString(),
+            actualType: 'FAILED' // Store the real type in eventData
           }
         }
       }).catch(dbError => {
