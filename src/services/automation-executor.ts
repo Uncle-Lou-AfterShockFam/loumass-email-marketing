@@ -372,6 +372,35 @@ export class AutomationExecutor {
     })
 
     console.log(`✅ ENROLLED ${contactIds.length} contacts starting at node: ${startingNodeId}`)
+
+    // 🚀 CRITICAL FIX: Immediately process the enrolled executions (like sequences do!)
+    console.log('🚀 Processing enrolled executions immediately...')
+    
+    // Fetch the created executions
+    const createdExecutions = await prisma.automationExecution.findMany({
+      where: {
+        automationId,
+        contactId: { in: contactIds },
+        status: AutomationExecStatus.ACTIVE
+      },
+      include: {
+        automation: true,
+        contact: true
+      }
+    })
+
+    // Process each execution immediately
+    for (const execution of createdExecutions) {
+      try {
+        console.log(`⚡ Processing execution for contact ${execution.contact.email}`)
+        await this.processExecution(execution)
+      } catch (error) {
+        console.error(`Failed to process initial execution for ${execution.contact.email}:`, error)
+        // Don't throw - continue with other executions
+      }
+    }
+
+    console.log(`✅ Processed ${createdExecutions.length} executions immediately after enrollment`)
   }
 
   /**
