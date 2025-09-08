@@ -76,7 +76,7 @@ export class GmailClient {
   }
 
   async getGmailService(userId: string, email: string): Promise<any> {
-    console.log('Getting Gmail service for user:', userId, 'email:', email)
+    console.log('🔑 Getting Gmail service for user:', userId, 'email:', email)
     
     const gmailToken = await prisma.gmailToken.findUnique({
       where: {
@@ -85,66 +85,128 @@ export class GmailClient {
     })
 
     if (!gmailToken) {
-      console.error('No Gmail token found for user:', userId)
-      throw new Error('No Gmail token found')
+      console.error('❌ No Gmail token found for user:', userId)
+      throw new Error('Gmail account not connected. Please reconnect your Gmail account in Settings.')
     }
 
-    console.log('Gmail token found, expires at:', gmailToken.expiresAt)
+    console.log('✅ Gmail token found, expires at:', gmailToken.expiresAt)
 
-    // Check if token needs refresh
+    // Check if token needs refresh (refresh 5 minutes early to prevent edge cases)
     const now = new Date()
-    if (gmailToken.expiresAt <= now) {
-      console.log('Token expired, refreshing...')
-      await this.refreshToken(userId, email)
-      return this.getGmailService(userId, email)
+    const refreshBuffer = new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes buffer
+    
+    if (gmailToken.expiresAt <= refreshBuffer) {
+      console.log('🔄 Token expired or expiring soon, refreshing...')
+      try {
+        await this.refreshToken(userId, email)
+        // Get the updated token after refresh
+        const refreshedToken = await prisma.gmailToken.findUnique({
+          where: { userId }
+        })
+        
+        if (!refreshedToken) {
+          throw new Error('Failed to retrieve refreshed token')
+        }
+        
+        console.log('✅ Token refreshed successfully, new expiry:', refreshedToken.expiresAt)
+        
+        // Set credentials with refreshed token
+        this.oauth2Client.setCredentials({
+          access_token: refreshedToken.accessToken,
+          refresh_token: refreshedToken.refreshToken,
+          expiry_date: refreshedToken.expiresAt.getTime()
+        })
+        
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh Gmail token:', refreshError)
+        throw new Error('Gmail token expired and could not be refreshed. Please reconnect your Gmail account in Settings.')
+      }
+    } else {
+      console.log('✅ Token is valid, setting credentials...')
+      this.oauth2Client.setCredentials({
+        access_token: gmailToken.accessToken,
+        refresh_token: gmailToken.refreshToken,
+        expiry_date: gmailToken.expiresAt.getTime()
+      })
     }
 
-    console.log('Setting OAuth2 credentials...')
-    this.oauth2Client.setCredentials({
-      access_token: gmailToken.accessToken,
-      refresh_token: gmailToken.refreshToken,
-      expiry_date: gmailToken.expiresAt.getTime()
-    })
-
-    console.log('Creating Gmail service instance...')
+    console.log('📧 Creating Gmail service instance...')
     const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client })
 
-    console.log('Gmail service created successfully')
+    console.log('✅ Gmail service created successfully')
     return gmail
   }
 
   private async refreshToken(userId: string, email: string) {
+    console.log('🔄 Refreshing Gmail token for user:', userId)
+    
     const gmailToken = await prisma.gmailToken.findUnique({
       where: {
         userId
       }
     })
 
-    if (!gmailToken || !gmailToken.refreshToken) {
-      throw new Error('No refresh token available')
+    if (!gmailToken) {
+      console.error('❌ No Gmail token found during refresh for user:', userId)
+      throw new Error('Gmail token not found')
     }
 
-    this.oauth2Client.setCredentials({
-      refresh_token: gmailToken.refreshToken
-    })
-
-    const { credentials } = await this.oauth2Client.refreshAccessToken()
-    
-    // Calculate proper expiry time for refreshed token
-    let expiresAt: Date
-    if (credentials.expiry_date) {
-      expiresAt = new Date(credentials.expiry_date)
-    } else {
-      // Default to 1 hour from now (OAuth2 access tokens typically expire in 1 hour)
-      expiresAt = new Date(Date.now() + 3600 * 1000)
+    if (!gmailToken.refreshToken) {
+      console.error('❌ No refresh token available for user:', userId)
+      throw new Error('No refresh token available. Please reconnect your Gmail account.')
     }
-    
-    await prisma.gmailToken.update({
-      where: { id: gmailToken.id },
-      data: {
-        accessToken: credentials.access_token!,
-        expiresAt
+
+    try {
+      console.log('🔑 Setting refresh token credentials...')
+      this.oauth2Client.setCredentials({
+        refresh_token: gmailToken.refreshToken
+      })
+
+      console.log('🌐 Calling Google OAuth to refresh access token...')
+      const { credentials } = await this.oauth2Client.refreshAccessToken()
+      
+      if (!credentials.access_token) {
+        throw new Error('No access token returned from refresh')
       }
-    })
+      
+      // Calculate proper expiry time for refreshed token
+      let expiresAt: Date
+      if (credentials.expiry_date) {
+        expiresAt = new Date(credentials.expiry_date)
+        console.log('✅ Got expiry from Google:', expiresAt)
+      } else {
+        // Default to 1 hour from now (OAuth2 access tokens typically expire in 1 hour)
+        expiresAt = new Date(Date.now() + 3600 * 1000)
+        console.log('⚠️ No expiry from Google, defaulting to 1 hour:', expiresAt)
+      }
+      
+      console.log('💾 Updating database with new token...')
+      await prisma.gmailToken.update({
+        where: { id: gmailToken.id },
+        data: {
+          accessToken: credentials.access_token,
+          expiresAt,
+          // Update refresh token if Google provided a new one
+          ...(credentials.refresh_token && { refreshToken: credentials.refresh_token })
+        }
+      })
+      
+      console.log('✅ Gmail token refreshed successfully! New expiry:', expiresAt)
+      
+    } catch (error) {
+      console.error('❌ Failed to refresh Gmail token:', error)
+      
+      // Check if it's a Google OAuth error
+      if (error instanceof Error) {
+        if (error.message.includes('invalid_grant')) {
+          throw new Error('Gmail refresh token is invalid or expired. Please reconnect your Gmail account in Settings.')
+        } else if (error.message.includes('unauthorized')) {
+          throw new Error('Gmail access has been revoked. Please reconnect your Gmail account in Settings.')
+        }
+      }
+      
+      // Generic error for other cases
+      throw new Error('Failed to refresh Gmail token. Please try again or reconnect your Gmail account in Settings.')
+    }
   }
 }

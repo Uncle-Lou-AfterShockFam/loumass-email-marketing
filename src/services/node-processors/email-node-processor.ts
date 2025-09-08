@@ -95,7 +95,8 @@ export class EmailNodeProcessor {
         finalContent = await this.addTrackingToEmail(processedEmail.content, trackingId, execution.automation.userId)
       }
 
-      // Send email using GmailService
+      // Send email using GmailService (with automatic token refresh)
+      console.log('📧 Sending email via Gmail service...')
       const emailResult = await this.gmailService.sendEmail(
         execution.automation.userId,
         gmailToken.email,
@@ -109,6 +110,7 @@ export class EmailNodeProcessor {
           fromName: nodeData.email?.fromName || 'LOUMASS'
         }
       )
+      console.log('✅ Email sent successfully:', emailResult.messageId)
 
       // Create email event record
       await prisma.emailEvent.create({
@@ -167,12 +169,50 @@ export class EmailNodeProcessor {
       }
 
     } catch (error) {
-      console.error('Error in email node processor:', error)
+      console.error('❌ Error in email node processor:', error)
+      
+      // Enhanced error handling for different types of Gmail errors
+      let errorMessage = 'Unknown email error'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Gmail account not connected')) {
+          errorMessage = 'Gmail account not connected. Please reconnect your Gmail account in Settings.'
+        } else if (error.message.includes('Gmail token expired and could not be refreshed')) {
+          errorMessage = 'Gmail token expired. Please reconnect your Gmail account in Settings.'
+        } else if (error.message.includes('Invalid Credentials') || error.message.includes('unauthorized')) {
+          errorMessage = 'Gmail authentication failed. Please reconnect your Gmail account in Settings.'
+        } else if (error.message.includes('quota')) {
+          errorMessage = 'Gmail API quota exceeded. Please try again later.'
+        } else if (error.message.includes('Rate limit')) {
+          errorMessage = 'Gmail rate limit exceeded. Email will be retried automatically.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      // Log the error for debugging
+      await prisma.emailEvent.create({
+        data: {
+          userId: execution.automation.userId,
+          contactId: execution.contact.id,
+          type: 'FAILED',
+          subject: execution.executionData?.lastEmail?.subject || 'Email Failed',
+          details: `Failed via automation: ${execution.automation.name}`,
+          eventData: {
+            automationId: execution.automation.id,
+            executionId: execution.id,
+            error: errorMessage,
+            failedAt: new Date().toISOString()
+          }
+        }
+      }).catch(dbError => {
+        console.error('Failed to log email error to database:', dbError)
+      })
       
       return {
         completed: false,
         failed: true,
-        error: error instanceof Error ? error.message : 'Unknown email error'
+        error: errorMessage
       }
     }
   }

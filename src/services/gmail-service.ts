@@ -43,6 +43,7 @@ export class GmailService {
     console.log('  messageId for In-Reply-To:', emailData.messageId)
     
     try {
+      // Attempt to get Gmail service (with automatic token refresh if needed)
       const gmail = await this.gmailClient.getGmailService(userId, gmailAddress)
       
       // Build email message
@@ -62,14 +63,38 @@ export class GmailService {
         console.log('Could not decode message for debug'  )
       }
       
-      // Send the email
-      const response = await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: message,
-          threadId: emailData.threadId // For threading follow-ups
+      // Send the email (with retry for token refresh)
+      let response
+      try {
+        response = await gmail.users.messages.send({
+          userId: 'me',
+          requestBody: {
+            raw: message,
+            threadId: emailData.threadId // For threading follow-ups
+          }
+        })
+      } catch (sendError: any) {
+        console.log('❌ First send attempt failed:', sendError?.message)
+        
+        // Check if it's a token-related error
+        if (sendError?.code === 401 || sendError?.message?.includes('Invalid Credentials')) {
+          console.log('🔄 Token error detected, refreshing and retrying...')
+          
+          // Force token refresh and retry
+          const refreshedGmail = await this.gmailClient.getGmailService(userId, gmailAddress)
+          response = await refreshedGmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+              raw: message,
+              threadId: emailData.threadId
+            }
+          })
+          console.log('✅ Retry after token refresh succeeded')
+        } else {
+          // Re-throw non-token errors
+          throw sendError
         }
-      })
+      }
 
       // Fetch the sent message to get the Message-ID header
       let messageIdHeader: string | undefined
