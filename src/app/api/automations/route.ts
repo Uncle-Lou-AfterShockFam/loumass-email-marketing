@@ -177,6 +177,63 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // 🚀 AUTO-GENERATE FLOW: If no nodes provided, create a basic email automation
+    if (flowData.nodes.length === 0) {
+      console.log('🔧 AUTO-GENERATING: No nodes provided, creating basic email automation...')
+      
+      const timestamp = Date.now()
+      const triggerNode = {
+        id: `trigger-${timestamp}`,
+        type: 'trigger',
+        name: 'Automation Start',
+        position: { x: 50, y: 100 },
+        data: {
+          label: 'Automation Start',
+          triggerType: triggerEvent
+        }
+      }
+      
+      const emailNode = {
+        id: `email-${timestamp + 1}`,
+        type: 'email',
+        name: 'Send Email',
+        position: { x: 300, y: 100 },
+        emailTemplate: {
+          subject: 'Welcome!',
+          content: `Hi {{firstName}},
+
+Welcome to our community! We're excited to have you on board.
+
+Best regards,
+The Team`,
+          trackingEnabled: true
+        },
+        data: {
+          label: 'Send Email'
+        }
+      }
+      
+      const edge = {
+        id: `trigger-to-${emailNode.id}`,
+        source: triggerNode.id,
+        target: emailNode.id,
+        type: 'smoothstep'
+      }
+      
+      flowData = {
+        nodes: [triggerNode, emailNode],
+        edges: [edge]
+      }
+      
+      console.log('✅ AUTO-GENERATED FLOW:', {
+        triggerNodeId: triggerNode.id,
+        emailNodeId: emailNode.id,
+        edgeId: edge.id,
+        totalNodes: 2,
+        totalEdges: 1
+      })
+    }
+    
     // 🚨 DEBUG: Log flow data before trigger addition
     console.log('📊 FLOW DATA BEFORE TRIGGER:', {
       nodesCount: flowData.nodes.length,

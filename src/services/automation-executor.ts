@@ -152,31 +152,44 @@ export class AutomationExecutor {
    */
   private async processExecution(execution: any) {
     const automationFlow = execution.automation.nodes as AutomationFlow
-    const currentNodeId = execution.currentNodeId
+    let currentNodeId = execution.currentNodeId
+
+    console.log(`🎯 PROCESSING EXECUTION ${execution.id} - Current Node: ${currentNodeId || 'NULL'}`)
 
     // Find current node or start from trigger
     let currentNode: NodeData | null = null
     
     if (currentNodeId) {
       currentNode = automationFlow.nodes.find(n => n.id === currentNodeId) || null
+      console.log(`📍 Found current node: ${currentNode?.type} (${currentNode?.id})`)
     } else {
-      // Find the trigger node to start
+      // RECOVERY: Find the trigger node to start (for broken executions)
+      console.log(`🚨 RECOVERY MODE: No currentNodeId set, finding trigger node...`)
       const triggerNode = automationFlow.nodes.find(n => n.type === 'trigger')
       if (triggerNode) {
         // Move to first node after trigger
         const nextNode = this.getNextNode(triggerNode.id, automationFlow)
         if (nextNode) {
           currentNode = nextNode
+          currentNodeId = nextNode.id
+          // Update the execution with the correct starting node
+          await prisma.automationExecution.update({
+            where: { id: execution.id },
+            data: { currentNodeId: nextNode.id }
+          })
+          console.log(`✅ RECOVERY: Set starting node to ${nextNode.type} (${nextNode.id})`)
         }
       }
     }
 
     if (!currentNode) {
-      // No more nodes, mark as completed
+      console.log(`🏁 No more nodes to process, completing execution ${execution.id}`)
       await this.completeExecution(execution.id)
       return
     }
 
+    console.log(`⚡ PROCESSING NODE: ${currentNode.type} (${currentNode.id})`)
+    
     // Process the current node
     const result = await this.processNode(execution, currentNode)
 
@@ -322,10 +335,32 @@ export class AutomationExecutor {
    * Enroll contacts in an automation
    */
   private async enrollContacts(automationId: string, contactIds: string[]) {
+    // Get automation flow to find starting node
+    const automation = await prisma.automation.findUnique({
+      where: { id: automationId },
+      select: { nodes: true }
+    })
+
+    if (!automation) {
+      throw new Error('Automation not found')
+    }
+
+    const automationFlow = automation.nodes as AutomationFlow
+    const triggerNode = automationFlow.nodes.find(n => n.type === 'trigger')
+    
+    if (!triggerNode) {
+      throw new Error('No trigger node found in automation')
+    }
+
+    // Find the first node after trigger to start execution
+    const firstNode = this.getNextNode(triggerNode.id, automationFlow)
+    const startingNodeId = firstNode ? firstNode.id : null
+
     const enrollments = contactIds.map(contactId => ({
       automationId,
       contactId,
       status: AutomationExecStatus.ACTIVE,
+      currentNodeId: startingNodeId, // 🚨 CRITICAL FIX: Set starting node
       executionData: { variables: {} },
       enteredAt: new Date(),
       startedAt: new Date()
@@ -335,6 +370,8 @@ export class AutomationExecutor {
       data: enrollments,
       skipDuplicates: true
     })
+
+    console.log(`✅ ENROLLED ${contactIds.length} contacts starting at node: ${startingNodeId}`)
   }
 
   /**
