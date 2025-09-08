@@ -82,11 +82,14 @@ async function debugBrokenAutomation() {
       }
     })
     
-    // Check for email events
+    // Check for email events (automationId field doesn't exist, use userId and recent time)
     console.log(`\n📧 EMAIL EVENTS:`)
     const emailEvents = await prisma.emailEvent.findMany({
       where: { 
-        automationId: automationId 
+        userId: automation.userId,
+        timestamp: {
+          gte: new Date(Date.now() - 3600000) // Last hour
+        }
       },
       orderBy: { timestamp: 'desc' },
       take: 10

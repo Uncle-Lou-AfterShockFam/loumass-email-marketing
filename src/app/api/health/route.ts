@@ -6,7 +6,9 @@ export async function GET() {
       status: 'ok', 
       timestamp: new Date().toISOString(),
       message: 'LOUMASS API is working',
-      version: 'v1.5-AUTOMATION-FIXES-DEPLOYED'
+      version: 'v1.6-CRITICAL-AUTOMATION-EXECUTION-FIXES',
+      deploymentTime: new Date().toISOString(),
+      fixesIncluded: ['currentNodeId setting', 'auto-generation', 'recovery logic']
     })
   } catch (error) {
     return NextResponse.json(
