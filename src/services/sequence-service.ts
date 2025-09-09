@@ -640,11 +640,18 @@ export class SequenceService {
       }
     } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId) {
       console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
-      console.log('   This suggests the first email in sequence did not store thread ID properly.')
-      console.log('   This follow-up email will start a new thread.')
+      console.log('   Checking for stored Message-ID header for threading...')
       
-      // Start a new thread but maintain subject threading for better continuity
-      threadId = undefined
+      // CRITICAL FIX: Check if we have a Message-ID header stored for threading
+      if (enrollment.messageIdHeader) {
+        console.log('✅ Found stored Message-ID header for threading:', enrollment.messageIdHeader)
+        messageIdForReply = enrollment.messageIdHeader
+        // We don't have a gmailThreadId, but we can still use threading headers
+        threadId = undefined
+      } else {
+        console.log('   No Message-ID header stored either. This follow-up email will start a new thread.')
+        threadId = undefined
+      }
       
       // For better thread appearance, maintain the original subject or add "Re:" prefix
       const steps = Array.isArray(enrollment.sequence.steps) ? 
