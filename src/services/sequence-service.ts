@@ -528,12 +528,14 @@ export class SequenceService {
     let threadId: string | undefined
     let messageIdForReply: string | undefined
     
-    // ULTIMATE FIX: If replyToThread is true and we have a stored Message-ID, USE IT!
-    // This ensures threading works for ALL scenarios
-    if (stepToExecute.replyToThread && enrollment.messageIdHeader) {
-      console.log('🎯 ULTIMATE THREADING FIX: Found stored Message-ID, will use for threading')
+    // CRITICAL FIX: For standalone sequences, always use stored Message-ID for threading
+    // This must happen BEFORE any other threading logic
+    if (stepToExecute.replyToThread && enrollment.messageIdHeader && !enrollment.triggerRecipientId) {
+      console.log('🎯 STANDALONE SEQUENCE THREADING: Using stored Message-ID')
       messageIdForReply = enrollment.messageIdHeader
-      console.log('  Message-ID:', messageIdForReply)
+      threadId = enrollment.gmailThreadId || undefined
+      console.log('  Message-ID for threading:', messageIdForReply)
+      console.log('  Thread ID:', threadId)
     }
     
     // Check if this step should reply to thread
@@ -591,7 +593,7 @@ export class SequenceService {
       }
     }
     
-    if (stepToExecute.replyToThread && enrollment.gmailThreadId) {
+    if (stepToExecute.replyToThread && enrollment.gmailThreadId && !messageIdForReply) {
       threadId = enrollment.gmailThreadId
       
       // Use stored Message-ID header if available, otherwise fetch it
@@ -631,15 +633,7 @@ export class SequenceService {
       console.log('  - stepToExecute.replyToThread:', stepToExecute.replyToThread)
       console.log('  - enrollment.gmailThreadId:', enrollment.gmailThreadId)
       console.log('  - enrollment.messageIdHeader:', enrollment.messageIdHeader)
-      console.log('  - messageIdForReply (before fix):', messageIdForReply)
-      
-      // CRITICAL FIX: ALWAYS use the stored Message-ID for threading when replyToThread is true
-      // This ensures threading works for ALL follow-up emails in standalone sequences
-      if (stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
-        console.log('🚨 CRITICAL FIX: Setting messageIdForReply from stored Message-ID for threading')
-        messageIdForReply = enrollment.messageIdHeader
-        console.log('✅ FIXED: Threading will now work! Message-ID:', messageIdForReply)
-      }
+      console.log('  - messageIdForReply:', messageIdForReply)
       
       // Double-check we have a valid Message-ID format
       if (messageIdForReply && !messageIdForReply.includes('@')) {
@@ -647,7 +641,7 @@ export class SequenceService {
         console.log('   This might be a threadId, clearing it to prevent broken threading')
         messageIdForReply = undefined
       }
-    } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId) {
+    } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId && !messageIdForReply) {
       console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
       console.log('   Checking for stored Message-ID header for threading...')
       
