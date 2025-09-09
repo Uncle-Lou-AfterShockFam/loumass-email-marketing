@@ -208,16 +208,28 @@ export class GmailService {
       console.log('  Original Message-ID to reference:', emailData.messageId)
       console.log('  Gmail Thread ID (if any):', emailData.threadId)
       
-      // CRITICAL SAFEGUARD: Ensure messageId looks like a proper Message-ID, not a threadId
-      if (emailData.messageId.includes('@') && (emailData.messageId.includes('<') || emailData.messageId.includes('CAM'))) {
-        mailOptions.inReplyTo = emailData.messageId
-        mailOptions.references = emailData.messageId
+      // CRITICAL FIX: Accept any Message-ID containing '@' as valid
+      // Message-IDs from Gmail might not always have angle brackets when stored
+      if (emailData.messageId.includes('@')) {
+        // Ensure Message-ID has proper angle brackets for headers
+        let formattedMessageId = emailData.messageId
+        if (!formattedMessageId.startsWith('<')) {
+          formattedMessageId = '<' + formattedMessageId
+        }
+        if (!formattedMessageId.endsWith('>')) {
+          formattedMessageId = formattedMessageId + '>'
+        }
+        
+        mailOptions.inReplyTo = formattedMessageId
+        mailOptions.references = formattedMessageId
         console.log('✅ Threading headers SUCCESSFULLY added to message:')
+        console.log('  - Original messageId:', emailData.messageId)
+        console.log('  - Formatted for headers:', formattedMessageId)
         console.log('  - In-Reply-To:', mailOptions.inReplyTo)
         console.log('  - References:', mailOptions.references)
       } else {
-        console.log('❌ CRITICAL ERROR: messageId does not look like a proper Message-ID:', emailData.messageId)
-        console.log('   This might be a threadId being passed as messageId - skipping threading headers')
+        console.log('❌ CRITICAL ERROR: messageId does not contain @ symbol:', emailData.messageId)
+        console.log('   This is likely a threadId being passed as messageId')
         console.log('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
         console.log('   HEADERS NOT ADDED - This email will NOT thread for recipients!')
       }

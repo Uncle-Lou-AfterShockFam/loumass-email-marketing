@@ -640,17 +640,37 @@ export class SequenceService {
       let messageIdHeader: string | undefined
       if (result.messageId && gmailToken) {
         try {
+          console.log('🔍 FETCHING MESSAGE-ID HEADER FOR THREADING...')
+          console.log('  Gmail internal ID:', result.messageId)
+          console.log('  Step index:', stepToExecuteIndex)
+          console.log('  Is first email:', stepToExecuteIndex === 0)
+          
           const messageHeaders = await this.gmailFetchService.getMessageHeaders(
             enrollment.sequence.userId,
             gmailToken.email,
             result.messageId
           )
           messageIdHeader = messageHeaders.messageId
-          console.log('📧 Fetched proper Message-ID header for threading:', messageIdHeader)
-          console.log('📧 Gmail internal ID (NOT used for threading):', result.messageId)
+          
+          console.log('📧 THREADING HEADER CAPTURED:')
+          console.log('  Message-ID header:', messageIdHeader)
+          console.log('  Has @ symbol:', messageIdHeader?.includes('@'))
+          console.log('  Has angle brackets:', messageIdHeader?.startsWith('<') && messageIdHeader?.endsWith('>'))
+          console.log('  Gmail internal ID (NOT for threading):', result.messageId)
+          console.log('  Gmail thread ID:', result.threadId)
+          
+          // Strip angle brackets if present for storage (we'll add them back when using)
+          if (messageIdHeader && messageIdHeader.startsWith('<') && messageIdHeader.endsWith('>')) {
+            const strippedId = messageIdHeader.slice(1, -1)
+            console.log('  Stripped for storage:', strippedId)
+          }
         } catch (error) {
           console.error('❌ Failed to fetch Message-ID after sending:', error)
         }
+      } else {
+        console.log('⚠️ Cannot fetch Message-ID header:')
+        console.log('  Has result.messageId:', !!result.messageId)
+        console.log('  Has gmailToken:', !!gmailToken)
       }
       
       console.log(`✅ Email sent successfully!`)
@@ -659,15 +679,22 @@ export class SequenceService {
       console.log(`   Message-ID Header: ${messageIdHeader || 'Not captured'}`)
       
       // Update enrollment with Gmail thread ID for reply tracking
+      // Strip angle brackets from Message-ID for storage (we'll add them back when using)
+      let cleanMessageId = messageIdHeader
+      if (cleanMessageId && cleanMessageId.startsWith('<') && cleanMessageId.endsWith('>')) {
+        cleanMessageId = cleanMessageId.slice(1, -1)
+        console.log('📝 Stripping angle brackets for storage:', messageIdHeader, '->', cleanMessageId)
+      }
+      
       const updateData = { 
         currentStep: enrollment.currentStep + 1,
         lastEmailSentAt: new Date(),
         // Store Gmail's internal message ID for fetching purposes
         gmailMessageId: result.messageId,
         gmailThreadId: result.threadId,
-        // CRITICAL FIX: Always store the proper Message-ID header for threading
+        // CRITICAL FIX: Always store the proper Message-ID header for threading (without angle brackets)
         // This overwrites any wrong values and ensures follow-ups use correct Message-ID
-        ...(messageIdHeader ? { messageIdHeader } : {})
+        ...(cleanMessageId ? { messageIdHeader: cleanMessageId } : {})
       }
       
       console.log(`📝 Updating enrollment after email sent:`, {
