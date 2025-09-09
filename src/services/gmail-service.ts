@@ -185,15 +185,15 @@ export class GmailService {
     console.log('=== buildMessage CALLED ===')
     console.log('HTML content length:', emailData.htmlContent.length)
     console.log('Has attachments:', !!emailData.attachments?.length)
-    console.log('FromName provided:', emailData.fromName || 'NONE - will use LOUMASS')
+    console.log('FromName provided:', emailData.fromName)
     
     try {
       // Create mail options for MailComposer
       console.log('Creating mailOptions object...')
-      // ALWAYS use LOUMASS for consistency across all emails
-      const consistentFromName = 'LOUMASS'
+      // Use the provided fromName or default to just the email
+      const displayName = emailData.fromName || ''
       const mailOptions: any = {
-        from: `${consistentFromName} <${fromEmail}>`,
+        from: displayName ? `${displayName} <${fromEmail}>` : fromEmail,
         to: emailData.to.join(', '),
         subject: emailData.subject,
         text: emailData.textContent || '',
@@ -377,6 +377,12 @@ export class GmailService {
     
     const results = []
     
+    // Fetch user's fromName setting
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fromName: true }
+    })
+    
     // Send emails with rate limiting (Gmail API allows 250 quota units per second)
     for (const contact of contacts) {
       try {
@@ -458,7 +464,7 @@ export class GmailService {
           subject,
           htmlContent: cleanedHtml,
           textContent,
-          fromName: undefined, // Campaign model doesn't have fromName field
+          fromName: user?.fromName || undefined, // Use user's configured FROM name
           replyTo: undefined, // Campaign model doesn't have replyTo field
           trackingId,
           campaignId,

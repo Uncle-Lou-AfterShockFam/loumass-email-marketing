@@ -11,6 +11,7 @@ model User {
   id                 String          @id @default(cuid())
   email              String          @unique
   name               String?
+  fromName           String?         // Name to display in FROM field of emails
   password           String?
   emailVerified      DateTime?
   image              String?

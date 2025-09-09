@@ -612,6 +612,12 @@ export class SequenceService {
       console.log('  - Has tracked links:', finalHtmlContent.includes('/api/track/click'))
       console.log('  - Message-ID being passed:', messageIdForReply || 'NONE')
       
+      // Fetch user's fromName setting
+      const user = await prisma.user.findUnique({
+        where: { id: enrollment.sequence.userId },
+        select: { fromName: true }
+      })
+      
       const result = await this.gmailService.sendEmail(
         enrollment.sequence.userId,
         gmailToken.email,
@@ -625,7 +631,7 @@ export class SequenceService {
           contactId: enrollment.contactId,
           threadId,
           messageId: messageIdForReply, // Pass message ID for proper threading headers
-          fromName: 'LOUMASS' // Ensure consistent FROM name
+          fromName: user?.fromName || undefined // Use user's configured FROM name
         }
       )
 

@@ -8,6 +8,7 @@ interface AccountSettingsProps {
     id: string
     email: string
     name: string | null
+    fromName?: string | null
     dailyEmailLimit?: number
   } | null
 }
@@ -18,6 +19,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: user?.name || '',
+    fromName: user?.fromName || '',
     dailyEmailLimit: user?.dailyEmailLimit || 500
   })
 
@@ -91,6 +93,23 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
           </div>
 
           <div>
+            <label htmlFor="fromName" className="block text-sm font-medium text-gray-800 dark:text-gray-200">
+              Email "From" Name
+            </label>
+            <input
+              type="text"
+              id="fromName"
+              value={formData.fromName}
+              onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Display name for sent emails (e.g., 'John from ACME')"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              This name will appear in the "From" field of all your emails
+            </p>
+          </div>
+
+          <div>
             <label htmlFor="dailyLimit" className="block text-sm font-medium text-gray-800 dark:text-gray-200">
               Daily Email Limit
             </label>
@@ -122,6 +141,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
                 setIsEditing(false)
                 setFormData({
                   name: user.name || '',
+                  fromName: user.fromName || '',
                   dailyEmailLimit: user.dailyEmailLimit || 500
                 })
               }}
@@ -141,6 +161,11 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
           <div>
             <p className="text-sm text-gray-600">Name</p>
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name || 'Not set'}</p>
+          </div>
+          
+          <div>
+            <p className="text-sm text-gray-600">Email "From" Name</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.fromName || 'Not set'}</p>
           </div>
           
           <div>
