@@ -280,12 +280,17 @@ export class SequenceService {
       const hasTrueBranch = trueBranch && Array.isArray(trueBranch) && trueBranch.length > 0 && trueBranch[0] !== null
       const hasFalseBranch = falseBranch && Array.isArray(falseBranch) && falseBranch.length > 0 && falseBranch[0] !== null
       
+      console.log('🎯 BRANCH SELECTION LOGIC:')
+      console.log('  - conditionMet:', conditionMet)
+      console.log('  - hasTrueBranch:', hasTrueBranch)
+      console.log('  - hasFalseBranch:', hasFalseBranch)
+      
       if (conditionMet && hasTrueBranch) {
         branchStepId = trueBranch[0]
-        console.log('✅ Following TRUE branch to step:', branchStepId)
+        console.log('✅ Condition is TRUE, following TRUE branch to step:', branchStepId)
       } else if (!conditionMet && hasFalseBranch) {
         branchStepId = falseBranch[0]
-        console.log('✅ Following FALSE branch to step:', branchStepId)
+        console.log('✅ Condition is FALSE, following FALSE branch to step:', branchStepId)
       } else if ((conditionMet && !hasTrueBranch) || (!conditionMet && !hasFalseBranch)) {
         // No branch for this condition result, but might have branch for the other result
         // Check if we should continue to next step or if sequence design expects a branch
@@ -1096,7 +1101,16 @@ export class SequenceService {
         return !(await this.hasContactClicked(enrollment.id, condition.referenceStep))
       
       case 'not_replied':
-        return !(await this.hasContactReplied(enrollment.id, condition.referenceStep))
+        // For standalone sequences, replies are not currently tracked
+        // TODO: Implement reply tracking for standalone sequences
+        if (!enrollment.triggerCampaignId) {
+          console.log('📧 not_replied condition for standalone sequence: always returning TRUE (replies not tracked)')
+          return true
+        }
+        const repliedResult = await this.hasContactReplied(enrollment.id, condition.referenceStep)
+        const notRepliedResult = !repliedResult
+        console.log(`📧 not_replied condition: hasContactReplied=${repliedResult}, returning ${notRepliedResult}`)
+        return notRepliedResult
       
       case 'opened_no_reply':
         const opened = await this.hasContactOpened(enrollment.id, condition.referenceStep)
@@ -1268,18 +1282,28 @@ export class SequenceService {
   }
 
   private async hasContactReplied(enrollmentId: string, referenceStep?: string): Promise<boolean> {
+    console.log('🔍 hasContactReplied called with:', { enrollmentId, referenceStep })
+    
     // Find the step index from the reference step ID
     const enrollment = await prisma.sequenceEnrollment.findUnique({
       where: { id: enrollmentId },
       include: { sequence: true }
     })
     
-    if (!enrollment) return false
+    if (!enrollment) {
+      console.log('  No enrollment found')
+      return false
+    }
     
     const steps = enrollment.sequence.steps as any[]
     const stepIndex = referenceStep ? steps.findIndex((s: any) => s.id === referenceStep) : enrollment.currentStep - 1
     
-    if (stepIndex < 0) return false
+    console.log('  Looking for REPLIED event at stepIndex:', stepIndex)
+    
+    if (stepIndex < 0) {
+      console.log('  Invalid step index')
+      return false
+    }
     
     const replyEvent = await prisma.sequenceEvent.findFirst({
       where: {
@@ -1289,7 +1313,11 @@ export class SequenceService {
       }
     })
     
-    return !!replyEvent
+    const result = !!replyEvent
+    console.log('  REPLIED event found:', result)
+    console.log('  hasContactReplied returning:', result)
+    
+    return result
   }
 
   private evaluateTimeCondition(condition: any, contactId: string): boolean {
