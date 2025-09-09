@@ -530,12 +530,14 @@ export class SequenceService {
     
     // CRITICAL FIX: For standalone sequences, always use stored Message-ID for threading
     // This must happen BEFORE any other threading logic
-    if (stepToExecute.replyToThread && enrollment.messageIdHeader && !enrollment.triggerRecipientId) {
+    let isStandaloneSequence = !enrollment.triggerRecipientId
+    if (stepToExecute.replyToThread && enrollment.messageIdHeader && isStandaloneSequence) {
       console.log('🎯 STANDALONE SEQUENCE THREADING: Using stored Message-ID')
       messageIdForReply = enrollment.messageIdHeader
       threadId = enrollment.gmailThreadId || undefined
       console.log('  Message-ID for threading:', messageIdForReply)
       console.log('  Thread ID:', threadId)
+      console.log('  Is valid Message-ID format:', messageIdForReply.includes('@'))
     }
     
     // Check if this step should reply to thread
@@ -593,7 +595,8 @@ export class SequenceService {
       }
     }
     
-    if (stepToExecute.replyToThread && enrollment.gmailThreadId && !messageIdForReply) {
+    // For campaign-triggered sequences or when we don't have messageIdForReply yet
+    if (stepToExecute.replyToThread && enrollment.gmailThreadId && !messageIdForReply && !isStandaloneSequence) {
       threadId = enrollment.gmailThreadId
       
       // Use stored Message-ID header if available, otherwise fetch it
@@ -676,6 +679,13 @@ export class SequenceService {
       console.log('🆕 Starting new thread for this sequence email')
     }
 
+    // CRITICAL: Final check - ensure we have messageIdForReply for standalone sequences
+    if (isStandaloneSequence && stepToExecute.replyToThread && !messageIdForReply && enrollment.messageIdHeader) {
+      console.log('⚠️ CRITICAL: messageIdForReply was cleared! Restoring from enrollment.messageIdHeader')
+      messageIdForReply = enrollment.messageIdHeader
+      console.log('  Restored Message-ID:', messageIdForReply)
+    }
+    
     // Apply "Re:" prefix for thread continuity when using threadId
     if (threadId) {
       // For campaign-triggered sequences, get the campaign subject
@@ -717,10 +727,18 @@ export class SequenceService {
     }
 
     // Send the email
+    // CRITICAL FINAL CHECK: Ensure messageIdForReply is set for threading
+    if (isStandaloneSequence && stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
+      console.log('🚨 FINAL FIX: messageIdForReply missing at send time! Restoring...')
+      messageIdForReply = enrollment.messageIdHeader
+    }
+    
     console.log('📮 SENDING EMAIL WITH THREADING INFO:')
     console.log('  threadId:', threadId)
     console.log('  messageId for In-Reply-To:', messageIdForReply)
     console.log('  replyToThread:', stepToExecute.replyToThread)
+    console.log('  isStandaloneSequence:', isStandaloneSequence)
+    console.log('  enrollment.messageIdHeader:', enrollment.messageIdHeader)
     console.log('  trackingEnabled (sequence):', enrollment.sequence.trackingEnabled)
     console.log('  trackingEnabled (step):', stepToExecute.trackingEnabled)
     console.log('  Will add tracking:', enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false))
