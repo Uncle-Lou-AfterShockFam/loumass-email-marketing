@@ -109,11 +109,11 @@ export async function GET(request: NextRequest) {
       select: { variables: true }
     })
 
-    const existingVariables = existingUser?.variables || {}
+    const existingVariables = (existingUser?.variables as Record<string, any>) || {}
     
     // Increment authorization count if user has connected before
-    if (existingVariables.gmailAuthorizationCount) {
-      userVariables.gmailAuthorizationCount = (existingVariables.gmailAuthorizationCount as number) + 1
+    if (existingVariables.gmailAuthorizationCount && typeof existingVariables.gmailAuthorizationCount === 'number') {
+      userVariables.gmailAuthorizationCount = existingVariables.gmailAuthorizationCount + 1
     }
 
     // Update user with new variables
