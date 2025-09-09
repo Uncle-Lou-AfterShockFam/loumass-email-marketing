@@ -5,13 +5,11 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/components/ui/use-toast'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,16 +19,8 @@ export default function ForgotPasswordPage() {
       // TODO: Implement password reset logic
       // For now, just show a success message
       setIsSubmitted(true)
-      toast({
-        title: 'Check your email',
-        description: 'If an account exists with this email, you will receive password reset instructions.',
-      })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      })
+      console.error('Password reset error:', error)
     } finally {
       setIsLoading(false)
     }
