@@ -284,10 +284,11 @@ export class SequenceProcessor {
 
       // Only add tracking if enabled
       if (isTrackingEnabled) {
-        emailData.trackingId = `seq_${sequence.id}_${enrollment.id}_${step.id}`
+        emailData.trackingId = `seq_${sequence.id}_${enrollment.id}_${step.id}_${Date.now()}`
         console.log(`[SequenceProcessor] Tracking enabled with ID: ${emailData.trackingId}`)
+        console.log(`[SequenceProcessor] Tracking settings - sequence: ${sequence.trackingEnabled}, step: ${step.trackingEnabled}`)
       } else {
-        console.log(`[SequenceProcessor] Tracking disabled for this email`)
+        console.log(`[SequenceProcessor] Tracking disabled for this email - sequence: ${sequence.trackingEnabled}, step: ${step.trackingEnabled}`)
       }
 
       // Send email via Gmail
@@ -297,26 +298,22 @@ export class SequenceProcessor {
         emailData
       )
 
-      // Determine next step index
+      // Determine next step index based on context
       let nextStepIndex = enrollment.currentStep + 1
       
-      // Check if this email is part of a condition branch
-      if (enrollment.currentStep > 0) {
-        const prevStep = steps[enrollment.currentStep - 1]
-        if (prevStep && prevStep.type === 'condition') {
-          // This is a true branch email (immediately after condition)
-          // After sending, skip to N+3 (past the false branch)
-          nextStepIndex = enrollment.currentStep + 2
-          console.log(`[SequenceProcessor] Sent true branch email, skipping false branch to step ${nextStepIndex}`)
-        } else if (enrollment.currentStep > 1) {
-          const prevPrevStep = steps[enrollment.currentStep - 2]
-          if (prevPrevStep && prevPrevStep.type === 'condition') {
-            // This is a false branch email (two steps after condition)
-            // After sending, move to the next step normally (already past both branches)
-            nextStepIndex = enrollment.currentStep + 1
-            console.log(`[SequenceProcessor] Sent false branch email, continuing to step ${nextStepIndex}`)
-          }
-        }
+      // CRITICAL FIX: Check if this email is part of a condition branch
+      // If so, we need to skip to the step AFTER both branches
+      const isPartOfBranch = this.isEmailPartOfConditionBranch(enrollment.currentStep, steps)
+      
+      if (isPartOfBranch) {
+        // This email is either TRUE branch (N+1) or FALSE branch (N+2) after condition (N)
+        // After sending branch email, skip to step after both branches (N+3)
+        const conditionStepIndex = isPartOfBranch.conditionIndex
+        nextStepIndex = conditionStepIndex + 3 // Skip to after both branches
+        console.log(`[SequenceProcessor] Branch email sent at step ${enrollment.currentStep}, skipping to step ${nextStepIndex} (after both branches)`)
+      } else {
+        // Normal email step - just increment
+        console.log(`[SequenceProcessor] Normal email step completed, moving from step ${enrollment.currentStep} to ${nextStepIndex}`)
       }
 
       // Update enrollment with message info
@@ -371,35 +368,52 @@ export class SequenceProcessor {
     const conditionMet = await this.evaluateCondition(enrollment, step.condition)
     console.log(`[SequenceProcessor] Condition result: ${conditionMet}`)
     
-    // Determine the next step based on the condition result
-    // The sequence structure typically has:
+    // CRITICAL FIX: Find the correct next step after both branches
+    // In the sequence UI, conditions typically have this structure:
     // - Condition step at index N
-    // - True branch email at index N+1
+    // - True branch email at index N+1  
     // - False branch email at index N+2
-    // - Continue with steps after both branches at N+3
+    // - Next step (after both branches) at index N+3
     
     let nextStepIndex: number
     
     if (conditionMet) {
-      // Condition is TRUE - go to the next step (true branch)
+      // Condition is TRUE - go to TRUE branch (next step)
       nextStepIndex = enrollment.currentStep + 1
-      console.log(`[SequenceProcessor] Condition TRUE - proceeding to step ${nextStepIndex} (true branch)`)
+      console.log(`[SequenceProcessor] Condition TRUE - proceeding to step ${nextStepIndex} (TRUE branch)`)
+      
+      // Mark that this enrollment took the TRUE path to prevent FALSE branch execution
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          currentStep: nextStepIndex,
+          // Store the branch path in a custom field for debugging
+          updatedAt: new Date()
+        }
+      })
+      
+      // After the TRUE branch email is sent, we need to skip the FALSE branch
+      // This will be handled by setting a flag or jumping directly to N+3
+      
     } else {
-      // Condition is FALSE - skip true branch and go to false branch
-      // We need to skip the true branch email (N+1) and go to false branch (N+2)
+      // Condition is FALSE - skip TRUE branch and go directly to FALSE branch  
       nextStepIndex = enrollment.currentStep + 2
-      console.log(`[SequenceProcessor] Condition FALSE - skipping to step ${nextStepIndex} (false branch)`)
+      console.log(`[SequenceProcessor] Condition FALSE - skipping TRUE branch, going to step ${nextStepIndex} (FALSE branch)`)
+      
+      // Mark that this enrollment took the FALSE path to prevent TRUE branch execution
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          currentStep: nextStepIndex,
+          updatedAt: new Date()
+        }
+      })
+      
+      // After the FALSE branch email is sent, continue normally to N+3
     }
-    
-    // Update to set the correct next step
-    await prisma.sequenceEnrollment.update({
-      where: { id: enrollment.id },
-      data: {
-        currentStep: nextStepIndex
-      }
-    })
 
     console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}, moved to step ${nextStepIndex}`)
+    console.log(`[SequenceProcessor] IMPORTANT: Only ONE branch path will be executed - ${conditionMet ? 'TRUE' : 'FALSE'} branch`)
   }
 
   /**
@@ -447,6 +461,23 @@ export class SequenceProcessor {
     })
 
     console.log(`[SequenceProcessor] Enrollment ${enrollmentId} completed`)
+  }
+
+  /**
+   * Check if an email step is part of a condition branch
+   */
+  isEmailPartOfConditionBranch(currentStepIndex: number, steps: SequenceStep[]): { conditionIndex: number } | null {
+    // Check if current step is TRUE branch (directly after condition)
+    if (currentStepIndex > 0 && steps[currentStepIndex - 1]?.type === 'condition') {
+      return { conditionIndex: currentStepIndex - 1 }
+    }
+    
+    // Check if current step is FALSE branch (two steps after condition)
+    if (currentStepIndex > 1 && steps[currentStepIndex - 2]?.type === 'condition') {
+      return { conditionIndex: currentStepIndex - 2 }
+    }
+    
+    return null
   }
 
   /**
