@@ -274,6 +274,20 @@ export class GmailService {
       console.log('About to create MailComposer instance...')
       console.log('MailComposer constructor type:', typeof MailComposer)
       
+      // DEBUG: Log the exact mailOptions being passed
+      console.log('📋 FINAL mailOptions passed to MailComposer:')
+      console.log(JSON.stringify({
+        from: mailOptions.from,
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+        inReplyTo: mailOptions.inReplyTo,
+        references: mailOptions.references,
+        replyTo: mailOptions.replyTo,
+        hasText: !!mailOptions.text,
+        hasHtml: !!mailOptions.html,
+        attachmentCount: mailOptions.attachments?.length || 0
+      }, null, 2))
+      
       const mail = new MailComposer(mailOptions)
       console.log('MailComposer instance created successfully')
       
@@ -303,7 +317,30 @@ export class GmailService {
           }
           
           // Encode to base64url for Gmail API
-          const encodedMessage = message
+          const messageString = message.toString()
+          
+          // DEBUG: Log the first 1500 chars of the raw message to see headers
+          console.log('📧 RAW MIME MESSAGE (first 1500 chars):')
+          console.log(messageString.substring(0, 1500))
+          console.log('...[truncated]')
+          
+          // Check if threading headers are present
+          const hasInReplyTo = messageString.includes('In-Reply-To:')
+          const hasReferences = messageString.includes('References:')
+          console.log('🔍 HEADER CHECK:')
+          console.log('  - Has In-Reply-To header:', hasInReplyTo)
+          console.log('  - Has References header:', hasReferences)
+          
+          if (!hasInReplyTo && mailOptions.inReplyTo) {
+            console.error('❌ CRITICAL: In-Reply-To was set but not in MIME message!')
+            console.error('  Expected:', mailOptions.inReplyTo)
+          }
+          if (!hasReferences && mailOptions.references) {
+            console.error('❌ CRITICAL: References was set but not in MIME message!')
+            console.error('  Expected:', mailOptions.references)
+          }
+          
+          const encodedMessage = Buffer.from(messageString)
             .toString('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')

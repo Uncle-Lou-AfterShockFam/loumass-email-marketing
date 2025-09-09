@@ -3,12 +3,9 @@ const prisma = new PrismaClient();
 
 async function testCurrentState() {
   try {
-    // Create a new enrollment to test
+    // First, find any contact to test with
     const contact = await prisma.contact.findFirst({
-      where: { 
-        email: 'lou@soberafe.com',
-        userId: 'cm4nxgla90000c7ydxvxn14y8'
-      }
+      orderBy: { createdAt: 'desc' }
     });
     
     if (!contact) {
@@ -16,10 +13,28 @@ async function testCurrentState() {
       return;
     }
 
+    console.log('Found contact:', contact.email);
+
+    // Find a sequence to test with
+    const sequence = await prisma.sequence.findFirst({
+      where: {
+        userId: contact.userId,
+        sequenceType: 'STANDALONE'
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!sequence) {
+      console.log('No standalone sequence found');
+      return;
+    }
+
+    console.log('Found sequence:', sequence.name);
+
     // Delete any existing enrollment for this contact
     await prisma.sequenceEnrollment.deleteMany({
       where: { 
-        sequenceId: 'cmfcxnr6g0001k004ok1p668d',
+        sequenceId: sequence.id,
         contactId: contact.id
       }
     });
@@ -27,7 +42,7 @@ async function testCurrentState() {
     // Create new enrollment
     const enrollment = await prisma.sequenceEnrollment.create({
       data: {
-        sequenceId: 'cmfcxnr6g0001k004ok1p668d',
+        sequenceId: sequence.id,
         contactId: contact.id,
         status: 'ACTIVE',
         currentStep: 0
@@ -35,7 +50,9 @@ async function testCurrentState() {
     });
 
     console.log('Created new enrollment:', enrollment.id);
-    console.log('Please monitor at: https://loumassbeta.vercel.app/dashboard/sequences/cmfcxnr6g0001k004ok1p668d');
+    console.log('Sequence ID:', sequence.id);
+    console.log('Contact:', contact.email);
+    console.log('Please monitor at: http://localhost:3000/dashboard/sequences/' + sequence.id);
     
   } catch (error) {
     console.error('Error:', error);
