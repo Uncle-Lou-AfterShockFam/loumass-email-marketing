@@ -78,12 +78,21 @@ export class SequenceProcessor {
       const { sequence, contact } = enrollment
       let steps: SequenceStep[]
       
-      try {
-        steps = JSON.parse(sequence.steps) as SequenceStep[]
-      } catch (parseError) {
-        console.error(`[SequenceProcessor] Failed to parse steps for sequence ${sequence.id}:`, parseError)
+      // Handle both JSON string and object formats
+      if (typeof sequence.steps === 'string') {
+        try {
+          steps = JSON.parse(sequence.steps) as SequenceStep[]
+        } catch (parseError) {
+          console.error(`[SequenceProcessor] Failed to parse steps for sequence ${sequence.id}:`, parseError)
+          console.error(`[SequenceProcessor] Raw steps data:`, sequence.steps)
+          throw new Error(`Invalid sequence steps format`)
+        }
+      } else if (Array.isArray(sequence.steps)) {
+        steps = sequence.steps as SequenceStep[]
+      } else {
+        console.error(`[SequenceProcessor] Unexpected steps format for sequence ${sequence.id}:`, typeof sequence.steps)
         console.error(`[SequenceProcessor] Raw steps data:`, sequence.steps)
-        throw new Error(`Invalid sequence steps format`)
+        steps = []
       }
       
       if (!steps || steps.length === 0) {
