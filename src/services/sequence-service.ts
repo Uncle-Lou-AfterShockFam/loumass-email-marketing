@@ -1101,12 +1101,7 @@ export class SequenceService {
         return !(await this.hasContactClicked(enrollment.id, condition.referenceStep))
       
       case 'not_replied':
-        // For standalone sequences, replies are not currently tracked
-        // TODO: Implement reply tracking for standalone sequences
-        if (!enrollment.triggerCampaignId) {
-          console.log('📧 not_replied condition for standalone sequence: always returning TRUE (replies not tracked)')
-          return true
-        }
+        // Check for replies in ALL sequences, not just campaign-triggered ones
         const repliedResult = await this.hasContactReplied(enrollment.id, condition.referenceStep)
         const notRepliedResult = !repliedResult
         console.log(`📧 not_replied condition: hasContactReplied=${repliedResult}, returning ${notRepliedResult}`)
