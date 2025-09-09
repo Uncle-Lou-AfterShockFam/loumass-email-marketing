@@ -586,10 +586,10 @@ export class SequenceService {
         }
       )
 
-      // Fetch the actual Message-ID header from the sent email for future threading
-      // Only do this for the first email in the sequence
+      // CRITICAL: Always fetch the actual Message-ID header from the sent email for proper threading
+      // This is the proper email Message-ID header (not Gmail's internal ID)
       let messageIdHeader: string | undefined
-      if (!enrollment.messageIdHeader && result.messageId && gmailToken) {
+      if (result.messageId && gmailToken) {
         try {
           const messageHeaders = await this.gmailFetchService.getMessageHeaders(
             enrollment.sequence.userId,
@@ -597,9 +597,10 @@ export class SequenceService {
             result.messageId
           )
           messageIdHeader = messageHeaders.messageId
-          console.log('Stored Message-ID header for future threading:', messageIdHeader)
+          console.log('📧 Fetched proper Message-ID header for threading:', messageIdHeader)
+          console.log('📧 Gmail internal ID (NOT used for threading):', result.messageId)
         } catch (error) {
-          console.error('Failed to fetch Message-ID after sending:', error)
+          console.error('❌ Failed to fetch Message-ID after sending:', error)
         }
       }
       
@@ -612,11 +613,12 @@ export class SequenceService {
       const updateData = { 
         currentStep: enrollment.currentStep + 1,
         lastEmailSentAt: new Date(),
-        // Always update gmailMessageId with the latest message ID for proper threading
+        // Store Gmail's internal message ID for fetching purposes
         gmailMessageId: result.messageId,
         gmailThreadId: result.threadId,
-        // Store the Message-ID header only for the first email
-        ...(messageIdHeader && !enrollment.messageIdHeader ? { messageIdHeader } : {})
+        // CRITICAL FIX: Always store the proper Message-ID header for threading
+        // This overwrites any wrong values and ensures follow-ups use correct Message-ID
+        ...(messageIdHeader ? { messageIdHeader } : {})
       }
       
       console.log(`📝 Updating enrollment after email sent:`, {
