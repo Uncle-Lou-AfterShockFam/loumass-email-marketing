@@ -19,6 +19,7 @@ model User {
   googleClientId     String?
   googleClientSecret String?
   oauthConfigured    Boolean         @default(false)
+  variables          Json?           @default("{}")
   accounts           Account[]
   automations        Automation[]
   campaigns          Campaign[]
@@ -80,6 +81,8 @@ model GmailToken {
   updatedAt     DateTime  @updatedAt
   lastHistoryId String?
   watchExpiry   DateTime?
+  lastRefreshAt DateTime?
+  refreshCount  Int       @default(0)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
