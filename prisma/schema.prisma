@@ -12,6 +12,7 @@ model User {
   email              String          @unique
   name               String?
   fromName           String?         // Name to display in FROM field of emails
+  dailyEmailLimit    Int             @default(500) // Daily email sending limit
   password           String?
   emailVerified      DateTime?
   image              String?
