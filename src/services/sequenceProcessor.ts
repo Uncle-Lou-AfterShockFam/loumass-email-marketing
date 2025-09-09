@@ -311,13 +311,7 @@ export class SequenceProcessor {
     await prisma.sequenceEnrollment.update({
       where: { id: enrollment.id },
       data: {
-        currentStep: enrollment.currentStep + 1,
-        // Store the condition result for reference
-        executionData: {
-          ...((enrollment.executionData as any) || {}),
-          lastConditionResult: conditionMet,
-          lastConditionType: step.condition.type
-        }
+        currentStep: enrollment.currentStep + 1
       }
     })
 
