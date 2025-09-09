@@ -7,6 +7,8 @@ interface SequenceStep {
   type: 'email' | 'delay' | 'condition'
   content?: string
   subject?: string
+  replyToThread?: boolean
+  trackingEnabled?: boolean
   delay?: {
     value: number
     unit: 'minutes' | 'hours' | 'days'
@@ -212,6 +214,22 @@ export class SequenceProcessor {
   async processEmailStep(enrollment: any, step: SequenceStep) {
     const { sequence, contact } = enrollment
     const { user } = sequence
+    let steps: SequenceStep[]
+
+    // Parse steps array
+    if (typeof sequence.steps === 'string') {
+      try {
+        steps = JSON.parse(sequence.steps) as SequenceStep[]
+      } catch (parseError) {
+        console.error(`[SequenceProcessor] Failed to parse steps for sequence ${sequence.id}`)
+        return
+      }
+    } else if (Array.isArray(sequence.steps)) {
+      steps = sequence.steps as SequenceStep[]
+    } else {
+      console.error(`[SequenceProcessor] Unexpected steps format for sequence ${sequence.id}`)
+      return
+    }
 
     if (!user.gmailToken) {
       console.error(`[SequenceProcessor] No Gmail token for user ${user.id}`)
@@ -230,18 +248,46 @@ export class SequenceProcessor {
       subject = this.replaceVariables(subject, contact)
       content = this.replaceVariables(content, contact)
 
+      // Check if tracking is enabled for this sequence AND step
+      // Access the step properties correctly - they're at the step level
+      const isTrackingEnabled = sequence.trackingEnabled && (step.trackingEnabled !== false)
+      
+      // Check if we should reply to thread - also at step level
+      const shouldReplyToThread = step.replyToThread === true
+      
+      console.log(`[SequenceProcessor] Email settings for step ${enrollment.currentStep}:`)
+      console.log(`  - Step data:`, JSON.stringify(step, null, 2))
+      console.log(`  - Tracking enabled: ${isTrackingEnabled} (sequence: ${sequence.trackingEnabled}, step: ${step.trackingEnabled})`)
+      console.log(`  - Reply to thread: ${shouldReplyToThread}`)
+      console.log(`  - Existing thread ID: ${enrollment.gmailThreadId}`)
+      console.log(`  - Existing message ID: ${enrollment.gmailMessageId}`)
+
       // Prepare email data for GmailService
-      const emailData = {
+      const emailData: any = {
         to: [contact.email],
         subject: subject,
         htmlContent: content,
         textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML for text version
         fromName: user.name || user.email,
-        threadId: enrollment.gmailThreadId || undefined,
-        messageId: enrollment.gmailMessageId || undefined,
-        trackingId: `seq_${sequence.id}_${enrollment.id}_${step.id}`,
         sequenceId: sequence.id,
         contactId: contact.id
+      }
+
+      // Only add threading info if replying to thread AND we have the necessary IDs
+      if (shouldReplyToThread && enrollment.gmailMessageId) {
+        emailData.threadId = enrollment.gmailThreadId || undefined
+        emailData.messageId = enrollment.gmailMessageId
+        console.log(`[SequenceProcessor] Threading enabled - will reply to message ${enrollment.gmailMessageId}`)
+      } else if (shouldReplyToThread) {
+        console.log(`[SequenceProcessor] Threading requested but no previous message ID available`)
+      }
+
+      // Only add tracking if enabled
+      if (isTrackingEnabled) {
+        emailData.trackingId = `seq_${sequence.id}_${enrollment.id}_${step.id}`
+        console.log(`[SequenceProcessor] Tracking enabled with ID: ${emailData.trackingId}`)
+      } else {
+        console.log(`[SequenceProcessor] Tracking disabled for this email`)
       }
 
       // Send email via Gmail
@@ -251,6 +297,28 @@ export class SequenceProcessor {
         emailData
       )
 
+      // Determine next step index
+      let nextStepIndex = enrollment.currentStep + 1
+      
+      // Check if this email is part of a condition branch
+      if (enrollment.currentStep > 0) {
+        const prevStep = steps[enrollment.currentStep - 1]
+        if (prevStep && prevStep.type === 'condition') {
+          // This is a true branch email (immediately after condition)
+          // After sending, skip to N+3 (past the false branch)
+          nextStepIndex = enrollment.currentStep + 2
+          console.log(`[SequenceProcessor] Sent true branch email, skipping false branch to step ${nextStepIndex}`)
+        } else if (enrollment.currentStep > 1) {
+          const prevPrevStep = steps[enrollment.currentStep - 2]
+          if (prevPrevStep && prevPrevStep.type === 'condition') {
+            // This is a false branch email (two steps after condition)
+            // After sending, move to the next step normally (already past both branches)
+            nextStepIndex = enrollment.currentStep + 1
+            console.log(`[SequenceProcessor] Sent false branch email, continuing to step ${nextStepIndex}`)
+          }
+        }
+      }
+
       // Update enrollment with message info
       await prisma.sequenceEnrollment.update({
         where: { id: enrollment.id },
@@ -258,7 +326,7 @@ export class SequenceProcessor {
           lastEmailSentAt: new Date(),
           gmailMessageId: result.messageId,
           gmailThreadId: result.threadId || enrollment.gmailThreadId,
-          currentStep: enrollment.currentStep + 1,
+          currentStep: nextStepIndex,
           updatedAt: new Date()
         }
       })
@@ -275,7 +343,7 @@ export class SequenceProcessor {
         }
       })
 
-      console.log(`[SequenceProcessor] Email sent for enrollment ${enrollment.id}`)
+      console.log(`[SequenceProcessor] Email sent for enrollment ${enrollment.id}, moved to step ${nextStepIndex}`)
     } catch (error) {
       console.error(`[SequenceProcessor] Error sending email for enrollment ${enrollment.id}:`, error)
       throw error
@@ -303,19 +371,35 @@ export class SequenceProcessor {
     const conditionMet = await this.evaluateCondition(enrollment, step.condition)
     console.log(`[SequenceProcessor] Condition result: ${conditionMet}`)
     
-    // For sequences with conditions, we need to handle branching differently
-    // Instead of modifying the global sequence, we should track the branch in the enrollment
+    // Determine the next step based on the condition result
+    // The sequence structure typically has:
+    // - Condition step at index N
+    // - True branch email at index N+1
+    // - False branch email at index N+2
+    // - Continue with steps after both branches at N+3
     
-    // Simple approach: just move to the next step
-    // The sequence should be designed with the branches already in place
+    let nextStepIndex: number
+    
+    if (conditionMet) {
+      // Condition is TRUE - go to the next step (true branch)
+      nextStepIndex = enrollment.currentStep + 1
+      console.log(`[SequenceProcessor] Condition TRUE - proceeding to step ${nextStepIndex} (true branch)`)
+    } else {
+      // Condition is FALSE - skip true branch and go to false branch
+      // We need to skip the true branch email (N+1) and go to false branch (N+2)
+      nextStepIndex = enrollment.currentStep + 2
+      console.log(`[SequenceProcessor] Condition FALSE - skipping to step ${nextStepIndex} (false branch)`)
+    }
+    
+    // Update to set the correct next step
     await prisma.sequenceEnrollment.update({
       where: { id: enrollment.id },
       data: {
-        currentStep: enrollment.currentStep + 1
+        currentStep: nextStepIndex
       }
     })
 
-    console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}, moved to step ${enrollment.currentStep + 1}`)
+    console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}, moved to step ${nextStepIndex}`)
   }
 
   /**
