@@ -205,9 +205,16 @@ export class GmailService {
       console.log('  Original Message-ID to reference:', emailData.messageId)
       console.log('  Gmail Thread ID (if any):', emailData.threadId)
       
-      mailOptions.inReplyTo = emailData.messageId
-      mailOptions.references = emailData.messageId
-      console.log('✅ Threading headers added to message')
+      // CRITICAL SAFEGUARD: Ensure messageId looks like a proper Message-ID, not a threadId
+      if (emailData.messageId.includes('@') && (emailData.messageId.includes('<') || emailData.messageId.includes('CAM'))) {
+        mailOptions.inReplyTo = emailData.messageId
+        mailOptions.references = emailData.messageId
+        console.log('✅ Threading headers added to message')
+      } else {
+        console.log('❌ CRITICAL ERROR: messageId does not look like a proper Message-ID:', emailData.messageId)
+        console.log('   This might be a threadId being passed as messageId - skipping threading headers')
+        console.log('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
+      }
     } else if (emailData.threadId) {
       console.log('⚠️ Have threadId but no messageId - cannot add threading headers')
       console.log('  Threading will only work in sender\'s sent folder, not recipient\'s inbox')

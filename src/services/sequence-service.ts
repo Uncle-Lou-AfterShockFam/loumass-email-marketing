@@ -497,6 +497,20 @@ export class SequenceService {
       
       console.log('🧵 Using sequence thread ID for reply:', threadId)
       console.log('📧 Using message ID for threading headers:', messageIdForReply)
+      
+      // CRITICAL DEBUGGING: Log the exact values to trace the threading bug
+      console.log('🔍 THREADING DEBUG:')
+      console.log('  - stepToExecute.replyToThread:', stepToExecute.replyToThread)
+      console.log('  - enrollment.gmailThreadId:', enrollment.gmailThreadId)
+      console.log('  - enrollment.messageIdHeader:', enrollment.messageIdHeader)
+      console.log('  - messageIdForReply (final):', messageIdForReply)
+      
+      // CRITICAL FIX: Ensure we never pass threadId as messageId
+      if (!messageIdForReply && enrollment.gmailThreadId && enrollment.messageIdHeader) {
+        console.log('⚠️ FIXING: messageIdForReply was undefined despite having stored Message-ID')
+        messageIdForReply = enrollment.messageIdHeader
+        console.log('✅ FIXED: Set messageIdForReply to stored Message-ID:', messageIdForReply)
+      }
     } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId) {
       console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
       console.log('   This suggests the first email in sequence did not store thread ID properly.')
