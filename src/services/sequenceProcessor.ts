@@ -76,7 +76,15 @@ export class SequenceProcessor {
   async processEnrollment(enrollment: any) {
     try {
       const { sequence, contact } = enrollment
-      const steps = JSON.parse(sequence.steps) as SequenceStep[]
+      let steps: SequenceStep[]
+      
+      try {
+        steps = JSON.parse(sequence.steps) as SequenceStep[]
+      } catch (parseError) {
+        console.error(`[SequenceProcessor] Failed to parse steps for sequence ${sequence.id}:`, parseError)
+        console.error(`[SequenceProcessor] Raw steps data:`, sequence.steps)
+        throw new Error(`Invalid sequence steps format`)
+      }
       
       if (!steps || steps.length === 0) {
         console.log(`[SequenceProcessor] No steps found for sequence ${sequence.id}`)
@@ -87,12 +95,14 @@ export class SequenceProcessor {
       const currentStepIndex = enrollment.currentStep
       if (currentStepIndex >= steps.length) {
         // Sequence completed
+        console.log(`[SequenceProcessor] Sequence completed for enrollment ${enrollment.id} (step ${currentStepIndex} >= ${steps.length})`)
         await this.completeEnrollment(enrollment.id)
         return
       }
 
       const currentStep = steps[currentStepIndex]
       console.log(`[SequenceProcessor] Processing step ${currentStepIndex} of type ${currentStep.type} for enrollment ${enrollment.id}`)
+      console.log(`[SequenceProcessor] Contact: ${contact.email}, Last email sent: ${enrollment.lastEmailSentAt}`)
 
       // Check if enough time has passed since last action
       if (!(await this.isStepDue(enrollment, currentStep))) {
@@ -125,6 +135,13 @@ export class SequenceProcessor {
       }
     } catch (error) {
       console.error(`[SequenceProcessor] Error processing enrollment ${enrollment.id}:`, error)
+      console.error(`[SequenceProcessor] Enrollment details:`, {
+        id: enrollment.id,
+        currentStep: enrollment.currentStep,
+        sequenceId: enrollment.sequenceId,
+        contactEmail: enrollment.contact?.email,
+        lastEmailSentAt: enrollment.lastEmailSentAt
+      })
       throw error
     }
   }
@@ -263,49 +280,39 @@ export class SequenceProcessor {
   async processConditionStep(enrollment: any, step: SequenceStep, allSteps: SequenceStep[]) {
     if (!step.condition) {
       console.warn(`[SequenceProcessor] No condition defined for step`)
+      // Skip this malformed condition step
+      await prisma.sequenceEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          currentStep: enrollment.currentStep + 1
+        }
+      })
       return
     }
 
+    console.log(`[SequenceProcessor] Evaluating condition type: ${step.condition.type} for enrollment ${enrollment.id}`)
     const conditionMet = await this.evaluateCondition(enrollment, step.condition)
+    console.log(`[SequenceProcessor] Condition result: ${conditionMet}`)
     
-    // Determine which branch to take
-    const branch = conditionMet ? step.condition.trueBranch : step.condition.falseBranch
+    // For sequences with conditions, we need to handle branching differently
+    // Instead of modifying the global sequence, we should track the branch in the enrollment
     
-    if (!branch || branch.length === 0) {
-      // No branch defined, move to next step
-      await prisma.sequenceEnrollment.update({
-        where: { id: enrollment.id },
-        data: {
-          currentStep: enrollment.currentStep + 1
+    // Simple approach: just move to the next step
+    // The sequence should be designed with the branches already in place
+    await prisma.sequenceEnrollment.update({
+      where: { id: enrollment.id },
+      data: {
+        currentStep: enrollment.currentStep + 1,
+        // Store the condition result for reference
+        executionData: {
+          ...((enrollment.executionData as any) || {}),
+          lastConditionResult: conditionMet,
+          lastConditionType: step.condition.type
         }
-      })
-    } else {
-      // Insert branch steps into the sequence
-      // This is a simplified approach - in production, you'd want more sophisticated branch handling
-      const newSteps = [
-        ...allSteps.slice(0, enrollment.currentStep + 1),
-        ...branch,
-        ...allSteps.slice(enrollment.currentStep + 1)
-      ]
+      }
+    })
 
-      // Update sequence with new steps
-      await prisma.sequence.update({
-        where: { id: enrollment.sequenceId },
-        data: {
-          steps: JSON.stringify(newSteps)
-        }
-      })
-
-      // Move to next step (first step of the branch)
-      await prisma.sequenceEnrollment.update({
-        where: { id: enrollment.id },
-        data: {
-          currentStep: enrollment.currentStep + 1
-        }
-      })
-    }
-
-    console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}`)
+    console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}, moved to step ${enrollment.currentStep + 1}`)
   }
 
   /**
