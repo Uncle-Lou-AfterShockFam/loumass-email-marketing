@@ -362,41 +362,10 @@ export class SequenceService {
     
     console.log(`📧 Processing EMAIL step at index ${stepToExecuteIndex}`)
     
-    // Check if this email step is part of a conditional branch that wasn't chosen
-    // Look for any condition steps that have this email in their branches
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i]
-      if (step.type === 'condition' && i < stepToExecuteIndex) {
-        const isInTrueBranch = step.condition?.trueBranch?.includes(stepToExecute.id)
-        const isInFalseBranch = step.condition?.falseBranch?.includes(stepToExecute.id)
-        
-        if (isInTrueBranch || isInFalseBranch) {
-          console.log(`Email step ${stepToExecute.id} is part of a conditional branch from step ${i}`)
-          
-          // Re-evaluate the condition to see if this branch should be executed
-          const conditionMet = await this.evaluateCondition(
-            step.condition,
-            enrollment.contactId,
-            enrollment.sequenceId
-          )
-          
-          const shouldExecute = (conditionMet && isInTrueBranch) || (!conditionMet && isInFalseBranch)
-          
-          if (!shouldExecute) {
-            console.log(`Skipping conditional branch email - condition result: ${conditionMet}, isInTrueBranch: ${isInTrueBranch}, isInFalseBranch: ${isInFalseBranch}`)
-            // Complete the sequence instead of sending the wrong branch
-            await prisma.sequenceEnrollment.update({
-              where: { id: enrollmentId },
-              data: {
-                status: EnrollmentStatus.COMPLETED,
-                completedAt: new Date()
-              }
-            })
-            return { success: true, completed: true, reason: 'Conditional branch not chosen, sequence completed' }
-          }
-        }
-      }
-    }
+    // REMOVED BROKEN CONDITION LOGIC: 
+    // The previous code was re-evaluating conditions for every email step and inappropriately 
+    // completing sequences. Condition steps already handle branching logic correctly.
+    // Trust the condition step's routing - if we reached this email step, it should be sent.
 
     // Get Gmail credentials
     const gmailToken = await prisma.gmailToken.findUnique({
@@ -606,7 +575,7 @@ export class SequenceService {
         {
           to: [enrollment.contact.email],
           subject,
-          htmlContent: enrollment.sequence.trackingEnabled ? 
+          htmlContent: (enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false)) ? 
             await this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent,
           textContent,
           trackingId,
