@@ -286,20 +286,23 @@ export class SequenceService {
           console.log('Processing branch step immediately...')
           return this.processSequenceStep(enrollmentId)
         } else {
-          console.log(`WARNING: Branch step ${branchStepId} not found in sequence steps`)
-          // Try to continue to next sequential step
-          const nextStepIndex = stepToExecuteIndex + 1
-          if (nextStepIndex < steps.length) {
-            console.log(`Falling back to next sequential step ${nextStepIndex}`)
-            await prisma.sequenceEnrollment.update({
-              where: { id: enrollmentId },
-              data: {
-                currentStep: nextStepIndex,
-                updatedAt: new Date()
-              }
-            })
-            return this.processSequenceStep(enrollmentId)
-          }
+          console.log(`❌ CRITICAL ERROR: Branch step ${branchStepId} not found in sequence steps`)
+          console.log(`❌ This indicates a sequence design error - branch targets must exist`)
+          console.log(`❌ STOPPING sequence to prevent incorrect execution of sequential steps`)
+          
+          // Log the step IDs for debugging
+          console.log('Available step IDs:', steps.map((s: any, i: number) => `${i}: ${s.id || 'NO_ID'}`).join(', '))
+          
+          // Complete the sequence as the branching is broken
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              status: EnrollmentStatus.COMPLETED,
+              completedAt: new Date()
+            }
+          })
+          
+          return { success: false, completed: true, reason: `Branch target ${branchStepId} not found - sequence design error` }
         }
       }
       
