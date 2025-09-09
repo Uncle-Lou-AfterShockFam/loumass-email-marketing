@@ -177,6 +177,29 @@ export class SequenceService {
       console.log('Current step has ID:', stepToExecute.id)
       console.log('All step IDs in sequence:', steps.map((s: any) => s.id))
       
+      // CRITICAL FIX: Record that we're executing this condition step
+      if (stepToExecute.id) {
+        try {
+          await prisma.sequenceStepExecution.create({
+            data: {
+              enrollmentId,
+              stepId: stepToExecute.id,
+              stepIndex: stepToExecuteIndex,
+              status: 'executing'
+            }
+          })
+          console.log('📝 Recorded condition step execution:', stepToExecute.id)
+        } catch (error) {
+          console.log('⚠️ Step already executed, preventing duplicate condition evaluation')
+          // Move to next step to prevent stuck enrollment
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollmentId },
+            data: { currentStep: enrollment.currentStep + 1 }
+          })
+          return this.processSequenceStep(enrollmentId)
+        }
+      }
+      
       // Evaluate condition and choose branch
       const conditionMet = await this.evaluateCondition(
         stepToExecute.condition,
@@ -370,6 +393,29 @@ export class SequenceService {
     
     console.log(`📧 Processing EMAIL step at index ${stepToExecuteIndex}`)
     
+    // CRITICAL FIX: Record that we're executing this email step to prevent duplicates
+    if (stepToExecute.id) {
+      try {
+        await prisma.sequenceStepExecution.create({
+          data: {
+            enrollmentId,
+            stepId: stepToExecute.id,
+            stepIndex: stepToExecuteIndex,
+            status: 'executing'
+          }
+        })
+        console.log('📝 Recorded email step execution:', stepToExecute.id)
+      } catch (error) {
+        console.log('⚠️ Email step already executed, preventing duplicate send')
+        // Move to next step to prevent stuck enrollment
+        await prisma.sequenceEnrollment.update({
+          where: { id: enrollmentId },
+          data: { currentStep: enrollment.currentStep + 1 }
+        })
+        return this.processSequenceStep(enrollmentId)
+      }
+    }
+    
     // REMOVED BROKEN CONDITION LOGIC: 
     // The previous code was re-evaluating conditions for every email step and inappropriately 
     // completing sequences. Condition steps already handle branching logic correctly.
@@ -445,11 +491,18 @@ export class SequenceService {
       })
       
       if (campaignRecipient?.messageIdHeader) {
+        // CRITICAL FIX: Strip angle brackets before storing
+        let cleanMessageId = campaignRecipient.messageIdHeader
+        if (cleanMessageId.startsWith('<') && cleanMessageId.endsWith('>')) {
+          cleanMessageId = cleanMessageId.slice(1, -1)
+          console.log('📝 Stripping angle brackets from campaign Message-ID:', campaignRecipient.messageIdHeader, '->', cleanMessageId)
+        }
+        
         // Store the campaign's Message-ID in the enrollment for future use
         await prisma.sequenceEnrollment.update({
           where: { id: enrollmentId },
           data: { 
-            messageIdHeader: campaignRecipient.messageIdHeader,
+            messageIdHeader: cleanMessageId,
             // Also copy the thread ID if not already set
             ...(campaignRecipient.gmailThreadId && !enrollment.gmailThreadId ? {
               gmailThreadId: campaignRecipient.gmailThreadId
@@ -458,7 +511,7 @@ export class SequenceService {
         })
         
         // Update our local enrollment object
-        enrollment.messageIdHeader = campaignRecipient.messageIdHeader
+        enrollment.messageIdHeader = cleanMessageId
         if (campaignRecipient.gmailThreadId && !enrollment.gmailThreadId) {
           enrollment.gmailThreadId = campaignRecipient.gmailThreadId
         }

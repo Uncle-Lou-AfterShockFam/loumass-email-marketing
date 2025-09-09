@@ -209,10 +209,10 @@ export class GmailService {
       console.log('  Gmail Thread ID (if any):', emailData.threadId)
       
       // CRITICAL FIX: Accept any Message-ID containing '@' as valid
-      // Message-IDs from Gmail might not always have angle brackets when stored
+      // Message-IDs are stored WITHOUT angle brackets in database
       if (emailData.messageId.includes('@')) {
-        // Ensure Message-ID has proper angle brackets for headers
-        let formattedMessageId = emailData.messageId
+        // ALWAYS add angle brackets for headers (they're stored without them)
+        let formattedMessageId = emailData.messageId.trim()
         if (!formattedMessageId.startsWith('<')) {
           formattedMessageId = '<' + formattedMessageId
         }
@@ -220,18 +220,21 @@ export class GmailService {
           formattedMessageId = formattedMessageId + '>'
         }
         
+        console.log('🚨 CRITICAL THREADING FIX:')
+        console.log('  - Input messageId:', emailData.messageId)
+        console.log('  - Formatted with brackets:', formattedMessageId)
+        
         mailOptions.inReplyTo = formattedMessageId
         mailOptions.references = formattedMessageId
+        
         console.log('✅ Threading headers SUCCESSFULLY added to message:')
-        console.log('  - Original messageId:', emailData.messageId)
-        console.log('  - Formatted for headers:', formattedMessageId)
         console.log('  - In-Reply-To:', mailOptions.inReplyTo)
         console.log('  - References:', mailOptions.references)
       } else {
-        console.log('❌ CRITICAL ERROR: messageId does not contain @ symbol:', emailData.messageId)
-        console.log('   This is likely a threadId being passed as messageId')
-        console.log('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
-        console.log('   HEADERS NOT ADDED - This email will NOT thread for recipients!')
+        console.error('❌ CRITICAL ERROR: messageId does not contain @ symbol:', emailData.messageId)
+        console.error('   This is likely a threadId being passed as messageId')
+        console.error('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
+        console.error('   HEADERS NOT ADDED - This email will NOT thread for recipients!')
       }
     } else if (emailData.threadId) {
       console.log('⚠️ Have threadId but no messageId - cannot add threading headers')

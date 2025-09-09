@@ -11,8 +11,6 @@ model User {
   id                 String          @id @default(cuid())
   email              String          @unique
   name               String?
-  fromName           String?         // Name to display in FROM field of emails
-  dailyEmailLimit    Int             @default(500) // Daily email sending limit
   password           String?
   emailVerified      DateTime?
   image              String?
@@ -22,6 +20,8 @@ model User {
   googleClientSecret String?
   oauthConfigured    Boolean         @default(false)
   variables          Json?           @default("{}")
+  fromName           String?
+  dailyEmailLimit    Int             @default(500)
   accounts           Account[]
   automations        Automation[]
   campaigns          Campaign[]
@@ -213,33 +213,47 @@ model Sequence {
 }
 
 model SequenceEnrollment {
-  id                 String           @id @default(cuid())
+  id                 String                    @id @default(cuid())
   sequenceId         String
   contactId          String
-  status             EnrollmentStatus @default(ACTIVE)
-  currentStep        Int              @default(0)
+  status             EnrollmentStatus          @default(ACTIVE)
+  currentStep        Int                       @default(0)
   completedAt        DateTime?
   pausedAt           DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  clickCount         Int              @default(0)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  clickCount         Int                       @default(0)
   gmailMessageId     String?
   gmailThreadId      String?
   lastClickedAt      DateTime?
   lastEmailSentAt    DateTime?
   lastOpenedAt       DateTime?
   lastRepliedAt      DateTime?
-  openCount          Int              @default(0)
-  replyCount         Int              @default(0)
+  openCount          Int                       @default(0)
+  replyCount         Int                       @default(0)
   messageIdHeader    String?
   triggerCampaignId  String?
   triggerRecipientId String?
-  contact            Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  sequence           Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  contact            Contact                   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sequence           Sequence                  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
   sequenceEvents     SequenceEvent[]
+  stepExecutions     SequenceStepExecution[]
 
   @@unique([sequenceId, contactId])
   @@index([sequenceId, status])
+}
+
+model SequenceStepExecution {
+  id           String              @id @default(cuid())
+  enrollmentId String
+  enrollment   SequenceEnrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  stepId       String              // The ID of the step that was executed
+  stepIndex    Int                 // The index of the step that was executed
+  executedAt   DateTime            @default(now())
+  status       String              // 'completed', 'skipped', 'failed'
+  
+  @@unique([enrollmentId, stepId]) // Prevent duplicate execution
+  @@index([enrollmentId])
 }
 
 model EmailEvent {
