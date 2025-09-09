@@ -177,9 +177,55 @@ export class SequenceService {
       console.log('Current step has ID:', stepToExecute.id)
       console.log('All step IDs in sequence:', steps.map((s: any) => s.id))
       
-      // CRITICAL FIX: Record that we're executing this condition step
+      // CRITICAL FIX: Prevent duplicate condition execution with better locking
       if (stepToExecute.id) {
+        const executionKey = `${enrollmentId}-${stepToExecute.id}-${stepToExecuteIndex}`
+        console.log('🔒 Checking condition execution lock:', executionKey)
+        
         try {
+          // Check if already executed
+          const existing = await prisma.sequenceStepExecution.findFirst({
+            where: {
+              enrollmentId,
+              stepId: stepToExecute.id
+            }
+          })
+          
+          if (existing) {
+            console.log('⚠️ CONDITION ALREADY EXECUTED - PREVENTING DUPLICATE')
+            console.log('  Previous execution:', existing.executedAt)
+            console.log('  Status:', existing.status)
+            
+            // Find the step that was chosen in the previous execution
+            const nextStepAfterCondition = await prisma.sequenceStepExecution.findFirst({
+              where: {
+                enrollmentId,
+                stepIndex: { gt: stepToExecuteIndex }
+              },
+              orderBy: { stepIndex: 'asc' }
+            })
+            
+            if (nextStepAfterCondition) {
+              // Jump to the step after the already-executed branch
+              const targetStepIndex = nextStepAfterCondition.stepIndex + 1
+              console.log('  Jumping to step after executed branch:', targetStepIndex)
+              
+              await prisma.sequenceEnrollment.update({
+                where: { id: enrollmentId },
+                data: { currentStep: targetStepIndex }
+              })
+            } else {
+              // No branch was executed yet, just move to next step
+              await prisma.sequenceEnrollment.update({
+                where: { id: enrollmentId },
+                data: { currentStep: enrollment.currentStep + 1 }
+              })
+            }
+            
+            return this.processSequenceStep(enrollmentId)
+          }
+          
+          // Create execution record with unique constraint
           await prisma.sequenceStepExecution.create({
             data: {
               enrollmentId,
@@ -189,14 +235,23 @@ export class SequenceService {
             }
           })
           console.log('📝 Recorded condition step execution:', stepToExecute.id)
-        } catch (error) {
-          console.log('⚠️ Step already executed, preventing duplicate condition evaluation')
-          // Move to next step to prevent stuck enrollment
-          await prisma.sequenceEnrollment.update({
-            where: { id: enrollmentId },
-            data: { currentStep: enrollment.currentStep + 1 }
-          })
-          return this.processSequenceStep(enrollmentId)
+        } catch (error: any) {
+          if (error.code === 'P2002') {
+            console.log('⚠️ Concurrent execution detected - another process is handling this condition')
+            // Wait a moment for the other process to complete
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            // Re-fetch enrollment to get updated state
+            const updatedEnrollment = await prisma.sequenceEnrollment.findUnique({
+              where: { id: enrollmentId }
+            })
+            
+            if (updatedEnrollment && updatedEnrollment.currentStep > enrollment.currentStep) {
+              console.log('  Other process advanced to step:', updatedEnrollment.currentStep)
+              return this.processSequenceStep(enrollmentId)
+            }
+          }
+          throw error
         }
       }
       
@@ -656,8 +711,19 @@ export class SequenceService {
     console.log('  Will add tracking:', enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false))
     
     try {
-      // Ensure tracking is added if enabled
-      const finalHtmlContent = (enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false)) ? 
+      // CRITICAL FIX: Ensure tracking is added to ALL emails when enabled
+      const sequenceTrackingEnabled = enrollment.sequence.trackingEnabled !== false // Default to true if undefined
+      const stepTrackingEnabled = stepToExecute.trackingEnabled !== false // Default to true if undefined
+      const shouldAddTracking = sequenceTrackingEnabled && stepTrackingEnabled
+      
+      console.log('📊 TRACKING DECISION:')
+      console.log('  Sequence tracking enabled:', sequenceTrackingEnabled)
+      console.log('  Step tracking enabled:', stepTrackingEnabled)
+      console.log('  Will add tracking:', shouldAddTracking)
+      console.log('  Current step:', enrollment.currentStep)
+      console.log('  Step type:', stepToExecute.type)
+      
+      const finalHtmlContent = shouldAddTracking ? 
         await this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent
       
       console.log('🔍 Final email content checks:')
@@ -732,11 +798,23 @@ export class SequenceService {
       console.log(`   Message-ID Header: ${messageIdHeader || 'Not captured'}`)
       
       // Update enrollment with Gmail thread ID for reply tracking
-      // Strip angle brackets from Message-ID for storage (we'll add them back when using)
+      // CRITICAL FIX: Always store Message-ID for threading
+      // This handles both campaign-triggered and standalone sequences
       let cleanMessageId = messageIdHeader
       if (cleanMessageId && cleanMessageId.startsWith('<') && cleanMessageId.endsWith('>')) {
         cleanMessageId = cleanMessageId.slice(1, -1)
         console.log('📝 Stripping angle brackets for storage:', messageIdHeader, '->', cleanMessageId)
+      }
+      
+      // STANDALONE SEQUENCE FIX: Store Message-ID from first email
+      const isFirstEmail = enrollment.currentStep === 0
+      const needsMessageId = !enrollment.messageIdHeader && cleanMessageId
+      
+      if (isFirstEmail || needsMessageId) {
+        console.log('🆕 STORING INITIAL MESSAGE-ID FOR STANDALONE SEQUENCE')
+        console.log('  Is first email:', isFirstEmail)
+        console.log('  Has existing Message-ID:', !!enrollment.messageIdHeader)
+        console.log('  New Message-ID:', cleanMessageId)
       }
       
       const updateData = { 
