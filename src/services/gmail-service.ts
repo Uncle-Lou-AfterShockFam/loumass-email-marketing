@@ -185,19 +185,22 @@ export class GmailService {
     console.log('=== buildMessage CALLED ===')
     console.log('HTML content length:', emailData.htmlContent.length)
     console.log('Has attachments:', !!emailData.attachments?.length)
+    console.log('FromName provided:', emailData.fromName || 'NONE - will use LOUMASS')
     
     try {
       // Create mail options for MailComposer
       console.log('Creating mailOptions object...')
+      // ALWAYS use LOUMASS for consistency across all emails
+      const consistentFromName = 'LOUMASS'
       const mailOptions: any = {
-        from: `${emailData.fromName || 'LOUMASS'} <${fromEmail}>`,
+        from: `${consistentFromName} <${fromEmail}>`,
         to: emailData.to.join(', '),
         subject: emailData.subject,
         text: emailData.textContent || '',
         html: emailData.htmlContent,
         textEncoding: 'base64'
       }
-      console.log('mailOptions created successfully')
+      console.log('mailOptions created with FROM:', mailOptions.from)
 
     // CRITICAL: Add threading headers when we have a messageId to reference
     if (emailData.messageId) {
@@ -209,15 +212,20 @@ export class GmailService {
       if (emailData.messageId.includes('@') && (emailData.messageId.includes('<') || emailData.messageId.includes('CAM'))) {
         mailOptions.inReplyTo = emailData.messageId
         mailOptions.references = emailData.messageId
-        console.log('✅ Threading headers added to message')
+        console.log('✅ Threading headers SUCCESSFULLY added to message:')
+        console.log('  - In-Reply-To:', mailOptions.inReplyTo)
+        console.log('  - References:', mailOptions.references)
       } else {
         console.log('❌ CRITICAL ERROR: messageId does not look like a proper Message-ID:', emailData.messageId)
         console.log('   This might be a threadId being passed as messageId - skipping threading headers')
         console.log('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
+        console.log('   HEADERS NOT ADDED - This email will NOT thread for recipients!')
       }
     } else if (emailData.threadId) {
       console.log('⚠️ Have threadId but no messageId - cannot add threading headers')
       console.log('  Threading will only work in sender\'s sent folder, not recipient\'s inbox')
+    } else {
+      console.log('🆕 No messageId or threadId provided - this will be a new thread')
     }
 
     if (emailData.replyTo) {

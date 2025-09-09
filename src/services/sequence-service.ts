@@ -193,16 +193,21 @@ export class SequenceService {
       const trueBranch = stepToExecute.condition?.trueBranch
       const falseBranch = stepToExecute.condition?.falseBranch
       
+      console.log('🔀 Branch configuration:')
+      console.log('  - True branch:', trueBranch)
+      console.log('  - False branch:', falseBranch)
+      console.log('  - Condition met:', conditionMet)
+      
       // Handle empty arrays or invalid branch configuration
       const hasTrueBranch = trueBranch && Array.isArray(trueBranch) && trueBranch.length > 0 && trueBranch[0] !== null
       const hasFalseBranch = falseBranch && Array.isArray(falseBranch) && falseBranch.length > 0 && falseBranch[0] !== null
       
       if (conditionMet && hasTrueBranch) {
         branchStepId = trueBranch[0]
-        console.log('Following TRUE branch to step:', branchStepId)
+        console.log('✅ Following TRUE branch to step:', branchStepId)
       } else if (!conditionMet && hasFalseBranch) {
         branchStepId = falseBranch[0]
-        console.log('Following FALSE branch to step:', branchStepId)
+        console.log('✅ Following FALSE branch to step:', branchStepId)
       } else if ((conditionMet && !hasTrueBranch) || (!conditionMet && !hasFalseBranch)) {
         // No branch for this condition result, but might have branch for the other result
         // Check if we should continue to next step or if sequence design expects a branch
@@ -418,12 +423,14 @@ export class SequenceService {
     let messageIdForReply: string | undefined
     
     // Check if this step should reply to thread
-    console.log(`🧵 Threading check:`)
+    console.log(`🧵 Threading check for step ${enrollment.currentStep}:`)
     console.log(`   - stepToExecute.replyToThread: ${stepToExecute.replyToThread}`)
     console.log(`   - enrollment.gmailThreadId: ${enrollment.gmailThreadId || 'None'}`)
     console.log(`   - enrollment.gmailMessageId: ${enrollment.gmailMessageId || 'None'}`)
     console.log(`   - enrollment.messageIdHeader: ${enrollment.messageIdHeader || 'None'}`)
     console.log(`   - enrollment.triggerRecipientId: ${enrollment.triggerRecipientId || 'None'}`)
+    console.log(`   - Step type: ${stepToExecute.type}`)
+    console.log(`   - Step ID: ${stepToExecute.id}`)
     
     // For campaign-triggered sequences, fetch Message-ID from campaign recipient if not stored
     if (!enrollment.messageIdHeader && enrollment.triggerRecipientId) {
@@ -505,11 +512,18 @@ export class SequenceService {
       console.log('  - enrollment.messageIdHeader:', enrollment.messageIdHeader)
       console.log('  - messageIdForReply (final):', messageIdForReply)
       
-      // CRITICAL FIX: Ensure we never pass threadId as messageId
-      if (!messageIdForReply && enrollment.gmailThreadId && enrollment.messageIdHeader) {
+      // CRITICAL FIX: Ensure we always use the stored Message-ID if available
+      if (!messageIdForReply && enrollment.messageIdHeader) {
         console.log('⚠️ FIXING: messageIdForReply was undefined despite having stored Message-ID')
         messageIdForReply = enrollment.messageIdHeader
         console.log('✅ FIXED: Set messageIdForReply to stored Message-ID:', messageIdForReply)
+      }
+      
+      // Double-check we have a valid Message-ID format
+      if (messageIdForReply && !messageIdForReply.includes('@')) {
+        console.log('❌ ERROR: messageIdForReply does not look like a valid Message-ID:', messageIdForReply)
+        console.log('   This might be a threadId, clearing it to prevent broken threading')
+        messageIdForReply = undefined
       }
     } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId) {
       console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
@@ -584,22 +598,34 @@ export class SequenceService {
     console.log('  threadId:', threadId)
     console.log('  messageId for In-Reply-To:', messageIdForReply)
     console.log('  replyToThread:', stepToExecute.replyToThread)
+    console.log('  trackingEnabled (sequence):', enrollment.sequence.trackingEnabled)
+    console.log('  trackingEnabled (step):', stepToExecute.trackingEnabled)
+    console.log('  Will add tracking:', enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false))
     
     try {
+      // Ensure tracking is added if enabled
+      const finalHtmlContent = (enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false)) ? 
+        await this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent
+      
+      console.log('🔍 Final email content checks:')
+      console.log('  - Has tracking pixel:', finalHtmlContent.includes('img src="') && finalHtmlContent.includes('/api/track/open'))
+      console.log('  - Has tracked links:', finalHtmlContent.includes('/api/track/click'))
+      console.log('  - Message-ID being passed:', messageIdForReply || 'NONE')
+      
       const result = await this.gmailService.sendEmail(
         enrollment.sequence.userId,
         gmailToken.email,
         {
           to: [enrollment.contact.email],
           subject,
-          htmlContent: (enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false)) ? 
-            await this.addTrackingToEmail(htmlContent, trackingId, enrollment.sequence.userId) : htmlContent,
+          htmlContent: finalHtmlContent,
           textContent,
           trackingId,
           sequenceId: enrollment.sequenceId,
           contactId: enrollment.contactId,
           threadId,
-          messageId: messageIdForReply // Pass message ID for proper threading headers
+          messageId: messageIdForReply, // Pass message ID for proper threading headers
+          fromName: 'LOUMASS' // Ensure consistent FROM name
         }
       )
 
