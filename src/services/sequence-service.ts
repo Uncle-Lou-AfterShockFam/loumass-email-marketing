@@ -531,8 +531,21 @@ export class SequenceService {
     // CRITICAL FIX: For standalone sequences, always use stored Message-ID for threading
     // This must happen BEFORE any other threading logic
     let isStandaloneSequence = !enrollment.triggerRecipientId
-    if (stepToExecute.replyToThread && enrollment.messageIdHeader && isStandaloneSequence) {
-      console.log('🎯 STANDALONE SEQUENCE THREADING: Using stored Message-ID')
+    
+    // ENHANCED FIX: For standalone sequences, thread ALL follow-up emails (step > 0) regardless of replyToThread flag
+    // This ensures emails after conditions also thread properly
+    if (isStandaloneSequence && enrollment.messageIdHeader && enrollment.currentStep > 0) {
+      console.log('🎯 STANDALONE SEQUENCE AUTO-THREADING: Step > 0, forcing thread')
+      console.log('  Current step:', enrollment.currentStep)
+      console.log('  Step has replyToThread:', stepToExecute.replyToThread)
+      messageIdForReply = enrollment.messageIdHeader
+      threadId = enrollment.gmailThreadId || undefined
+      console.log('  Message-ID for threading:', messageIdForReply)
+      console.log('  Thread ID:', threadId)
+      console.log('  Is valid Message-ID format:', messageIdForReply.includes('@'))
+      console.log('  FORCING THREADING for follow-up email in standalone sequence')
+    } else if (stepToExecute.replyToThread && enrollment.messageIdHeader && isStandaloneSequence) {
+      console.log('🎯 STANDALONE SEQUENCE THREADING: Using stored Message-ID (explicit replyToThread)')
       messageIdForReply = enrollment.messageIdHeader
       threadId = enrollment.gmailThreadId || undefined
       console.log('  Message-ID for threading:', messageIdForReply)
@@ -728,7 +741,14 @@ export class SequenceService {
 
     // Send the email
     // CRITICAL FINAL CHECK: Ensure messageIdForReply is set for threading
-    if (isStandaloneSequence && stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
+    // For standalone sequences, ALL follow-up emails (step > 0) should thread
+    if (isStandaloneSequence && enrollment.messageIdHeader && enrollment.currentStep > 0 && !messageIdForReply) {
+      console.log('🚨 FINAL FIX: messageIdForReply missing at send time for follow-up! Restoring...')
+      console.log('  Current step:', enrollment.currentStep)
+      console.log('  Has Message-ID:', enrollment.messageIdHeader)
+      messageIdForReply = enrollment.messageIdHeader
+      threadId = threadId || enrollment.gmailThreadId || undefined
+    } else if (isStandaloneSequence && stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
       console.log('🚨 FINAL FIX: messageIdForReply missing at send time! Restoring...')
       messageIdForReply = enrollment.messageIdHeader
     }
