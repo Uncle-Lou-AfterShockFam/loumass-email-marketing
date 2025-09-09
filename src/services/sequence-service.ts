@@ -528,6 +528,14 @@ export class SequenceService {
     let threadId: string | undefined
     let messageIdForReply: string | undefined
     
+    // ULTIMATE FIX: If replyToThread is true and we have a stored Message-ID, USE IT!
+    // This ensures threading works for ALL scenarios
+    if (stepToExecute.replyToThread && enrollment.messageIdHeader) {
+      console.log('🎯 ULTIMATE THREADING FIX: Found stored Message-ID, will use for threading')
+      messageIdForReply = enrollment.messageIdHeader
+      console.log('  Message-ID:', messageIdForReply)
+    }
+    
     // Check if this step should reply to thread
     console.log(`🧵 Threading check for step ${enrollment.currentStep}:`)
     console.log(`   - stepToExecute.replyToThread: ${stepToExecute.replyToThread}`)
@@ -623,13 +631,14 @@ export class SequenceService {
       console.log('  - stepToExecute.replyToThread:', stepToExecute.replyToThread)
       console.log('  - enrollment.gmailThreadId:', enrollment.gmailThreadId)
       console.log('  - enrollment.messageIdHeader:', enrollment.messageIdHeader)
-      console.log('  - messageIdForReply (final):', messageIdForReply)
+      console.log('  - messageIdForReply (before fix):', messageIdForReply)
       
-      // CRITICAL FIX: Ensure we always use the stored Message-ID if available
-      if (!messageIdForReply && enrollment.messageIdHeader) {
-        console.log('⚠️ FIXING: messageIdForReply was undefined despite having stored Message-ID')
+      // CRITICAL FIX: ALWAYS use the stored Message-ID for threading when replyToThread is true
+      // This ensures threading works for ALL follow-up emails in standalone sequences
+      if (stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
+        console.log('🚨 CRITICAL FIX: Setting messageIdForReply from stored Message-ID for threading')
         messageIdForReply = enrollment.messageIdHeader
-        console.log('✅ FIXED: Set messageIdForReply to stored Message-ID:', messageIdForReply)
+        console.log('✅ FIXED: Threading will now work! Message-ID:', messageIdForReply)
       }
       
       // Double-check we have a valid Message-ID format
