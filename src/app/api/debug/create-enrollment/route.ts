@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const targetSequenceId = 'cmfc04unm0005l504batqbm9w'
+    // Accept sequenceId from request body, default to existing one
+    const body = await request.json().catch(() => ({}))
+    const targetSequenceId = body.sequenceId || 'cmfc04unm0005l504batqbm9w'
     const targetUserId = 'cmeuwk6x70000jj04gb20w4dk'
     
     // Create a unique test contact with timestamp
