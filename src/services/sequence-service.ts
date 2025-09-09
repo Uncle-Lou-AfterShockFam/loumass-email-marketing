@@ -829,15 +829,19 @@ export class SequenceService {
         console.log('  New Message-ID:', cleanMessageId)
       }
       
+      // CRITICAL FIX: For standalone sequences, we MUST store the Message-ID from the first email
+      // This is what will be used for threading in all subsequent emails
+      const shouldStoreMessageId = (isFirstEmail && cleanMessageId) || (!enrollment.messageIdHeader && cleanMessageId)
+      
       const updateData = { 
         currentStep: enrollment.currentStep + 1,
         lastEmailSentAt: new Date(),
         // Store Gmail's internal message ID for fetching purposes
         gmailMessageId: result.messageId,
         gmailThreadId: result.threadId,
-        // CRITICAL FIX: Always store the proper Message-ID header for threading (without angle brackets)
-        // This overwrites any wrong values and ensures follow-ups use correct Message-ID
-        ...(cleanMessageId ? { messageIdHeader: cleanMessageId } : {})
+        // CRITICAL FIX: Store the Message-ID header from the FIRST email for threading
+        // Only update if this is the first email or we don't have one yet
+        ...(shouldStoreMessageId ? { messageIdHeader: cleanMessageId } : {})
       }
       
       console.log(`📝 Updating enrollment after email sent:`, {
