@@ -14,36 +14,41 @@ export async function GET() {
       )
     }
 
-    // Get Gmail connection status from database
-    const gmailToken = await prisma.gmailToken.findUnique({
-      where: {
-        userId: session.user.id
-      },
+    // Get user OAuth configuration and Gmail connection status
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
       select: {
-        id: true,
-        email: true,
-        createdAt: true,
-        expiresAt: true,
-        scope: true
+        oauthConfigured: true,
+        gmailToken: {
+          select: {
+            id: true,
+            email: true,
+            createdAt: true,
+            expiresAt: true,
+            scope: true
+          }
+        }
       }
     })
 
-    if (!gmailToken) {
+    if (!user?.gmailToken) {
       return NextResponse.json({
-        connected: false
+        connected: false,
+        oauthConfigured: user?.oauthConfigured || false
       })
     }
 
     // Check if token is still valid (not expired)
-    const isTokenValid = gmailToken.expiresAt > new Date()
+    const isTokenValid = user.gmailToken.expiresAt > new Date()
 
     return NextResponse.json({
       connected: true,
-      email: gmailToken.email,
-      connectedAt: gmailToken.createdAt.toISOString(),
-      tokenExpiry: gmailToken.expiresAt.toISOString(),
-      scope: gmailToken.scope,
-      isTokenValid
+      email: user.gmailToken.email,
+      connectedAt: user.gmailToken.createdAt.toISOString(),
+      tokenExpiry: user.gmailToken.expiresAt.toISOString(),
+      scope: user.gmailToken.scope,
+      isTokenValid,
+      oauthConfigured: user.oauthConfigured || false
     })
   } catch (error) {
     console.error('Gmail status check error:', error)

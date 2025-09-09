@@ -20,7 +20,6 @@ interface TokenRefreshOptions {
 }
 
 export class BulletproofTokenRefresh {
-  private oauth2Client: OAuth2Client
   private readonly options: Required<TokenRefreshOptions>
 
   constructor(options: TokenRefreshOptions = {}) {
@@ -29,10 +28,25 @@ export class BulletproofTokenRefresh {
       baseDelayMs: options.baseDelayMs ?? 1000, // Start with 1 second
       proactiveRefreshMinutes: options.proactiveRefreshMinutes ?? 10 // Refresh 10 minutes early
     }
+  }
 
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
+  private async createOAuthClient(userId: string): Promise<OAuth2Client> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        googleClientId: true,
+        googleClientSecret: true,
+        oauthConfigured: true
+      }
+    })
+
+    if (!user?.oauthConfigured || !user.googleClientId || !user.googleClientSecret) {
+      throw new Error('User OAuth credentials not configured. Please configure your Google OAuth Client ID and Secret in Settings.')
+    }
+
+    return new google.auth.OAuth2(
+      user.googleClientId,
+      user.googleClientSecret,
       `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
   }
@@ -109,6 +123,9 @@ export class BulletproofTokenRefresh {
    * Single token refresh attempt
    */
   private async attemptTokenRefresh(userId: string, email: string): Promise<boolean> {
+    // Create OAuth client with user credentials
+    const oauth2Client = await this.createOAuthClient(userId)
+    
     // Get current token from database
     const gmailToken = await prisma.gmailToken.findUnique({
       where: { userId },
@@ -130,12 +147,12 @@ export class BulletproofTokenRefresh {
     }
 
     // Set credentials for refresh
-    this.oauth2Client.setCredentials({
+    oauth2Client.setCredentials({
       refresh_token: gmailToken.refreshToken
     })
 
     // Call Google OAuth to refresh access token
-    const { credentials } = await this.oauth2Client.refreshAccessToken()
+    const { credentials } = await oauth2Client.refreshAccessToken()
     
     if (!credentials.access_token) {
       throw new Error('No access token returned from Google OAuth')
@@ -332,10 +349,10 @@ export class BulletproofTokenRefresh {
         select: { variables: true }
       })
 
-      const existingVariables = user?.variables || {}
+      const existingVariables = (user?.variables as Record<string, any>) || {}
       
       // Handle increment operations
-      const updatedVariables = { ...existingVariables }
+      const updatedVariables: Record<string, any> = { ...existingVariables }
       for (const [key, value] of Object.entries(variables)) {
         if (typeof value === 'object' && value?.increment) {
           updatedVariables[key] = ((existingVariables[key] as number) || 0) + value.increment

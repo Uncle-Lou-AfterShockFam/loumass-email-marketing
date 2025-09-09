@@ -39,14 +39,30 @@ export async function GET(request: NextRequest) {
 
     const gmailClient = new GmailClient()
     
-    // Exchange code for tokens
-    const tokens = await gmailClient.getTokensFromCode(code)
+    // Exchange code for tokens using user credentials
+    const tokens = await gmailClient.getTokensFromCode(code, session.user.id)
     
-    // Get user profile and Gmail info from Google APIs
+    // Get user OAuth credentials for API calls
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        googleClientId: true,
+        googleClientSecret: true,
+        oauthConfigured: true
+      }
+    })
+
+    if (!user?.oauthConfigured || !user.googleClientId || !user.googleClientSecret) {
+      return NextResponse.redirect(
+        new URL('/dashboard/settings?error=oauth_not_configured', request.url)
+      )
+    }
+    
+    // Get user profile and Gmail info from Google APIs using user credentials
     const { google } = await import('googleapis')
     const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
+      user.googleClientId,
+      user.googleClientSecret,
       `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
     

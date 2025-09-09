@@ -12,6 +12,7 @@ interface GmailConnectionStatus {
   email?: string
   connectedAt?: string
   tokenExpiry?: string
+  oauthConfigured?: boolean
 }
 
 export default function AutomaticGmailConnection() {
@@ -38,6 +39,11 @@ export default function AutomaticGmailConnection() {
   }
 
   const handleConnect = async () => {
+    if (!status.oauthConfigured) {
+      toast.error('Please configure your Google OAuth credentials first in the OAuth Setup section above')
+      return
+    }
+
     setIsLoading(true)
     try {
       // Redirect to Gmail connection endpoint
@@ -88,7 +94,7 @@ export default function AutomaticGmailConnection() {
           Gmail Connection
         </CardTitle>
         <CardDescription>
-          Connect your Gmail account to send emails through LOUMASS. We handle all the OAuth setup automatically.
+          Connect your Gmail account to send emails through LOUMASS using your own OAuth credentials.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -136,21 +142,27 @@ export default function AutomaticGmailConnection() {
               <AlertDescription>
                 <div className="space-y-2">
                   <div><strong>Gmail Not Connected</strong></div>
-                  <div className="text-sm">
-                    Connect your Gmail account to start sending emails. We use Google OAuth2 with the following permissions:
-                  </div>
-                  <ul className="text-sm space-y-1 ml-4">
-                    <li>• Send emails from your Gmail account</li>
-                    <li>• Read your Gmail messages (for reply tracking)</li>
-                    <li>• Access your email address and profile</li>
-                  </ul>
+                  {!status.oauthConfigured ? (
+                    <div className="text-sm">
+                      Please configure your Google OAuth credentials in the "Google OAuth Configuration" section above before connecting Gmail.
+                    </div>
+                  ) : (
+                    <div className="text-sm">
+                      Connect your Gmail account to start sending emails. We use your Google OAuth2 credentials with the following permissions:
+                      <ul className="space-y-1 ml-4 mt-2">
+                        <li>• Send emails from your Gmail account</li>
+                        <li>• Read your Gmail messages (for reply tracking)</li>
+                        <li>• Access your email address and profile</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </AlertDescription>
             </Alert>
 
             <Button
               onClick={handleConnect}
-              disabled={isLoading}
+              disabled={isLoading || !status.oauthConfigured}
               className="flex items-center gap-2 w-full sm:w-auto"
             >
               {isLoading ? (
@@ -160,21 +172,27 @@ export default function AutomaticGmailConnection() {
               )}
               Connect Gmail Account
             </Button>
+            
+            {!status.oauthConfigured && (
+              <div className="text-sm text-gray-600">
+                ⚠️ Button disabled until OAuth credentials are configured above
+              </div>
+            )}
           </>
         )}
 
         <Alert className="border-blue-200 bg-blue-50">
           <AlertDescription className="text-blue-800 text-sm">
             <div className="space-y-2">
-              <div><strong>🚀 Automatic Setup!</strong></div>
+              <div><strong>🔒 Your Own OAuth Credentials</strong></div>
               <div>
-                No more manual OAuth configuration needed. We handle all the technical setup automatically:
+                For security and control, each user provides their own Google OAuth credentials:
               </div>
               <ul className="space-y-0.5 text-xs">
-                <li>• Pre-configured Google Cloud OAuth application</li>
+                <li>• Use your own Google Cloud project and OAuth app</li>
                 <li>• Automatic token refresh to prevent expiration</li>
                 <li>• Secure credential management</li>
-                <li>• No Client ID or Secret needed from you</li>
+                <li>• Full control over your OAuth scopes and usage</li>
               </ul>
             </div>
           </AlertDescription>

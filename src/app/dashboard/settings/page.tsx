@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import OAuthSetup from '@/components/settings/OAuthSetup'
 import AutomaticGmailConnection from '@/components/settings/AutomaticGmailConnection'
 import TrackingDomain from '@/components/settings/TrackingDomain'
 import AccountSettings from '@/components/settings/AccountSettings'
@@ -32,7 +33,10 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        {/* 🚀 NEW AUTOMATIC GMAIL CONNECTION - No manual OAuth setup needed! */}
+        {/* 🔧 OAuth Setup - Users configure their own credentials */}
+        <OAuthSetup />
+
+        {/* 📧 Gmail Connection - Requires OAuth setup first */}
         <AutomaticGmailConnection />
 
         <TrackingDomain 

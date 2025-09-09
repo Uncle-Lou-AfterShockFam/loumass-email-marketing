@@ -4,22 +4,36 @@ import { prisma } from '@/lib/prisma'
 import { bulletproofTokenRefresh } from '@/lib/bulletproof-token-refresh'
 
 export class GmailClient {
-  private oauth2Client: OAuth2Client
+  private oauth2Client: OAuth2Client | null = null
   
   constructor() {
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      console.error('Missing Google OAuth credentials in environment variables')
-      throw new Error('Google OAuth credentials not configured')
+    // OAuth2Client will be created dynamically with user credentials
+  }
+
+  private async initializeOAuthClient(userId: string): Promise<OAuth2Client> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        googleClientId: true,
+        googleClientSecret: true,
+        oauthConfigured: true
+      }
+    })
+
+    if (!user?.oauthConfigured || !user.googleClientId || !user.googleClientSecret) {
+      throw new Error('User OAuth credentials not configured. Please configure your Google OAuth Client ID and Secret in Settings.')
     }
-    
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
+
+    return new google.auth.OAuth2(
+      user.googleClientId,
+      user.googleClientSecret,
       `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
   }
 
-  getAuthUrl(userId: string) {
+  async getAuthUrl(userId: string) {
+    const oauth2Client = await this.initializeOAuthClient(userId)
+    
     const scopes = [
       'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/gmail.compose',
@@ -28,7 +42,7 @@ export class GmailClient {
       'https://www.googleapis.com/auth/userinfo.email'
     ]
 
-    return this.oauth2Client.generateAuthUrl({
+    return oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
       state: userId,
@@ -36,8 +50,9 @@ export class GmailClient {
     })
   }
 
-  async getTokensFromCode(code: string) {
-    const { tokens } = await this.oauth2Client.getToken(code)
+  async getTokensFromCode(code: string, userId: string) {
+    const oauth2Client = await this.initializeOAuthClient(userId)
+    const { tokens } = await oauth2Client.getToken(code)
     return tokens
   }
 
@@ -79,6 +94,9 @@ export class GmailClient {
   async getGmailService(userId: string, email: string): Promise<any> {
     console.log('🔑 Getting Gmail service for user:', userId, 'email:', email)
     
+    // Initialize OAuth client with user credentials
+    const oauth2Client = await this.initializeOAuthClient(userId)
+    
     const gmailToken = await prisma.gmailToken.findUnique({
       where: {
         userId
@@ -118,14 +136,14 @@ export class GmailClient {
       console.log('✅ Bulletproof token refresh successful, new expiry:', refreshedToken.expiresAt)
       
       // Set credentials with refreshed token
-      this.oauth2Client.setCredentials({
+      oauth2Client.setCredentials({
         access_token: refreshedToken.accessToken,
         refresh_token: refreshedToken.refreshToken,
         expiry_date: refreshedToken.expiresAt.getTime()
       })
     } else {
       console.log('✅ Token is valid, setting credentials...')
-      this.oauth2Client.setCredentials({
+      oauth2Client.setCredentials({
         access_token: gmailToken.accessToken,
         refresh_token: gmailToken.refreshToken,
         expiry_date: gmailToken.expiresAt.getTime()
@@ -133,7 +151,7 @@ export class GmailClient {
     }
 
     console.log('📧 Creating Gmail service instance...')
-    const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client })
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
 
     console.log('✅ Gmail service created successfully')
     return gmail

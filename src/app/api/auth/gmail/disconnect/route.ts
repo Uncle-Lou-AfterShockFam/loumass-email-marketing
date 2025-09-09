@@ -31,11 +31,11 @@ export async function POST() {
       select: { variables: true }
     })
 
-    const existingVariables = existingUser?.variables || {}
+    const existingVariables = (existingUser?.variables as Record<string, any>) || {}
 
     // Update user variables to reflect disconnection
     const disconnectionDate = new Date().toISOString()
-    const updatedVariables = {
+    const updatedVariables: Record<string, any> = {
       ...existingVariables,
       // Mark Gmail as disconnected
       gmailConnected: false,
