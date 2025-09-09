@@ -27,7 +27,7 @@ export class GmailClient {
     return new google.auth.OAuth2(
       user.googleClientId,
       user.googleClientSecret,
-      `${process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
+      `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL}/api/auth/gmail/callback`
     )
   }
 

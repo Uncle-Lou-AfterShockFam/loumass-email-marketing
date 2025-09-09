@@ -106,7 +106,16 @@ export class SequenceProcessor {
           await this.processEmailStep(enrollment, currentStep)
           break
         case 'delay':
-          await this.processDelayStep(enrollment, currentStep)
+          // For delay steps, just move to next step once delay has passed
+          // isStepDue already verified the delay has passed
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollment.id },
+            data: {
+              currentStep: enrollment.currentStep + 1,
+              updatedAt: new Date()
+            }
+          })
+          console.log(`[SequenceProcessor] Delay completed, moved to step ${enrollment.currentStep + 1} for enrollment ${enrollment.id}`)
           break
         case 'condition':
           await this.processConditionStep(enrollment, currentStep, steps)
@@ -129,13 +138,21 @@ export class SequenceProcessor {
       return true
     }
 
-    // For delay steps, check if delay has passed
+    // For delay steps, check if delay has passed since last email was sent
     if (step.type === 'delay' && step.delay) {
-      const lastAction = enrollment.updatedAt || enrollment.createdAt
+      // Use lastEmailSentAt as the reference point for delays
+      const lastAction = enrollment.lastEmailSentAt || enrollment.updatedAt || enrollment.createdAt
       const delayMs = this.calculateDelayInMs(step.delay)
       const nextStepTime = new Date(lastAction.getTime() + delayMs)
       
-      return new Date() >= nextStepTime
+      const now = new Date()
+      const isDue = now >= nextStepTime
+      
+      if (!isDue) {
+        console.log(`[SequenceProcessor] Delay not due yet. Waiting until ${nextStepTime.toISOString()} (current time: ${now.toISOString()})`)
+      }
+      
+      return isDue
     }
 
     // For condition steps, evaluate immediately
@@ -239,22 +256,6 @@ export class SequenceProcessor {
     }
   }
 
-  /**
-   * Process a delay step
-   */
-  async processDelayStep(enrollment: any, step: SequenceStep) {
-    // For delay steps, we just move to the next step
-    // The actual delay is handled by the isStepDue check
-    await prisma.sequenceEnrollment.update({
-      where: { id: enrollment.id },
-      data: {
-        currentStep: enrollment.currentStep + 1,
-        updatedAt: new Date()
-      }
-    })
-
-    console.log(`[SequenceProcessor] Delay step processed for enrollment ${enrollment.id}`)
-  }
 
   /**
    * Process a condition step
