@@ -259,8 +259,9 @@ export class SequenceProcessor {
       let finalHtmlContent = content
       let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
       
-      if (shouldReplyToThread && enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-        console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
+      // Always include thread history when replying (Gmail's default behavior)
+      if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
+        console.log(`[SequenceProcessor] INCLUDING FULL THREAD HISTORY (Gmail default behavior) - Thread ID: ${enrollment.gmailThreadId}`)
         
         // Fetch the full thread history from Gmail (all messages in the conversation)
         const fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
