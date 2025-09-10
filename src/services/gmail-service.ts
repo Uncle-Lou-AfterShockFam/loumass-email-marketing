@@ -59,6 +59,23 @@ export class GmailService {
       // Attempt to get Gmail service (with automatic token refresh if needed)
       const gmail = await this.gmailClient.getGmailService(userId, gmailAddress)
       
+      // CRITICAL FIX: Add tracking to sequences (not just campaigns)
+      if (emailData.trackingId && emailData.htmlContent) {
+        console.log('🔍 SEQUENCE TRACKING: Adding tracking to email')
+        console.log('  Tracking ID:', emailData.trackingId)
+        console.log('  Original HTML length:', emailData.htmlContent.length)
+        
+        // Add tracking pixels and tracked links
+        emailData.htmlContent = await this.addTrackingToEmail(
+          emailData.htmlContent, 
+          emailData.trackingId, 
+          userId
+        )
+        
+        console.log('  Tracked HTML length:', emailData.htmlContent.length)
+        console.log('✅ Tracking added to sequence email')
+      }
+      
       // Build email message
       console.log('About to build message...')
       const message = await this.buildMessage(emailData, gmailAddress)
