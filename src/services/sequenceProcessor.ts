@@ -262,87 +262,21 @@ export class SequenceProcessor {
       if (shouldReplyToThread && enrollment.currentStep > 0 && enrollment.gmailThreadId) {
         console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
-        // Fetch the actual last message from the Gmail thread
-        const threadContent = await gmailService.getThreadLastMessage(user.id, enrollment.gmailThreadId)
+        // Fetch the full thread history from Gmail (all messages in the conversation)
+        const fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
         
-        if (threadContent) {
-          console.log(`[SequenceProcessor] Got actual thread content - using for quote`)
+        if (fullHistory) {
+          console.log(`[SequenceProcessor] Got full thread history - including all previous messages`)
           
-          // Format the date for the quote header to match Gmail's exact format
-          // Gmail format: "On Tue, Sep 9, 2025 at 11:02 PM Louis Piotti <ljpiotti@aftershockfam.org> wrote:"
-          const dateOptions: Intl.DateTimeFormatOptions = {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }
-          
-          // Format the date parts - use the actual date from the email
-          // The date from Gmail is already in the correct format
-          const emailDate = new Date(threadContent.date)
-          
-          const formattedDate = emailDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric',
-            timeZone: 'America/New_York' // Use the user's timezone
-          })
-          
-          const formattedTime = emailDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: 'America/New_York' // Use the user's timezone
-          }).replace(' ', ' ') // Regular space, not thin space
-          
-          // Extract name and email from the from field
-          // Format can be "Name <email@example.com>" or just "email@example.com"
-          console.log(`[SequenceProcessor] Parsing from field: "${threadContent.from}"`)
-          
-          let fromName = ''
-          let fromEmail = ''
-          
-          // Try to match "Name <email@example.com>" format
-          const emailMatch = threadContent.from.match(/(.*?)\s*<(.+?)>/)
-          if (emailMatch) {
-            fromName = emailMatch[1].trim() || emailMatch[2].split('@')[0]
-            fromEmail = emailMatch[2].trim()
-          } else if (threadContent.from.includes('@')) {
-            // Just an email address without name
-            fromEmail = threadContent.from.trim()
-            fromName = fromEmail.split('@')[0]
-          } else {
-            // Fallback - use the whole string as name
-            fromName = threadContent.from.trim()
-          }
-          
-          console.log(`[SequenceProcessor] Parsed - Name: "${fromName}", Email: "${fromEmail}"`)
-          
-          // Build the attribution line exactly like Gmail
-          // Always include email if we have it
-          const attribution = fromEmail ? 
-            `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:` :
-            `On ${formattedDate} at ${formattedTime} ${fromName} wrote:`
-          
-          // Build HTML content with Gmail's quote format using ACTUAL email content
+          // Build HTML content with the new message and full thread history
           finalHtmlContent = `<div dir="ltr">${content}</div>
 <br>
-<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
-  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    ${threadContent.htmlContent}
-  </blockquote>
-</div>`
+${fullHistory.htmlContent}`
           
-          // Build text content with quote format using ACTUAL email content
+          // Build text content with full thread history
           finalTextContent = `${finalTextContent}
 
-${attribution}
-${threadContent.textContent.split('\n').map(line => `> ${line}`).join('\n')}`
+${fullHistory.textContent}`
           
         } else {
           console.log(`[SequenceProcessor] Could not fetch thread content, falling back to template`)

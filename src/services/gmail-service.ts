@@ -871,4 +871,142 @@ export class GmailService {
       return null
     }
   }
+
+  /**
+   * Get ALL messages from a Gmail thread for including full conversation history
+   * This fetches the entire thread history like Gmail does by default
+   */
+  async getFullThreadHistory(userId: string, threadId: string): Promise<{ htmlContent: string; textContent: string } | null> {
+    try {
+      console.log(`[GmailService] Fetching full thread history for ${threadId}`)
+      
+      // Get user's gmail token
+      const gmailToken = await prisma.gmailToken.findUnique({
+        where: { userId }
+      })
+      
+      if (!gmailToken) {
+        console.error('[GmailService] No Gmail token found for user')
+        return null
+      }
+      
+      // Get Gmail service
+      const gmail = await this.gmailClient.getGmailService(userId, gmailToken.email)
+      
+      // Fetch the thread
+      const thread = await gmail.users.threads.get({
+        userId: 'me',
+        id: threadId,
+        format: 'full'
+      })
+      
+      if (!thread.data.messages || thread.data.messages.length === 0) {
+        console.log('[GmailService] No messages in thread')
+        return null
+      }
+      
+      console.log(`[GmailService] Found ${thread.data.messages.length} messages in thread`)
+      
+      // Build the complete thread history
+      let fullHtmlContent = ''
+      let fullTextContent = ''
+      
+      // Helper function to extract content from message parts
+      const extractContent = (parts: any[]): { html: string; text: string } => {
+        let html = ''
+        let text = ''
+        
+        for (const part of parts) {
+          if (part.mimeType === 'text/html' && part.body?.data) {
+            html = Buffer.from(part.body.data, 'base64').toString('utf-8')
+          } else if (part.mimeType === 'text/plain' && part.body?.data) {
+            text = Buffer.from(part.body.data, 'base64').toString('utf-8')
+          } else if (part.parts) {
+            const nested = extractContent(part.parts)
+            html = html || nested.html
+            text = text || nested.text
+          }
+        }
+        
+        return { html, text }
+      }
+      
+      // Process all messages in chronological order (oldest to newest)
+      // Start from the most recent and work backwards to build the nested structure
+      for (let i = thread.data.messages.length - 1; i >= 0; i--) {
+        const message = thread.data.messages[i]
+        
+        // Extract headers
+        const fromHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'from')
+        const from = fromHeader?.value || 'Unknown Sender'
+        
+        const dateHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'date')
+        const date = dateHeader?.value ? new Date(dateHeader.value) : new Date()
+        
+        // Extract message content
+        let messageHtml = ''
+        let messageText = ''
+        
+        if (message.payload?.parts) {
+          const content = extractContent(message.payload.parts)
+          messageHtml = content.html
+          messageText = content.text
+        } else if (message.payload?.body?.data) {
+          const content = Buffer.from(message.payload.body.data, 'base64').toString('utf-8')
+          if (message.payload.mimeType === 'text/html') {
+            messageHtml = content
+          } else {
+            messageText = content
+          }
+        }
+        
+        // Only include messages that have content and aren't the most recent
+        // (the most recent is what we're replying to)
+        if (i < thread.data.messages.length - 1 && (messageHtml || messageText)) {
+          // Format date like Gmail
+          const formattedDate = date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'America/New_York'
+          })
+          
+          const formattedTime = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/New_York'
+          }).replace(' ', ' ')
+          
+          // Build attribution line
+          const attribution = `On ${formattedDate} at ${formattedTime} ${from} wrote:`
+          
+          // Build the quoted content with proper nesting
+          const quotedHtml = `<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
+  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+    ${messageHtml}${fullHtmlContent ? '\n' + fullHtmlContent : ''}
+  </blockquote>
+</div>`
+          
+          fullHtmlContent = quotedHtml
+          
+          // For text version
+          const quotedText = `${attribution}\n> ${messageText.split('\n').join('\n> ')}${fullTextContent ? '\n>\n> ' + fullTextContent.split('\n').join('\n> ') : ''}`
+          fullTextContent = quotedText
+        }
+      }
+      
+      console.log(`[GmailService] Built full thread history - HTML: ${fullHtmlContent.length} chars`)
+      
+      return {
+        htmlContent: fullHtmlContent,
+        textContent: fullTextContent
+      }
+    } catch (error) {
+      console.error('[GmailService] Error fetching full thread history:', error)
+      return null
+    }
+  }
 }
