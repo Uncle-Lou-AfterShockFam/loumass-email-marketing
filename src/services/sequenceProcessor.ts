@@ -260,15 +260,9 @@ export class SequenceProcessor {
       let finalHtmlContent = content
       let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
       
-      // IMPORTANT: Gmail API behavior vs Gmail App behavior
-      // - Gmail API: Does NOT automatically include previous messages in replies
-      // - Gmail App: ADDS quoted text when user composes a reply
-      // - For automation: Often better WITHOUT quotes (cleaner, shorter emails)
-      // - For human-like: Include quotes to match Gmail app behavior
-      const INCLUDE_THREAD_HISTORY = true // Set to false for cleaner automation emails
-      
-      if (INCLUDE_THREAD_HISTORY && enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-        console.log(`[SequenceProcessor] Including thread history in reply (like Gmail app)`)
+      // ALWAYS include thread history when replying (Gmail's default behavior)
+      if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
+        console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
         // CRITICAL: Fetch the ACTUAL thread history from Gmail API 
         console.log(`[SequenceProcessor] FETCHING REAL EMAIL THREAD CONTENT for thread: ${enrollment.gmailThreadId}`)

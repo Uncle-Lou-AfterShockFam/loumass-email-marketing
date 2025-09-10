@@ -1019,9 +1019,7 @@ export class GmailService {
             const fromEmail = emailMatch[2].trim()
             attribution = `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:`
           } else {
-            // If no angle brackets found, assume it's just an email and add them
-            const emailOnly = from.trim()
-            attribution = `On ${formattedDate} at ${formattedTime} ${emailOnly} <${emailOnly}> wrote:`
+            attribution = `On ${formattedDate} at ${formattedTime} ${from} wrote:`
           }
           
           // Build the quoted content with proper nesting
