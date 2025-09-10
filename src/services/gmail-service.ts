@@ -694,6 +694,9 @@ export class GmailService {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;')
       
+      // Convert line breaks to HTML breaks
+      trackedHtml = trackedHtml.replace(/\n/g, '<br>')
+      
       // Then convert URLs to links
       trackedHtml = trackedHtml.replace(/(https?:\/\/[^\s<>'"]+)/gi, '<a href="$1">$1</a>')
       

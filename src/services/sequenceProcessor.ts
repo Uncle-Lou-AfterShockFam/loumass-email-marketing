@@ -248,6 +248,10 @@ export class SequenceProcessor {
       subject = this.replaceVariables(subject, contact)
       content = this.replaceVariables(content, contact)
       
+      // CRITICAL: Ensure content is complete and not truncated
+      console.log(`[SequenceProcessor] Step ${enrollment.currentStep} content length: ${content.length}`)
+      console.log(`[SequenceProcessor] Step ${enrollment.currentStep} full content:`, content)
+      
       // Check if we should reply to thread
       const shouldReplyToThread = step.replyToThread === true
       
@@ -270,11 +274,14 @@ export class SequenceProcessor {
       console.log(`  - Existing message ID: ${enrollment.gmailMessageId}`)
 
       // Prepare email data for GmailService
+      // Strip HTML for text version - this ensures the full content is sent
+      const textContent = content.replace(/<[^>]*>/g, '').trim()
+      
       const emailData: any = {
         to: [contact.email],
         subject: subject,
         htmlContent: content,
-        textContent: '', // Empty text content to avoid duplicate URLs when tracking is enabled
+        textContent: textContent, // Include full text content
         fromName: user.name || user.email,
         sequenceId: sequence.id,
         contactId: contact.id
