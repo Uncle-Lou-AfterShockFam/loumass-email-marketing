@@ -252,26 +252,23 @@ export class SequenceProcessor {
       console.log(`[SequenceProcessor] Step ${enrollment.currentStep} content length: ${content.length}`)
       console.log(`[SequenceProcessor] Step ${enrollment.currentStep} full content:`, content)
       
-      // Check if we should reply to thread (for logging purposes)
+      // Check if we should reply to thread (logging purposes only)
       const shouldReplyToThread = step.replyToThread === true
-      console.log(`[SequenceProcessor] Step ${enrollment.currentStep} - replyToThread flag: ${shouldReplyToThread}`)
+      console.log(`[SequenceProcessor] Step replyToThread flag: ${shouldReplyToThread}`)
       
       // For replies, add quoted content to match Gmail's native format
       let finalHtmlContent = content
       let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
       
       // ALWAYS include thread history when replying (Gmail's default behavior)
-      // Don't check replyToThread flag - if we have a thread, include the history
       if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-        console.log(`[SequenceProcessor] ALWAYS INCLUDING THREAD HISTORY (Gmail default) - Thread ID: ${enrollment.gmailThreadId}`)
+        console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
         // Fetch the full thread history from Gmail (all messages in the conversation)
         const fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
         
         if (fullHistory) {
-          console.log(`[SequenceProcessor] Successfully fetched thread history`)
-          console.log(`[SequenceProcessor] HTML history length: ${fullHistory.htmlContent?.length || 0}`)
-          console.log(`[SequenceProcessor] Text history length: ${fullHistory.textContent?.length || 0}`)
+          console.log(`[SequenceProcessor] Got full thread history - including all previous messages`)
           
           // Build HTML content with the new message and full thread history
           finalHtmlContent = `<div dir="ltr">${content}</div>
@@ -283,10 +280,8 @@ ${fullHistory.htmlContent}`
 
 ${fullHistory.textContent}`
           
-          console.log(`[SequenceProcessor] Final HTML content length: ${finalHtmlContent.length}`)
-          console.log(`[SequenceProcessor] Final includes thread: ${finalHtmlContent.includes('gmail_quote')}`)
         } else {
-          console.error(`[SequenceProcessor] ERROR: Failed to fetch thread history for thread ${enrollment.gmailThreadId}`)
+          console.log(`[SequenceProcessor] Could not fetch thread content, falling back to template`)
           // Fallback to template content if thread fetch fails
           const previousStepIndex = enrollment.currentStep - 1
           const previousStep = steps[previousStepIndex]

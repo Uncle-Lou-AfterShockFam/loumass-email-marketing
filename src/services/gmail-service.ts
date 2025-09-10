@@ -979,8 +979,17 @@ export class GmailService {
             timeZone: 'America/New_York'
           }).replace(' ', ' ')
           
-          // Build attribution line
-          const attribution = `On ${formattedDate} at ${formattedTime} ${from} wrote:`
+          // Build attribution line with proper email format like Gmail
+          // Extract name and email from "Name <email>" format
+          let attribution = ''
+          const emailMatch = from.match(/^(.+?)\s*<(.+?)>$/)
+          if (emailMatch) {
+            const fromName = emailMatch[1].trim()
+            const fromEmail = emailMatch[2].trim()
+            attribution = `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:`
+          } else {
+            attribution = `On ${formattedDate} at ${formattedTime} ${from} wrote:`
+          }
           
           // Build the quoted content with proper nesting
           const quotedHtml = `<div class="gmail_quote gmail_quote_container">
