@@ -255,11 +255,129 @@ export class SequenceProcessor {
       // Check if we should reply to thread
       const shouldReplyToThread = step.replyToThread === true
       
-      // Gmail automatically handles threading display - no need to add quoted content
-      // When replying to a thread, Gmail shows the conversation history automatically
-      // Adding quoted content makes the email look unnatural and detectable
-      if (shouldReplyToThread && enrollment.currentStep > 0) {
-        console.log(`[SequenceProcessor] Replying to thread - Gmail will handle conversation display`)
+      // For replies, add quoted content to match Gmail's native format
+      let finalHtmlContent = content
+      let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
+      
+      if (shouldReplyToThread && enrollment.currentStep > 0 && enrollment.gmailThreadId) {
+        console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
+        
+        // Fetch the actual last message from the Gmail thread
+        const threadContent = await gmailService.getThreadLastMessage(user.id, enrollment.gmailThreadId)
+        
+        if (threadContent) {
+          console.log(`[SequenceProcessor] Got actual thread content - using for quote`)
+          
+          // Format the date for the quote header to match Gmail's exact format
+          // Gmail format: "On Tue, Sep 9, 2025 at 11:02 PM Louis Piotti <ljpiotti@aftershockfam.org> wrote:"
+          const dateOptions: Intl.DateTimeFormatOptions = {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }
+          
+          // Format the date parts - use the actual date from the email
+          // The date from Gmail is already in the correct format
+          const emailDate = new Date(threadContent.date)
+          
+          const formattedDate = emailDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'America/New_York' // Use the user's timezone
+          })
+          
+          const formattedTime = emailDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/New_York' // Use the user's timezone
+          }).replace(' ', ' ') // Regular space, not thin space
+          
+          // Extract name and email from the from field
+          // Format can be "Name <email@example.com>" or just "email@example.com"
+          console.log(`[SequenceProcessor] Parsing from field: "${threadContent.from}"`)
+          
+          let fromName = ''
+          let fromEmail = ''
+          
+          // Try to match "Name <email@example.com>" format
+          const emailMatch = threadContent.from.match(/(.*?)\s*<(.+?)>/)
+          if (emailMatch) {
+            fromName = emailMatch[1].trim() || emailMatch[2].split('@')[0]
+            fromEmail = emailMatch[2].trim()
+          } else if (threadContent.from.includes('@')) {
+            // Just an email address without name
+            fromEmail = threadContent.from.trim()
+            fromName = fromEmail.split('@')[0]
+          } else {
+            // Fallback - use the whole string as name
+            fromName = threadContent.from.trim()
+          }
+          
+          console.log(`[SequenceProcessor] Parsed - Name: "${fromName}", Email: "${fromEmail}"`)
+          
+          // Build the attribution line exactly like Gmail
+          // Always include email if we have it
+          const attribution = fromEmail ? 
+            `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:` :
+            `On ${formattedDate} at ${formattedTime} ${fromName} wrote:`
+          
+          // Build HTML content with Gmail's quote format using ACTUAL email content
+          finalHtmlContent = `<div dir="ltr">${content}</div>
+<br>
+<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
+  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+    ${threadContent.htmlContent}
+  </blockquote>
+</div>`
+          
+          // Build text content with quote format using ACTUAL email content
+          finalTextContent = `${finalTextContent}
+
+${attribution}
+${threadContent.textContent.split('\n').map(line => `> ${line}`).join('\n')}`
+          
+        } else {
+          console.log(`[SequenceProcessor] Could not fetch thread content, falling back to template`)
+          // Fallback to template content if thread fetch fails
+          const previousStepIndex = enrollment.currentStep - 1
+          const previousStep = steps[previousStepIndex]
+          
+          if (previousStep && previousStep.content) {
+            const previousContent = this.replaceVariables(previousStep.content, contact)
+            const previousTextContent = previousContent.replace(/<[^>]*>/g, '').trim()
+            const previousDate = enrollment.lastEmailSentAt || enrollment.createdAt
+            const dateStr = new Date(previousDate).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+            
+            finalHtmlContent = `<div dir="ltr">${content}</div>
+<br>
+<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">On ${dateStr}, ${user.fromName || user.name || user.email} wrote:<br></div>
+  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+    ${previousContent}
+  </blockquote>
+</div>`
+            
+            finalTextContent = `${finalTextContent}
+
+On ${dateStr}, ${user.fromName || user.name || user.email} wrote:
+${previousTextContent.split('\n').map(line => `> ${line}`).join('\n')}`
+          }
+        }
       }
 
       // Check if tracking is enabled for this sequence AND step
@@ -274,13 +392,12 @@ export class SequenceProcessor {
       console.log(`  - Existing message ID: ${enrollment.gmailMessageId}`)
 
       // Prepare email data for GmailService
-      // Strip HTML for text version - this ensures the full content is sent
-      const textContent = content.replace(/<[^>]*>/g, '').trim()
+      const textContent = finalTextContent
       
       const emailData: any = {
         to: [contact.email],
         subject: subject,
-        htmlContent: content,
+        htmlContent: finalHtmlContent,
         textContent: textContent, // Include full text content
         fromName: user.name || user.email,
         sequenceId: sequence.id,

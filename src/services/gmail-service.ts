@@ -779,4 +779,96 @@ export class GmailService {
     
     return trackedHtml
   }
+
+  /**
+   * Get the last message content from a Gmail thread
+   * This fetches the ACTUAL sent email content, not templates
+   */
+  async getThreadLastMessage(userId: string, threadId: string): Promise<{ htmlContent: string; textContent: string; from: string; date: Date } | null> {
+    try {
+      console.log(`[GmailService] Fetching thread ${threadId} for quoting`)
+      
+      // Get user's gmail token
+      const gmailToken = await prisma.gmailToken.findUnique({
+        where: { userId }
+      })
+      
+      if (!gmailToken) {
+        console.error('[GmailService] No Gmail token found for user')
+        return null
+      }
+      
+      // Get Gmail service
+      const gmail = await this.gmailClient.getGmailService(userId, gmailToken.email)
+      
+      // Fetch the thread
+      const thread = await gmail.users.threads.get({
+        userId: 'me',
+        id: threadId,
+        format: 'full'
+      })
+      
+      if (!thread.data.messages || thread.data.messages.length === 0) {
+        console.log('[GmailService] No messages in thread')
+        return null
+      }
+      
+      // Get the last message (most recent)
+      const lastMessage = thread.data.messages[thread.data.messages.length - 1]
+      console.log(`[GmailService] Found last message: ${lastMessage.id}`)
+      
+      // Extract the sender
+      const fromHeader = lastMessage.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'from')
+      const from = fromHeader?.value || 'Unknown Sender'
+      
+      // Extract the date
+      const dateHeader = lastMessage.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'date')
+      const date = dateHeader?.value ? new Date(dateHeader.value) : new Date()
+      
+      // Extract message content
+      let htmlContent = ''
+      let textContent = ''
+      
+      // Helper function to extract content from message parts
+      const extractContent = (parts: any[]): void => {
+        for (const part of parts) {
+          if (part.mimeType === 'text/html' && part.body?.data) {
+            // Decode base64 HTML content
+            htmlContent = Buffer.from(part.body.data, 'base64').toString('utf-8')
+          } else if (part.mimeType === 'text/plain' && part.body?.data) {
+            // Decode base64 text content
+            textContent = Buffer.from(part.body.data, 'base64').toString('utf-8')
+          } else if (part.parts) {
+            // Recursive for multipart messages
+            extractContent(part.parts)
+          }
+        }
+      }
+      
+      // Check if message has parts (multipart)
+      if (lastMessage.payload?.parts) {
+        extractContent(lastMessage.payload.parts)
+      } else if (lastMessage.payload?.body?.data) {
+        // Single part message
+        const content = Buffer.from(lastMessage.payload.body.data, 'base64').toString('utf-8')
+        if (lastMessage.payload.mimeType === 'text/html') {
+          htmlContent = content
+        } else {
+          textContent = content
+        }
+      }
+      
+      console.log(`[GmailService] Extracted content - HTML: ${htmlContent.length} chars, Text: ${textContent.length} chars`)
+      
+      return {
+        htmlContent,
+        textContent,
+        from,
+        date
+      }
+    } catch (error) {
+      console.error('[GmailService] Error fetching thread:', error)
+      return null
+    }
+  }
 }
