@@ -281,37 +281,70 @@ ${fullHistory.htmlContent}`
 ${fullHistory.textContent}`
           
         } else {
-          console.log(`[SequenceProcessor] Could not fetch thread content, falling back to template`)
-          // Fallback to template content if thread fetch fails
-          const previousStepIndex = enrollment.currentStep - 1
-          const previousStep = steps[previousStepIndex]
+          console.log(`[SequenceProcessor] Could not fetch thread content, building from sequence steps`)
+          // Build complete thread history from all previous email steps (Gmail-style)
+          let fullHistoryHtml = ''
+          let fullHistoryText = ''
           
-          if (previousStep && previousStep.content) {
-            const previousContent = this.replaceVariables(previousStep.content, contact)
-            const previousTextContent = previousContent.replace(/<[^>]*>/g, '').trim()
-            const previousDate = enrollment.lastEmailSentAt || enrollment.createdAt
-            const dateStr = new Date(previousDate).toLocaleDateString('en-US', {
-              weekday: 'short',
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-            
-            finalHtmlContent = `<div dir="ltr">${content}</div>
-<br>
-<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">On ${dateStr}, ${user.fromName || user.name || user.email} wrote:<br></div>
+          // Process all previous email steps in reverse order to build nested structure
+          for (let i = enrollment.currentStep - 1; i >= 0; i--) {
+            const step = steps[i]
+            if (step.type === 'email' && step.content) {
+              const stepContent = this.replaceVariables(step.content, contact)
+              const stepTextContent = stepContent.replace(/<[^>]*>/g, '').trim()
+              
+              // Calculate estimated date for this step (work backwards from last sent)
+              const baseDate = enrollment.lastEmailSentAt || enrollment.createdAt
+              const daysBack = enrollment.currentStep - 1 - i
+              const estimatedDate = new Date(new Date(baseDate).getTime() - (daysBack * 24 * 60 * 60 * 1000))
+              
+              // Format date like Gmail
+              const formattedDate = estimatedDate.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                timeZone: 'America/New_York'
+              })
+              
+              const formattedTime = estimatedDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'America/New_York'
+              }).replace(' ', ' ')
+              
+              // Build attribution line with proper email format
+              const fromName = user.fromName || user.name || 'Unknown'
+              const fromEmail = user.email
+              const attribution = `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:`
+              
+              // Build quoted HTML with proper nesting
+              const quotedHtml = `<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
   <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    ${previousContent}
+    ${stepContent}${fullHistoryHtml ? '\n' + fullHistoryHtml : ''}
   </blockquote>
 </div>`
+              
+              fullHistoryHtml = quotedHtml
+              
+              // Build quoted text
+              const quotedText = `${attribution}\n> ${stepTextContent.split('\n').join('\n> ')}${fullHistoryText ? '\n>\n> ' + fullHistoryText.split('\n').join('\n> ') : ''}`
+              fullHistoryText = quotedText
+            }
+          }
+          
+          if (fullHistoryHtml) {
+            finalHtmlContent = `<div dir="ltr">${content}</div>
+<br>
+${fullHistoryHtml}`
             
             finalTextContent = `${finalTextContent}
 
-On ${dateStr}, ${user.fromName || user.name || user.email} wrote:
-${previousTextContent.split('\n').map(line => `> ${line}`).join('\n')}`
+${fullHistoryText}`
+            
+            console.log(`[SequenceProcessor] Built complete thread history from ${enrollment.currentStep} steps`)
           }
         }
       }
