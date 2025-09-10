@@ -651,11 +651,18 @@ export class SequenceService {
       console.log('  - enrollment.messageIdHeader:', enrollment.messageIdHeader)
       console.log('  - messageIdForReply:', messageIdForReply)
       
-      // Double-check we have a valid Message-ID format
+      // CRITICAL FIX: Only clear messageIdForReply if it's definitely invalid (empty or clearly a thread ID)
+      // Gmail Message-IDs always contain @ symbols, but we should not clear valid ones
       if (messageIdForReply && !messageIdForReply.includes('@')) {
         console.log('❌ ERROR: messageIdForReply does not look like a valid Message-ID:', messageIdForReply)
         console.log('   This might be a threadId, clearing it to prevent broken threading')
         messageIdForReply = undefined
+        
+        // RECOVERY: Try to use the stored Message-ID from enrollment if available
+        if (enrollment.messageIdHeader && enrollment.messageIdHeader.includes('@')) {
+          console.log('🔄 RECOVERY: Using enrollment.messageIdHeader instead:', enrollment.messageIdHeader)
+          messageIdForReply = enrollment.messageIdHeader
+        }
       }
     } else if (stepToExecute.replyToThread && !enrollment.gmailThreadId && !messageIdForReply) {
       console.log('⚠️ WARNING: replyToThread is true but no gmailThreadId available!')
@@ -740,17 +747,16 @@ export class SequenceService {
     }
 
     // Send the email
-    // CRITICAL FINAL CHECK: Ensure messageIdForReply is set for threading
-    // For standalone sequences, ALL follow-up emails (step > 0) should thread
-    if (isStandaloneSequence && enrollment.messageIdHeader && enrollment.currentStep > 0 && !messageIdForReply) {
-      console.log('🚨 FINAL FIX: messageIdForReply missing at send time for follow-up! Restoring...')
+    // ULTIMATE FINAL CHECK: Ensure messageIdForReply is set for threading
+    // This is the LAST chance to fix threading before sending
+    if (isStandaloneSequence && enrollment.messageIdHeader && enrollment.messageIdHeader.includes('@') && !messageIdForReply) {
+      console.log('🚨 ULTIMATE FIX: messageIdForReply missing at send time! This is the final restoration!')
       console.log('  Current step:', enrollment.currentStep)
-      console.log('  Has Message-ID:', enrollment.messageIdHeader)
+      console.log('  Has valid Message-ID:', enrollment.messageIdHeader)
+      console.log('  Step has replyToThread:', stepToExecute.replyToThread)
       messageIdForReply = enrollment.messageIdHeader
       threadId = threadId || enrollment.gmailThreadId || undefined
-    } else if (isStandaloneSequence && stepToExecute.replyToThread && enrollment.messageIdHeader && !messageIdForReply) {
-      console.log('🚨 FINAL FIX: messageIdForReply missing at send time! Restoring...')
-      messageIdForReply = enrollment.messageIdHeader
+      console.log('  ✅ RESTORED messageIdForReply:', messageIdForReply)
     }
     
     console.log('📮 SENDING EMAIL WITH THREADING INFO:')
@@ -759,9 +765,25 @@ export class SequenceService {
     console.log('  replyToThread:', stepToExecute.replyToThread)
     console.log('  isStandaloneSequence:', isStandaloneSequence)
     console.log('  enrollment.messageIdHeader:', enrollment.messageIdHeader)
+    console.log('  enrollment.currentStep:', enrollment.currentStep)
     console.log('  trackingEnabled (sequence):', enrollment.sequence.trackingEnabled)
     console.log('  trackingEnabled (step):', stepToExecute.trackingEnabled)
     console.log('  Will add tracking:', enrollment.sequence.trackingEnabled && (stepToExecute.trackingEnabled !== false))
+    
+    // CRITICAL DEBUG: Log exactly what we're passing to sendEmail
+    console.log('🚨 CRITICAL: About to call sendEmail with:')
+    console.log('  - messageId parameter:', messageIdForReply || 'NONE')
+    console.log('  - threadId parameter:', threadId || 'NONE')
+    
+    if (messageIdForReply) {
+      console.log('✅ THREADING SHOULD WORK: messageId is being passed to sendEmail')
+      console.log('  Full messageId value:', messageIdForReply)
+      console.log('  Contains @ symbol:', messageIdForReply.includes('@'))
+    } else {
+      console.log('❌ THREADING WILL FAIL: No messageId passed to sendEmail!')
+      console.log('  This is step:', enrollment.currentStep)
+      console.log('  Should have messageIdHeader:', enrollment.messageIdHeader)
+    }
     
     try {
       // CRITICAL FIX: Ensure tracking is added to ALL emails when enabled

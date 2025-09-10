@@ -42,6 +42,19 @@ export class GmailService {
     console.log('  threadId:', emailData.threadId)
     console.log('  messageId for In-Reply-To:', emailData.messageId)
     
+    // CRITICAL DEBUGGING: Catch the exact issue
+    if (!emailData.messageId && emailData.threadId) {
+      console.log('🚨 CRITICAL BUG DETECTED: threadId provided but NO messageId!')
+      console.log('  This means sequence-service failed to pass the Message-ID')
+      console.log('  Threading headers will be EMPTY - this is the root cause!')
+    } else if (emailData.messageId && !emailData.messageId.includes('@')) {
+      console.log('🚨 CRITICAL BUG DETECTED: Invalid messageId format:', emailData.messageId)
+      console.log('  This looks like a thread ID, not a Message-ID')
+      console.log('  Threading headers will be INVALID!')
+    } else if (emailData.messageId) {
+      console.log('✅ GOOD: Valid messageId provided for threading:', emailData.messageId)
+    }
+    
     try {
       // Attempt to get Gmail service (with automatic token refresh if needed)
       const gmail = await this.gmailClient.getGmailService(userId, gmailAddress)
@@ -188,31 +201,16 @@ export class GmailService {
     console.log('FromName provided:', emailData.fromName)
     
     try {
-      // Create mail options for MailComposer
-      console.log('Creating mailOptions object...')
-      // Use the provided fromName or default to just the email
-      const displayName = emailData.fromName || ''
-      const mailOptions: any = {
-        from: displayName ? `${displayName} <${fromEmail}>` : fromEmail,
-        to: emailData.to.join(', '),
-        subject: emailData.subject,
-        text: emailData.textContent || '',
-        html: emailData.htmlContent,
-        textEncoding: 'base64'
-      }
-      console.log('mailOptions created with FROM:', mailOptions.from)
-
-    // CRITICAL: Add threading headers when we have a messageId to reference
-    if (emailData.messageId) {
-      console.log('🔗 Adding threading headers for reply:')
-      console.log('  Original Message-ID to reference:', emailData.messageId)
-      console.log('  Gmail Thread ID (if any):', emailData.threadId)
+      // CRITICAL FIX: Prepare threading headers BEFORE creating mailOptions
+      let threadingHeaders: any = {}
+      let formattedMessageId: string | undefined
       
-      // CRITICAL FIX: Accept any Message-ID containing '@' as valid
-      // Message-IDs are stored WITHOUT angle brackets in database
-      if (emailData.messageId.includes('@')) {
-        // ALWAYS add angle brackets for headers (they're stored without them)
-        let formattedMessageId = emailData.messageId.trim()
+      if (emailData.messageId && emailData.messageId.includes('@')) {
+        console.log('🔗 PREPARING THREADING HEADERS:')
+        console.log('  Original Message-ID:', emailData.messageId)
+        
+        // Format Message-ID with angle brackets
+        formattedMessageId = emailData.messageId.trim()
         if (!formattedMessageId.startsWith('<')) {
           formattedMessageId = '<' + formattedMessageId
         }
@@ -220,28 +218,63 @@ export class GmailService {
           formattedMessageId = formattedMessageId + '>'
         }
         
-        console.log('🚨 CRITICAL THREADING FIX:')
-        console.log('  - Input messageId:', emailData.messageId)
-        console.log('  - Formatted with brackets:', formattedMessageId)
+        console.log('  Formatted Message-ID:', formattedMessageId)
         
-        mailOptions.inReplyTo = formattedMessageId
-        mailOptions.references = formattedMessageId
+        // Set threading headers
+        threadingHeaders = {
+          'In-Reply-To': formattedMessageId,
+          'References': formattedMessageId
+        }
         
-        console.log('✅ Threading headers SUCCESSFULLY added to message:')
-        console.log('  - In-Reply-To:', mailOptions.inReplyTo)
-        console.log('  - References:', mailOptions.references)
-      } else {
-        console.error('❌ CRITICAL ERROR: messageId does not contain @ symbol:', emailData.messageId)
-        console.error('   This is likely a threadId being passed as messageId')
-        console.error('   Threading will only work in sender\'s sent folder, not recipient\'s inbox')
-        console.error('   HEADERS NOT ADDED - This email will NOT thread for recipients!')
+        console.log('✅ Threading headers prepared:', JSON.stringify(threadingHeaders))
       }
-    } else if (emailData.threadId) {
-      console.log('⚠️ Have threadId but no messageId - cannot add threading headers')
-      console.log('  Threading will only work in sender\'s sent folder, not recipient\'s inbox')
-    } else {
-      console.log('🆕 No messageId or threadId provided - this will be a new thread')
-    }
+      
+      // Create mail options for MailComposer WITH threading built-in
+      console.log('Creating mailOptions object...')
+      const displayName = emailData.fromName || ''
+      
+      // CRITICAL: Include ALL properties at creation time
+      const mailOptions: any = {
+        from: displayName ? `${displayName} <${fromEmail}>` : fromEmail,
+        to: emailData.to.join(', '),
+        subject: emailData.subject,
+        text: emailData.textContent || '',
+        html: emailData.htmlContent,
+        textEncoding: 'base64',
+        // CRITICAL: Set threading properties at creation time if we have them
+        ...(formattedMessageId ? {
+          inReplyTo: formattedMessageId,
+          references: formattedMessageId,
+          headers: threadingHeaders
+        } : {})
+      }
+      
+      console.log('📧 FINAL mailOptions object created:')
+      console.log('  - FROM:', mailOptions.from)
+      console.log('  - TO:', mailOptions.to)
+      console.log('  - SUBJECT:', mailOptions.subject)
+      console.log('  - Has inReplyTo:', !!mailOptions.inReplyTo)
+      console.log('  - Has references:', !!mailOptions.references)
+      console.log('  - Has headers:', !!mailOptions.headers)
+      if (mailOptions.headers) {
+        console.log('  - Headers content:', JSON.stringify(mailOptions.headers))
+      }
+      
+      // FINAL SAFETY CHECK: Ensure threading headers are properly set
+      if (emailData.messageId && !mailOptions.inReplyTo) {
+        console.error('❌ CRITICAL ERROR: messageId provided but headers NOT set!')
+        console.error('  - emailData.messageId:', emailData.messageId)
+        console.error('  - Contains @:', emailData.messageId?.includes('@'))
+        console.error('  - formattedMessageId:', formattedMessageId)
+        console.error('  - This email will NOT thread properly!')
+        console.error('  - Root cause: buildMessage threading logic failed')
+      } else if (emailData.messageId && mailOptions.inReplyTo) {
+        console.log('✅ THREADING SUCCESS: Headers properly set for Message-ID:', emailData.messageId)
+        console.log('  - inReplyTo:', mailOptions.inReplyTo)
+        console.log('  - references:', mailOptions.references)
+      } else if (!emailData.messageId) {
+        console.log('ℹ️ NO THREADING: No messageId provided (this is normal for first emails)')
+      }
 
     if (emailData.replyTo) {
       mailOptions.replyTo = emailData.replyTo
@@ -282,6 +315,7 @@ export class GmailService {
         subject: mailOptions.subject,
         inReplyTo: mailOptions.inReplyTo,
         references: mailOptions.references,
+        headers: mailOptions.headers,
         replyTo: mailOptions.replyTo,
         hasText: !!mailOptions.text,
         hasHtml: !!mailOptions.html,
