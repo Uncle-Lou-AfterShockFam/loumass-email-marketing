@@ -274,7 +274,7 @@ export class SequenceProcessor {
         to: [contact.email],
         subject: subject,
         htmlContent: content,
-        textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+        textContent: '', // Empty text content to avoid duplicate URLs when tracking is enabled
         fromName: user.name || user.email,
         sequenceId: sequence.id,
         contactId: contact.id

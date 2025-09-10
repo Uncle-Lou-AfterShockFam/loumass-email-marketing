@@ -706,12 +706,14 @@ export class GmailService {
       console.log('Content already has HTML tags')
       
       // Convert HTTP/HTTPS URLs that are not already inside HTML tags
+      // DON'T show the original URL text when converting - just make it a clickable link
       const urlRegex = /(?<!<[^>]*)(https?:\/\/[^\s<>'"]+)/gi
       let urlsConverted = 0
       const convertedUrls: string[] = []
       
       trackedHtml = trackedHtml.replace(urlRegex, (match) => {
         urlsConverted++
+        // Keep displaying the URL as the link text (it will be tracked later)
         convertedUrls.push(`URL ${urlsConverted}: ${match} -> <a href="${match}">${match}</a>`)
         return `<a href="${match}">${match}</a>`
       })
