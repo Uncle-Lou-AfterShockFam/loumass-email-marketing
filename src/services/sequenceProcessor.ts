@@ -284,12 +284,73 @@ ${fullHistory.textContent}`
           
         } else {
           console.error(`[SequenceProcessor] CRITICAL: Failed to fetch Gmail thread content for thread ${enrollment.gmailThreadId}`)
-          console.error(`[SequenceProcessor] This means the email will be sent WITHOUT proper thread history`)
-          console.error(`[SequenceProcessor] User expects full conversation history like Gmail default behavior`)
+          console.error(`[SequenceProcessor] Implementing EmailEvent database fallback to build thread history`)
           
-          // Minimal fallback - just note that thread history couldn't be fetched
-          // This should be very rare with improved token refresh logic
-          console.log(`[SequenceProcessor] Sending email without thread history due to Gmail API failure`)
+          // ROBUST FALLBACK: Build thread history from EmailEvent database records
+          console.log(`[SequenceProcessor] Building thread history from EmailEvent database for contact ${contact.email}`)
+          
+          try {
+            const emailEvents = await prisma.emailEvent.findMany({
+              where: {
+                contactId: contact.id,
+                sequenceId: sequence.id,
+                type: 'SENT'
+              },
+              orderBy: {
+                createdAt: 'asc'
+              }
+            })
+            
+            if (emailEvents.length > 0) {
+              console.log(`[SequenceProcessor] Found ${emailEvents.length} previous email events for thread history`)
+              
+              // Build thread history from database records
+              let threadHistoryHtml = ''
+              let threadHistoryText = ''
+              
+              for (let i = emailEvents.length - 1; i >= 0; i--) {
+                const event = emailEvents[i]
+                const eventDate = event.createdAt.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })
+                const eventTime = event.createdAt.toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })
+                
+                // Build Gmail-style attribution
+                const attribution = `On ${eventDate} at ${eventTime} ${user.name || user.email} <${user.email}> wrote:`
+                
+                threadHistoryHtml += `<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
+  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+    ${event.content || `<div>Subject: ${event.subject || 'No subject'}</div>`}
+  </blockquote>
+</div>`
+                
+                threadHistoryText += `\n\n${attribution}\n${event.content?.replace(/<[^>]*>/g, '') || event.subject || 'No content'}`
+              }
+              
+              if (threadHistoryHtml) {
+                finalHtmlContent = `<div dir="ltr">${content}</div>
+<br>
+${threadHistoryHtml}`
+                
+                finalTextContent = `${finalTextContent}${threadHistoryText}`
+                
+                console.log(`[SequenceProcessor] ✅ SUCCESS: Built thread history from EmailEvent database (${threadHistoryHtml.length} chars)`)
+              }
+            } else {
+              console.log(`[SequenceProcessor] No previous EmailEvents found - this may be the first email in sequence`)
+            }
+          } catch (dbError) {
+            console.error(`[SequenceProcessor] Failed to build thread history from database:`, dbError)
+            console.error(`[SequenceProcessor] Proceeding with email but WITHOUT thread history`)
+          }
         }
       }
 

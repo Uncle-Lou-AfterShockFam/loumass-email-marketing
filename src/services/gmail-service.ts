@@ -880,6 +880,15 @@ export class GmailService {
     try {
       console.log(`[GmailService] Fetching full thread history for ${threadId}`)
       
+      // CRITICAL: Validate that this is a real Gmail thread ID
+      // Real Gmail thread IDs are hexadecimal strings like "19931fea6baa1065"
+      // Fake thread IDs look like "thread-1757430840066"
+      if (threadId.startsWith('thread-') || threadId.includes('test-') || !threadId.match(/^[0-9a-fA-F]+$/)) {
+        console.error(`[GmailService] REJECTING FAKE THREAD ID: ${threadId}`)
+        console.error(`[GmailService] Real Gmail thread IDs are hexadecimal strings, not fake IDs`)
+        return null
+      }
+      
       // Get user's gmail token
       const gmailToken = await prisma.gmailToken.findUnique({
         where: { userId }
