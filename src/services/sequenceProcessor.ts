@@ -328,11 +328,11 @@ ${fullHistory.textContent}`
                 threadHistoryHtml += `<div class="gmail_quote gmail_quote_container">
   <div dir="ltr" class="gmail_attr">${attribution}<br></div>
   <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    ${event.content || `<div>Subject: ${event.subject || 'No subject'}</div>`}
+    <div>Subject: ${event.subject || 'No subject'}</div>
   </blockquote>
 </div>`
                 
-                threadHistoryText += `\n\n${attribution}\n${event.content?.replace(/<[^>]*>/g, '') || event.subject || 'No content'}`
+                threadHistoryText += `\n\n${attribution}\n${event.subject || 'No content'}`
               }
               
               if (threadHistoryHtml) {
