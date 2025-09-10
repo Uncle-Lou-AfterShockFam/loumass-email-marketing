@@ -277,20 +277,8 @@ export class SequenceProcessor {
               })
             : 'Recently'
           
-          // Add Gmail-style quoted content
-          const quotedHtml = `
-            <div style="font-family: Arial, sans-serif;">
-              ${content}
-              <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e0e0e0; color: #888;">
-                <div style="margin-bottom: 10px;">
-                  On ${previousDate}, ${user.name || user.email} &lt;${user.email}&gt; wrote:
-                </div>
-                <blockquote style="margin: 0 0 0 10px; padding-left: 10px; border-left: 2px solid #ccc; color: #666;">
-                  ${previousContent}
-                </blockquote>
-              </div>
-            </div>
-          `
+          // Add Gmail-style quoted content (exact Gmail format)
+          const quotedHtml = `<div dir="ltr">${content}</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On ${previousDate} ${user.name || user.email} &lt;<a href="mailto:${user.email}">${user.email}</a>&gt; wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${previousContent}</blockquote></div>`
           
           // Update content with quoted text
           content = quotedHtml
