@@ -251,40 +251,11 @@ export class SequenceProcessor {
       // Check if we should reply to thread
       const shouldReplyToThread = step.replyToThread === true
       
-      // If replying to thread and we have previous content, add quoted content
+      // Gmail automatically handles threading display - no need to add quoted content
+      // When replying to a thread, Gmail shows the conversation history automatically
+      // Adding quoted content makes the email look unnatural and detectable
       if (shouldReplyToThread && enrollment.currentStep > 0) {
-        // Get the previous step's content to quote
-        const previousStepIndex = enrollment.currentStep - 1
-        const previousStep = steps[previousStepIndex]
-        
-        if (previousStep && previousStep.type === 'email') {
-          // Get the formatted previous content
-          let previousContent = previousStep.content || ''
-          previousContent = this.replaceVariables(previousContent, contact)
-          
-          // Strip HTML for quoted text version
-          const previousTextContent = previousContent.replace(/<[^>]*>/g, '')
-          
-          // Format the date of the previous email
-          const previousDate = enrollment.lastEmailSentAt 
-            ? new Date(enrollment.lastEmailSentAt).toLocaleDateString('en-US', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            : 'Recently'
-          
-          // Add Gmail-style quoted content (exact Gmail format)
-          const quotedHtml = `<div dir="ltr">${content}</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On ${previousDate} ${user.name || user.email} &lt;<a href="mailto:${user.email}">${user.email}</a>&gt; wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${previousContent}</blockquote></div>`
-          
-          // Update content with quoted text
-          content = quotedHtml
-          
-          console.log(`[SequenceProcessor] Added quoted content from previous email (step ${previousStepIndex})`)
-        }
+        console.log(`[SequenceProcessor] Replying to thread - Gmail will handle conversation display`)
       }
 
       // Check if tracking is enabled for this sequence AND step
