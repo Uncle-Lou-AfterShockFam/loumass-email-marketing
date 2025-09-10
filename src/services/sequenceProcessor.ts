@@ -247,13 +247,61 @@ export class SequenceProcessor {
       // Replace variables
       subject = this.replaceVariables(subject, contact)
       content = this.replaceVariables(content, contact)
+      
+      // Check if we should reply to thread
+      const shouldReplyToThread = step.replyToThread === true
+      
+      // If replying to thread and we have previous content, add quoted content
+      if (shouldReplyToThread && enrollment.currentStep > 0) {
+        // Get the previous step's content to quote
+        const previousStepIndex = enrollment.currentStep - 1
+        const previousStep = steps[previousStepIndex]
+        
+        if (previousStep && previousStep.type === 'email') {
+          // Get the formatted previous content
+          let previousContent = previousStep.content || ''
+          previousContent = this.replaceVariables(previousContent, contact)
+          
+          // Strip HTML for quoted text version
+          const previousTextContent = previousContent.replace(/<[^>]*>/g, '')
+          
+          // Format the date of the previous email
+          const previousDate = enrollment.lastEmailSentAt 
+            ? new Date(enrollment.lastEmailSentAt).toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : 'Recently'
+          
+          // Add Gmail-style quoted content
+          const quotedHtml = `
+            <div style="font-family: Arial, sans-serif;">
+              ${content}
+              <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e0e0e0; color: #888;">
+                <div style="margin-bottom: 10px;">
+                  On ${previousDate}, ${user.name || user.email} &lt;${user.email}&gt; wrote:
+                </div>
+                <blockquote style="margin: 0 0 0 10px; padding-left: 10px; border-left: 2px solid #ccc; color: #666;">
+                  ${previousContent}
+                </blockquote>
+              </div>
+            </div>
+          `
+          
+          // Update content with quoted text
+          content = quotedHtml
+          
+          console.log(`[SequenceProcessor] Added quoted content from previous email (step ${previousStepIndex})`)
+        }
+      }
 
       // Check if tracking is enabled for this sequence AND step
       // Access the step properties correctly - they're at the step level
       const isTrackingEnabled = sequence.trackingEnabled && (step.trackingEnabled !== false)
-      
-      // Check if we should reply to thread - also at step level
-      const shouldReplyToThread = step.replyToThread === true
       
       console.log(`[SequenceProcessor] Email settings for step ${enrollment.currentStep}:`)
       console.log(`  - Step data:`, JSON.stringify(step, null, 2))
@@ -290,8 +338,12 @@ export class SequenceProcessor {
 
       // Only add tracking if enabled
       if (isTrackingEnabled) {
-        emailData.trackingId = `seq_${sequence.id}_${enrollment.id}_${step.id}_${Date.now()}`
+        // Generate tracking ID in the format expected by tracking endpoints
+        // Format: seq:enrollmentId:stepIndex:timestamp
+        const trackingData = `seq:${enrollment.id}:${enrollment.currentStep}:${Date.now()}`
+        emailData.trackingId = Buffer.from(trackingData).toString('base64url')
         console.log(`[SequenceProcessor] Tracking enabled with ID: ${emailData.trackingId}`)
+        console.log(`[SequenceProcessor] Tracking data: ${trackingData}`)
         console.log(`[SequenceProcessor] Tracking settings - sequence: ${sequence.trackingEnabled}, step: ${step.trackingEnabled}`)
       } else {
         console.log(`[SequenceProcessor] Tracking disabled for this email - sequence: ${sequence.trackingEnabled}, step: ${step.trackingEnabled}`)
