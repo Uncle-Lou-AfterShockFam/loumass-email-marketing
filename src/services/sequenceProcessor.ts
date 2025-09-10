@@ -264,88 +264,32 @@ export class SequenceProcessor {
       if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
         console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
-        // Fetch the full thread history from Gmail (all messages in the conversation)
+        // CRITICAL: Fetch the ACTUAL thread history from Gmail API 
+        console.log(`[SequenceProcessor] FETCHING REAL EMAIL THREAD CONTENT for thread: ${enrollment.gmailThreadId}`)
         const fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
         
         if (fullHistory) {
-          console.log(`[SequenceProcessor] Got full thread history - including all previous messages`)
+          console.log(`[SequenceProcessor] ✅ SUCCESS: Got ACTUAL Gmail thread history with ${fullHistory.htmlContent.length} chars`)
+          console.log(`[SequenceProcessor] This includes the real email content from the conversation thread`)
           
           // Build HTML content with the new message and full thread history
           finalHtmlContent = `<div dir="ltr">${content}</div>
 <br>
 ${fullHistory.htmlContent}`
           
-          // Build text content with full thread history
+          // Build text content with full thread history  
           finalTextContent = `${finalTextContent}
 
 ${fullHistory.textContent}`
           
         } else {
-          console.log(`[SequenceProcessor] Could not fetch thread content, building from sequence steps`)
-          // Build complete thread history from all previous email steps (Gmail-style)
-          let fullHistoryHtml = ''
-          let fullHistoryText = ''
+          console.error(`[SequenceProcessor] CRITICAL: Failed to fetch Gmail thread content for thread ${enrollment.gmailThreadId}`)
+          console.error(`[SequenceProcessor] This means the email will be sent WITHOUT proper thread history`)
+          console.error(`[SequenceProcessor] User expects full conversation history like Gmail default behavior`)
           
-          // Process all previous email steps in reverse order to build nested structure
-          for (let i = enrollment.currentStep - 1; i >= 0; i--) {
-            const step = steps[i]
-            if (step.type === 'email' && step.content) {
-              const stepContent = this.replaceVariables(step.content, contact)
-              const stepTextContent = stepContent.replace(/<[^>]*>/g, '').trim()
-              
-              // Calculate estimated date for this step (work backwards from last sent)
-              const baseDate = enrollment.lastEmailSentAt || enrollment.createdAt
-              const daysBack = enrollment.currentStep - 1 - i
-              const estimatedDate = new Date(new Date(baseDate).getTime() - (daysBack * 24 * 60 * 60 * 1000))
-              
-              // Format date like Gmail
-              const formattedDate = estimatedDate.toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                timeZone: 'America/New_York'
-              })
-              
-              const formattedTime = estimatedDate.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-                timeZone: 'America/New_York'
-              }).replace(' ', ' ')
-              
-              // Build attribution line with proper email format
-              const fromName = user.fromName || user.name || 'Unknown'
-              const fromEmail = user.email
-              const attribution = `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:`
-              
-              // Build quoted HTML with proper nesting
-              const quotedHtml = `<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
-  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    ${stepContent}${fullHistoryHtml ? '\n' + fullHistoryHtml : ''}
-  </blockquote>
-</div>`
-              
-              fullHistoryHtml = quotedHtml
-              
-              // Build quoted text
-              const quotedText = `${attribution}\n> ${stepTextContent.split('\n').join('\n> ')}${fullHistoryText ? '\n>\n> ' + fullHistoryText.split('\n').join('\n> ') : ''}`
-              fullHistoryText = quotedText
-            }
-          }
-          
-          if (fullHistoryHtml) {
-            finalHtmlContent = `<div dir="ltr">${content}</div>
-<br>
-${fullHistoryHtml}`
-            
-            finalTextContent = `${finalTextContent}
-
-${fullHistoryText}`
-            
-            console.log(`[SequenceProcessor] Built complete thread history from ${enrollment.currentStep} steps`)
-          }
+          // Minimal fallback - just note that thread history couldn't be fetched
+          // This should be very rare with improved token refresh logic
+          console.log(`[SequenceProcessor] Sending email without thread history due to Gmail API failure`)
         }
       }
 

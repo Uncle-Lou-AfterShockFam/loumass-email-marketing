@@ -890,15 +890,37 @@ export class GmailService {
         return null
       }
       
-      // Get Gmail service
-      const gmail = await this.gmailClient.getGmailService(userId, gmailToken.email)
+      // Get Gmail service with retry logic
+      let gmail = await this.gmailClient.getGmailService(userId, gmailToken.email)
+      let thread
       
-      // Fetch the thread
-      const thread = await gmail.users.threads.get({
-        userId: 'me',
-        id: threadId,
-        format: 'full'
-      })
+      try {
+        // First attempt to fetch the thread
+        thread = await gmail.users.threads.get({
+          userId: 'me',
+          id: threadId,
+          format: 'full'
+        })
+      } catch (fetchError: any) {
+        console.log('❌ First thread fetch attempt failed:', fetchError?.message)
+        
+        // Check if it's a token-related error
+        if (fetchError?.code === 401 || fetchError?.message?.includes('Invalid Credentials')) {
+          console.log('🔄 Token error detected, refreshing and retrying thread fetch...')
+          
+          // Force token refresh and retry
+          const refreshedGmail = await this.gmailClient.getGmailService(userId, gmailToken.email)
+          thread = await refreshedGmail.users.threads.get({
+            userId: 'me',
+            id: threadId,
+            format: 'full'
+          })
+          console.log('✅ Thread fetch retry after token refresh succeeded')
+        } else {
+          // Re-throw non-token errors
+          throw fetchError
+        }
+      }
       
       if (!thread.data.messages || thread.data.messages.length === 0) {
         console.log('[GmailService] No messages in thread')
