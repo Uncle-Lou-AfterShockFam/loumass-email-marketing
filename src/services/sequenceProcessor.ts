@@ -274,10 +274,16 @@ export class SequenceProcessor {
       }
 
       // Only add threading info if replying to thread AND we have the necessary IDs
-      if (shouldReplyToThread && enrollment.gmailMessageId) {
+      // CRITICAL FIX: Use messageIdHeader (RFC Message-ID) not gmailMessageId (Gmail internal ID)
+      if (shouldReplyToThread && enrollment.messageIdHeader) {
         emailData.threadId = enrollment.gmailThreadId || undefined
-        emailData.messageId = enrollment.gmailMessageId
-        console.log(`[SequenceProcessor] Threading enabled - will reply to message ${enrollment.gmailMessageId}`)
+        emailData.messageId = enrollment.messageIdHeader  // THIS IS THE FIX! Use the actual Message-ID header
+        console.log(`[SequenceProcessor] Threading enabled - will reply to message ${enrollment.messageIdHeader}`)
+        console.log(`[SequenceProcessor] Using RFC Message-ID from messageIdHeader field`)
+      } else if (shouldReplyToThread && enrollment.gmailMessageId && !enrollment.messageIdHeader) {
+        // Fallback warning if we only have Gmail ID but not Message-ID header
+        console.error(`[SequenceProcessor] CRITICAL: Threading requested but only have Gmail ID (${enrollment.gmailMessageId}), not Message-ID header!`)
+        console.error(`[SequenceProcessor] Threading will FAIL - need messageIdHeader field`)
       } else if (shouldReplyToThread) {
         console.log(`[SequenceProcessor] Threading requested but no previous message ID available`)
       }
@@ -323,10 +329,13 @@ export class SequenceProcessor {
           lastEmailSentAt: new Date(),
           gmailMessageId: result.messageId,
           gmailThreadId: result.threadId || enrollment.gmailThreadId,
+          messageIdHeader: result.messageIdHeader || enrollment.messageIdHeader, // CRITICAL: Store the RFC Message-ID header
           currentStep: nextStepIndex,
           updatedAt: new Date()
         }
       })
+      
+      console.log(`[SequenceProcessor] Stored Message-ID header: ${result.messageIdHeader || 'not provided'}`)
 
       // Record email event
       await prisma.emailEvent.create({

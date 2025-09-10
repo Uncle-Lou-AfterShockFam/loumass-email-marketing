@@ -163,7 +163,8 @@ export class GmailService {
         success: true,
         messageId: response.data.id,
         threadId: response.data.threadId,
-        recipientId
+        recipientId,
+        messageIdHeader // CRITICAL: Return the actual Message-ID header for threading
       }
     } catch (error) {
       console.error('Failed to send email:', error)
