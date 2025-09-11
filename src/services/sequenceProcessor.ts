@@ -604,7 +604,40 @@ ${threadHistoryHtml}`
   async evaluateCondition(enrollment: any, condition: any): Promise<boolean> {
     const { type, referenceStepId } = condition
 
-    // Get recent email events for this enrollment
+    // For replies, we check ALL events (not just recent) since replies can come at any time
+    // For opens/clicks, we check events since the last email was sent
+    if (type === 'replied') {
+      console.log(`[SequenceProcessor] Checking for ANY replies for enrollment ${enrollment.id}`)
+      
+      // Look for ANY reply event for this contact/sequence combination
+      const replyEvents = await prisma.emailEvent.findMany({
+        where: {
+          contactId: enrollment.contactId,
+          sequenceId: enrollment.sequenceId,
+          type: 'REPLIED'
+        },
+        orderBy: {
+          timestamp: 'desc'
+        }
+      })
+      
+      console.log(`[SequenceProcessor] Found ${replyEvents.length} reply events for enrollment ${enrollment.id}`)
+      
+      // Also check SequenceEvents for replies (belt and suspenders approach)
+      const sequenceReplyEvents = await prisma.sequenceEvent.findMany({
+        where: {
+          enrollmentId: enrollment.id,
+          eventType: 'REPLIED'
+        }
+      })
+      
+      console.log(`[SequenceProcessor] Found ${sequenceReplyEvents.length} sequence reply events for enrollment ${enrollment.id}`)
+      
+      // Return true if we have ANY reply events
+      return replyEvents.length > 0 || sequenceReplyEvents.length > 0
+    }
+
+    // For opens and clicks, check recent events (since last email)
     const events = await prisma.emailEvent.findMany({
       where: {
         contactId: enrollment.contactId,
@@ -623,8 +656,6 @@ ${threadHistoryHtml}`
         return events.some(e => e.type === 'OPENED')
       case 'clicked':
         return events.some(e => e.type === 'CLICKED')
-      case 'replied':
-        return events.some(e => e.type === 'REPLIED')
       default:
         return false
     }
