@@ -633,12 +633,16 @@ ${threadHistoryHtml}`
     if (type === 'replied' || type === 'not_replied') {
       console.log(`[SequenceProcessor] Checking for ${type} condition for enrollment ${enrollment.id}`)
       
-      // Look for ANY reply event for this contact/sequence combination
+      // CRITICAL FIX: Only look for replies AFTER this enrollment started
+      // This prevents old replies from previous enrollments affecting the current one
       const replyEvents = await prisma.emailEvent.findMany({
         where: {
           contactId: enrollment.contactId,
           sequenceId: enrollment.sequenceId,
-          type: 'REPLIED'
+          type: 'REPLIED',
+          timestamp: {
+            gte: enrollment.createdAt // Only replies after enrollment started
+          }
         },
         orderBy: {
           timestamp: 'desc'
