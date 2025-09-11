@@ -1,30 +1,25 @@
 const { PrismaClient } = require('@prisma/client')
 
-async function monitorEnrollment() {
+async function monitorEnrollment(enrollmentId) {
   const prisma = new PrismaClient()
   
   try {
-    console.log('📊 Monitoring test enrollment status...\n')
+    const id = enrollmentId || 'cmffu4lxo00018osxl5qkon83'
     
-    // Get the latest enrollment for louis@aftershockfam.org
-    const enrollment = await prisma.sequenceEnrollment.findFirst({
-      where: {
-        contact: {
-          email: 'louis@aftershockfam.org'
-        },
-        status: 'ACTIVE'
-      },
+    console.log('📊 MONITORING ENROLLMENT: ' + id)
+    console.log('=' .repeat(50))
+    
+    // Get enrollment details
+    const enrollment = await prisma.sequenceEnrollment.findUnique({
+      where: { id },
       include: {
         contact: true,
         sequence: true
-      },
-      orderBy: {
-        createdAt: 'desc'
       }
     })
     
     if (!enrollment) {
-      console.error('❌ No active enrollment found for louis@aftershockfam.org')
+      console.log('❌ Enrollment not found!')
       return
     }
     
@@ -123,4 +118,6 @@ async function monitorEnrollment() {
   }
 }
 
-monitorEnrollment()
+// Get enrollment ID from command line argument
+const enrollmentId = process.argv[2]
+monitorEnrollment(enrollmentId)

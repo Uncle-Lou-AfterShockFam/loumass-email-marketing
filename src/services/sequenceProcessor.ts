@@ -559,30 +559,56 @@ ${threadHistoryHtml}`
     
     let nextStepIndex: number
     
+    // CRITICAL FIX: Use the actual step IDs from the condition branches
+    // Don't assume indices - find the actual steps by their IDs
     if (conditionMet) {
-      // Condition is TRUE - go to TRUE branch (next step)
-      nextStepIndex = enrollment.currentStep + 1
-      console.log(`[SequenceProcessor] Condition TRUE - proceeding to step ${nextStepIndex} (TRUE branch)`)
+      // Condition is TRUE - find the TRUE branch step
+      const trueBranchId = step.condition.trueBranch?.[0]
+      if (trueBranchId) {
+        const trueBranchIndex = allSteps.findIndex((s: any) => s.id === trueBranchId)
+        if (trueBranchIndex !== -1) {
+          nextStepIndex = trueBranchIndex
+          console.log(`[SequenceProcessor] Condition TRUE - going to TRUE branch ID ${trueBranchId} at index ${nextStepIndex}`)
+        } else {
+          // Fallback to old behavior if ID not found
+          nextStepIndex = enrollment.currentStep + 1
+          console.log(`[SequenceProcessor] WARNING: TRUE branch ID ${trueBranchId} not found, falling back to index ${nextStepIndex}`)
+        }
+      } else {
+        // Fallback if no branch ID defined
+        nextStepIndex = enrollment.currentStep + 1
+        console.log(`[SequenceProcessor] WARNING: No TRUE branch ID defined, using default index ${nextStepIndex}`)
+      }
       
-      // Mark that this enrollment took the TRUE path to prevent FALSE branch execution
+      // Mark that this enrollment took the TRUE path
       await prisma.sequenceEnrollment.update({
         where: { id: enrollment.id },
         data: {
           currentStep: nextStepIndex,
-          // Store the branch path in a custom field for debugging
           updatedAt: new Date()
         }
       })
-      
-      // After the TRUE branch email is sent, we need to skip the FALSE branch
-      // This will be handled by setting a flag or jumping directly to N+3
       
     } else {
-      // Condition is FALSE - skip TRUE branch and go directly to FALSE branch  
-      nextStepIndex = enrollment.currentStep + 2
-      console.log(`[SequenceProcessor] Condition FALSE - skipping TRUE branch, going to step ${nextStepIndex} (FALSE branch)`)
+      // Condition is FALSE - find the FALSE branch step  
+      const falseBranchId = step.condition.falseBranch?.[0]
+      if (falseBranchId) {
+        const falseBranchIndex = allSteps.findIndex((s: any) => s.id === falseBranchId)
+        if (falseBranchIndex !== -1) {
+          nextStepIndex = falseBranchIndex
+          console.log(`[SequenceProcessor] Condition FALSE - going to FALSE branch ID ${falseBranchId} at index ${nextStepIndex}`)
+        } else {
+          // Fallback to old behavior if ID not found
+          nextStepIndex = enrollment.currentStep + 2
+          console.log(`[SequenceProcessor] WARNING: FALSE branch ID ${falseBranchId} not found, falling back to index ${nextStepIndex}`)
+        }
+      } else {
+        // Fallback if no branch ID defined
+        nextStepIndex = enrollment.currentStep + 2
+        console.log(`[SequenceProcessor] WARNING: No FALSE branch ID defined, using default index ${nextStepIndex}`)
+      }
       
-      // Mark that this enrollment took the FALSE path to prevent TRUE branch execution
+      // Mark that this enrollment took the FALSE path
       await prisma.sequenceEnrollment.update({
         where: { id: enrollment.id },
         data: {
@@ -590,8 +616,6 @@ ${threadHistoryHtml}`
           updatedAt: new Date()
         }
       })
-      
-      // After the FALSE branch email is sent, continue normally to N+3
     }
 
     console.log(`[SequenceProcessor] Condition evaluated (${conditionMet}) for enrollment ${enrollment.id}, moved to step ${nextStepIndex}`)

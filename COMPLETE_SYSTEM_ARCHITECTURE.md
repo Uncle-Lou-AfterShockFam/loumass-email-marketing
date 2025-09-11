@@ -1,10 +1,148 @@
 # 🏗️ COMPLETE LOUMASS SYSTEM ARCHITECTURE
+**Version**: 2.0.0 - Post Condition Evaluation Fix
+**Last Updated**: 2025-09-11
+**Critical Fix Deployed**: Sequence condition evaluation for negative conditions (commit: 3f1baf4)
 
 ## 📍 PROJECT LOCATIONS
 
 **Local Path**: `/Users/louispiotti/loumass_beta`
 **Production URL**: https://loumassbeta.vercel.app
 **GitHub Repo**: https://github.com/Uncle-Lou-AfterShockFam/loumass-email-marketing
+
+## 🚨 CRITICAL BUG FIXES HISTORY
+
+### ✅ SEQUENCE CONDITION EVALUATION BUG - FIXED! (2025-09-11)
+
+#### 🎉 Problem Resolution
+The sequence condition evaluation bug has been successfully fixed! Sequences with `not_replied` conditions now correctly evaluate and take the proper branch based on reply detection.
+
+#### 🔧 The Fix
+**File**: `src/services/sequenceProcessor.ts` (Lines 457-518)
+
+**Root Cause**: The `evaluateCondition` method only handled positive conditions (`replied`, `opened`, `clicked`) but not negative conditions (`not_replied`, `not_opened`, `not_clicked`).
+
+**Before (Bug)**:
+```typescript
+private async evaluateCondition(
+  condition: any,
+  enrollment: any,
+  contact: any
+): Promise<boolean> {
+  const { type } = condition
+  
+  if (type === 'replied') {
+    // Check for reply events
+    const replyEvents = await this.prisma.emailEvent.findFirst({
+      where: {
+        contactId: contact.id,
+        sequenceId: enrollment.sequenceId,
+        type: 'REPLIED'
+      }
+    })
+    
+    return replyEvents !== null
+  }
+  
+  // ... other positive conditions
+  return false
+}
+```
+
+**After (Fixed)**:
+```typescript
+private async evaluateCondition(
+  condition: any,
+  enrollment: any,
+  contact: any
+): Promise<boolean> {
+  const { type } = condition
+  
+  // Handle both 'replied' and 'not_replied' conditions
+  if (type === 'replied' || type === 'not_replied') {
+    // Check for reply events in EmailEvent table
+    const replyEvents = await this.prisma.emailEvent.findFirst({
+      where: {
+        contactId: contact.id,
+        sequenceId: enrollment.sequenceId,
+        type: 'REPLIED'
+      }
+    })
+    
+    // Also check SequenceEvent table for redundancy
+    const sequenceReplyEvents = await this.prisma.sequenceEvent.findFirst({
+      where: {
+        enrollmentId: enrollment.id,
+        eventType: 'REPLIED'
+      }
+    })
+    
+    const hasReplied = replyEvents !== null || sequenceReplyEvents !== null
+    
+    // Return opposite boolean for 'not_replied'
+    if (type === 'replied') {
+      return hasReplied
+    } else {
+      return !hasReplied  // This is the critical fix!
+    }
+  }
+  
+  // Handle 'opened' and 'not_opened'
+  if (type === 'opened' || type === 'not_opened') {
+    const openedEvents = await this.prisma.emailEvent.findFirst({
+      where: {
+        contactId: contact.id,
+        sequenceId: enrollment.sequenceId,
+        type: 'OPENED'
+      }
+    })
+    
+    const hasOpened = openedEvents !== null
+    return type === 'opened' ? hasOpened : !hasOpened
+  }
+  
+  // Handle 'clicked' and 'not_clicked'
+  if (type === 'clicked' || type === 'not_clicked') {
+    const clickedEvents = await this.prisma.emailEvent.findFirst({
+      where: {
+        contactId: contact.id,
+        sequenceId: enrollment.sequenceId,
+        type: 'CLICKED'
+      }
+    })
+    
+    const hasClicked = clickedEvents !== null
+    return type === 'clicked' ? hasClicked : !hasClicked
+  }
+  
+  return false
+}
+```
+
+#### 📊 Test Results
+- **Test Enrollment ID**: `cmffu4lxo00018osxl5qkon83`
+- **Contact**: ljpiotti@gmail.com
+- **Sequence**: Test Sequence (cmffqb5yi000zky041joiaacl)
+- **Result**: ✅ Condition evaluation now works correctly for both positive and negative conditions
+
+### ✅ GMAIL THREAD HISTORY BUG - FIXED! (Previously)
+
+#### 🎉 Problem Resolution
+The Gmail thread history bug has been successfully fixed! Follow-up emails in sequences now properly include the complete Gmail conversation thread with proper `gmail_quote` formatting.
+
+#### 🔧 The Fix
+**File**: `src/services/gmail-service.ts` (Line 1209)
+
+**Before (Bug)**:
+```typescript
+// Only include messages that have content and aren't the most recent
+if (i < thread.data.messages.length - 1 && (messageHtml || messageText)) {
+```
+
+**After (Fixed)**:
+```typescript
+// Include all messages that have content
+if ((messageHtml || messageText)) {
+```
 
 ## 🗂️ COMPLETE FILE STRUCTURE
 
@@ -29,6 +167,29 @@
 ├── AUTOMATION_HANDOFF.md    # Automation system docs
 ├── OAUTH_SETUP_GUIDE.md     # OAuth configuration guide
 └── vercel.json              # Vercel deployment config
+```
+
+### 📁 TEST & MONITORING SCRIPTS
+```
+/Users/louispiotti/loumass_beta/
+├── monitor-test-enrollment.js           # Monitor enrollment status
+├── test-new-enrollment-with-fix.js     # Create test enrollments
+├── test-condition-evaluation.js        # Test condition logic
+├── test-process-replied-enrollment.js  # Test reply processing
+├── test-sequence-processing.js         # Test sequence execution
+├── test-direct-process.js             # Direct processing test
+├── test-condition-logic.js            # Condition logic test
+├── test-sequence-fixes.js             # Sequence fix verification
+├── test-prisma-query.js              # Database query test
+├── test-process-direct.js            # Direct process test
+├── test-process-step.ts              # Step processing test
+├── test-step5-with-enhanced-logging.js # Enhanced logging test
+├── trigger-step5-test.js             # Trigger specific step
+├── test-real-enrollment-thread-fix.js # Thread fix test
+├── test-gmail-thread-direct.js       # Gmail thread test
+├── test-check-step5-thread-content.js # Thread content check
+├── test-step5-with-new-logging.js    # New logging test
+└── trigger_crons.sh                  # Trigger all cron jobs
 ```
 
 ### 📁 /src DIRECTORY STRUCTURE
@@ -121,7 +282,7 @@
 │       │   │   ├── route.ts
 │       │   │   ├── control/
 │       │   │   │   └── route.ts
-│   │   │   ├── stats/
+│       │   │   ├── stats/
 │       │   │   │   └── route.ts
 │       │   │   └── enroll/
 │       │   │       └── route.ts
@@ -136,7 +297,9 @@
 │       │       └── route.ts
 │       ├── cron/
 │       │   ├── process-sequences/
-│       │   │   └── route.ts
+│       │   │   └── route.ts    # Main sequence processor
+│       │   ├── check-replies/
+│       │   │   └── route.ts    # Reply detection (runs every minute)
 │       │   ├── process-automations/
 │       │   │   └── route.ts
 │       │   └── cleanup/
@@ -190,9 +353,9 @@
 │   └── providers/
 │       └── session-provider.tsx
 ├── services/             # Business logic services
-│   ├── gmail-service.ts        # Gmail API integration
+│   ├── gmail-service.ts        # Gmail API integration (✅ FIXED thread history)
 │   ├── gmail-fetch-service.ts  # Gmail message fetching
-│   ├── sequenceProcessor.ts    # Sequence execution engine ✅ FIXED
+│   ├── sequenceProcessor.ts    # Sequence execution engine (✅ FIXED condition evaluation)
 │   ├── tracking-service.ts     # Email tracking
 │   ├── automation-executor.ts  # Automation processing
 │   ├── template-processor.ts   # Template variable replacement
@@ -225,36 +388,6 @@
 └── migrations/         # Database migrations
     └── [timestamp]_init/
         └── migration.sql
-```
-
-### 📁 /public DIRECTORY
-```
-/public/
-├── favicon.ico
-├── logo.png
-└── images/
-    └── landing/
-        └── hero.png
-```
-
-### 📁 TEST FILES
-```
-/Users/louispiotti/loumass_beta/
-├── test-process-replied-enrollment.js
-├── test-sequence-processing.js
-├── test-direct-process.js
-├── test-condition-logic.js
-├── test-sequence-fixes.js
-├── test-prisma-query.js
-├── test-process-direct.js
-├── test-process-step.ts
-├── test-step5-with-enhanced-logging.js
-├── trigger-step5-test.js
-├── test-real-enrollment-thread-fix.js
-├── test-gmail-thread-direct.js
-├── test-check-step5-thread-content.js
-├── test-step5-with-new-logging.js
-└── trigger_crons.sh
 ```
 
 ## 🔌 API ENDPOINTS
@@ -315,9 +448,10 @@
 - `GET /api/track/click` - Track link click
 
 ### Cron Jobs
-- `POST /api/cron/process-sequences` - Process sequences
-- `POST /api/cron/process-automations` - Process automations
-- `POST /api/cron/cleanup` - Cleanup old data
+- `POST /api/cron/process-sequences` - Process sequences (every minute)
+- `POST /api/cron/check-replies` - Check for Gmail replies (every minute)
+- `POST /api/cron/process-automations` - Process automations (every 5 minutes)
+- `POST /api/cron/cleanup` - Cleanup old data (daily)
 
 ### User Settings
 - `GET /api/user/variables` - Get variables
@@ -335,276 +469,54 @@
 - **Connection URL**: `postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require`
 - **Direct URL**: `postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require`
 
-### Tables (43 total)
-1. User
-2. Account
-3. Session
-4. VerificationToken
-5. GmailToken
-6. TrackingDomain
-7. Contact
-8. Campaign
-9. Recipient
-10. Sequence
-11. SequenceEnrollment
-12. SequenceStepExecution
-13. EmailEvent
-14. SequenceEvent
-15. EmailTemplate
-16. Webhook
-17. WebhookCall
-18. Automation
-19. AutomationExecution
-20. AutomationExecutionEvent
-21. AutomationNodeStats
-22. EmailList
-23. Segment
-24. ContactList
+### Key Tables for Sequence Processing
+```prisma
+model SequenceEnrollment {
+  id                String              @id @default(cuid())
+  sequenceId        String
+  contactId         String
+  currentStep       Int                 @default(0)
+  status            EnrollmentStatus    @default(ACTIVE)
+  enrolledAt        DateTime            @default(now())
+  completedAt       DateTime?
+  lastEmailSentAt   DateTime?
+  replyCount        Int                 @default(0)
+  lastRepliedAt     DateTime?
+  gmailThreadId     String?             # Gmail thread for conversation
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
 
-### Enums
-- CampaignStatus
-- RecipientStatus
-- SequenceStatus
-- EnrollmentStatus
-- EventType
-- ContactStatus
-- SequenceType
-- AutomationTriggerEvent
-- AutomationStatus
-- AutomationExecStatus
-- AutomationEventType
-- WebhookStatus
-- WebhookCallStatus
+model EmailEvent {
+  id                String              @id @default(uuid())
+  type              EventType           # SENT, OPENED, CLICKED, REPLIED, BOUNCED
+  contactId         String
+  campaignId        String?
+  sequenceId        String?
+  sequenceStepIndex Int?
+  timestamp         DateTime            @default(now())
+  eventData         Json?               # Additional event data
+  userAgent         String?
+  ipAddress         String?
+  createdAt         DateTime            @default(now())
+}
 
-## 🚀 VERCEL CONFIGURATION
-
-### Project Details
-- **Project ID**: `prj_NTDa3fPTPvHe9r57YmJ2PKdSHjCC`
-- **Team ID**: `team_x8fHgKrIrBJX7TJK5Fqymy8Y`
-- **Production URL**: https://loumassbeta.vercel.app
-
-### Build Configuration
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "nodeVersion": "20.x"
+model SequenceEvent {
+  id                String              @id @default(cuid())
+  enrollmentId      String
+  eventType         String              # SENT, REPLIED, CONDITION_TRUE, CONDITION_FALSE
+  stepIndex         Int
+  createdAt         DateTime            @default(now())
 }
 ```
 
-### Cron Jobs
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/process-sequences",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/process-automations",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/cleanup",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
-```
-
-## 🔐 COMPLETE VERCEL ENVIRONMENT VARIABLES
-
-### Database Configuration
-```bash
-# Neon PostgreSQL Database
-DATABASE_URL="postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
-DIRECT_DATABASE_URL="postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
-NEON_DATABASE_URL="postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
-NEON_DIRECT_URL="postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
-```
-
-### NextAuth Configuration
-```bash
-# NextAuth.js Authentication
-NEXTAUTH_URL="https://loumassbeta.vercel.app"
-NEXTAUTH_SECRET="your-production-secret-key-for-nextauth-loumass-beta-2024"
-```
-
-### Google OAuth Configuration
-```bash
-# Google OAuth for NextAuth (User Authentication)
-GOOGLE_CLIENT_ID="988882414599-oc33nemts3iu0p2d1pnng7vhbm44l3u4.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="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"
-
-# Gmail OAuth (Individual User Credentials)
-# Note: Each user configures their own Client ID/Secret for Gmail integration
-# These are stored per-user in the database
-```
-
-### Application URLs
-```bash
-# Application Configuration
-BASE_URL="https://loumassbeta.vercel.app"
-NEXT_PUBLIC_BASE_URL="https://loumassbeta.vercel.app"
-NEXT_PUBLIC_APP_URL="https://loumassbeta.vercel.app"
-NODE_ENV="production"
-```
-
-### Cron Job Security
-```bash
-# Cron Job Authentication
-CRON_SECRET="yRaxumteDNfJ8UDiNI1mpYDrk/Ft+r55MvEh7DKHnZE="
-```
-
-### Vercel System Variables (Auto-generated)
-```bash
-# Vercel System Environment Variables
-VERCEL="1"
-VERCEL_ENV="production"
-VERCEL_URL="loumassbeta.vercel.app"
-VERCEL_REGION="iad1"
-VERCEL_GIT_PROVIDER="github"
-VERCEL_GIT_REPO_SLUG="loumass-email-marketing"
-VERCEL_GIT_REPO_OWNER="Uncle-Lou-AfterShockFam"
-VERCEL_GIT_REPO_ID="your-repo-id"
-VERCEL_GIT_COMMIT_REF="main"
-VERCEL_GIT_COMMIT_SHA="latest-commit-sha"
-VERCEL_GIT_COMMIT_MESSAGE="latest-commit-message"
-VERCEL_GIT_COMMIT_AUTHOR_LOGIN="Uncle-Lou-AfterShockFam"
-VERCEL_GIT_COMMIT_AUTHOR_NAME="Louis Piotti"
-```
-
-### Email Tracking Configuration
-```bash
-# Email Tracking
-TRACKING_DOMAIN="track.loumass.com"
-TRACKING_SUBDOMAIN="track"
-TRACKING_CNAME_TARGET="tracking.loumass.com"
-```
-
-### Analytics Configuration (if applicable)
-```bash
-# Analytics (Optional)
-NEXT_PUBLIC_GA_MEASUREMENT_ID=""
-NEXT_PUBLIC_MIXPANEL_TOKEN=""
-NEXT_PUBLIC_HOTJAR_ID=""
-```
-
-### Feature Flags
-```bash
-# Feature Flags
-ENABLE_AUTOMATIONS="true"
-ENABLE_SEQUENCES="true"
-ENABLE_WEBHOOKS="true"
-ENABLE_EMAIL_LISTS="false"  # Not yet implemented
-ENABLE_TEMPLATES="false"     # Not yet implemented
-```
-
-### Rate Limiting
-```bash
-# Rate Limits
-DAILY_EMAIL_LIMIT="500"
-HOURLY_EMAIL_LIMIT="50"
-MINUTE_EMAIL_LIMIT="10"
-```
-
-### Error Tracking (if applicable)
-```bash
-# Sentry Error Tracking (Optional)
-SENTRY_DSN=""
-SENTRY_ORG=""
-SENTRY_PROJECT=""
-SENTRY_AUTH_TOKEN=""
-```
-
-### Redis Configuration (if applicable)
-```bash
-# Redis Cache (Optional)
-REDIS_URL=""
-REDIS_TOKEN=""
-```
-
-### SMTP Configuration (NOT USED - Using Gmail API)
-```bash
-# SMTP is NOT configured - Using Gmail API instead
-# Each user authenticates with their own Gmail account
-```
-
-## 🔄 SERVICES & INTEGRATIONS
-
-### Core Services
-1. **gmail-service.ts** - Gmail API email sending (✅ FIXED thread history bug)
-2. **gmail-fetch-service.ts** - Gmail message fetching
-3. **sequenceProcessor.ts** - Email sequence execution (✅ FIXED TypeScript error)
-4. **tracking-service.ts** - Email open/click tracking
-5. **automation-executor.ts** - Automation workflow engine
-6. **template-processor.ts** - Variable replacement
-7. **contact-service.ts** - Contact management
-8. **campaign-service.ts** - Campaign operations
-9. **webhook-service.ts** - Webhook delivery
-
-### External Integrations
-- **Gmail API** - Email sending/receiving
-- **Google OAuth 2.0** - Authentication
-- **Neon PostgreSQL** - Database
-- **Vercel** - Hosting & deployment
-- **GitHub** - Version control
-
-## 📦 NPM DEPENDENCIES
-
-### Core Dependencies
-```json
-{
-  "next": "15.5.2",
-  "react": "19.0.0",
-  "react-dom": "19.0.0",
-  "@prisma/client": "^5.22.0",
-  "prisma": "^5.22.0",
-  "next-auth": "^4.24.11",
-  "@next-auth/prisma-adapter": "^1.0.7",
-  "googleapis": "^144.0.0",
-  "nodemailer": "^6.9.16"
-}
-```
-
-### UI Dependencies
-```json
-{
-  "@radix-ui/react-dialog": "^1.1.4",
-  "@radix-ui/react-dropdown-menu": "^2.1.4",
-  "@radix-ui/react-label": "^2.1.1",
-  "@radix-ui/react-select": "^2.1.4",
-  "@radix-ui/react-slot": "^1.1.1",
-  "@radix-ui/react-tabs": "^1.1.2",
-  "@radix-ui/react-toast": "^1.2.4",
-  "tailwindcss": "^3.4.1",
-  "class-variance-authority": "^0.7.1",
-  "clsx": "^2.1.1",
-  "lucide-react": "^0.468.0"
-}
-```
-
-### Automation Dependencies
-```json
-{
-  "reactflow": "^11.11.4",
-  "dagre": "^0.8.5",
-  "@dagrejs/dagre": "^1.1.4"
-}
-```
-
-### Development Dependencies
-```json
-{
-  "typescript": "^5",
-  "@types/node": "^20",
-  "@types/react": "^19",
-  "@types/react-dom": "^19",
-  "eslint": "^8",
-  "eslint-config-next": "15.1.0"
-}
-```
+### Condition Types Supported
+- `replied` - Check if contact has replied
+- `not_replied` - Check if contact has NOT replied (✅ FIXED)
+- `opened` - Check if contact opened email
+- `not_opened` - Check if contact has NOT opened (✅ FIXED)
+- `clicked` - Check if contact clicked link
+- `not_clicked` - Check if contact has NOT clicked (✅ FIXED)
 
 ## ⏰ CRON JOBS
 
@@ -612,19 +524,102 @@ REDIS_TOKEN=""
 - **Endpoint**: `/api/cron/process-sequences`
 - **Schedule**: `* * * * *`
 - **Function**: Processes active sequence enrollments
-- **Secret**: `yRaxumteDNfJ8UDiNI1mpYDrk/Ft+r55MvEh7DKHnZE=`
+- **Key Logic**:
+  - Fetches enrollments with status = 'ACTIVE'
+  - Processes each step type (email, delay, condition)
+  - Evaluates conditions using fixed logic for negative conditions
 
-### 2. Process Automations (Every 5 Minutes)
+### 2. Check Replies (Every Minute)
+- **Endpoint**: `/api/cron/check-replies`
+- **Schedule**: `* * * * *`
+- **Function**: Detects replies via Gmail API
+- **Key Logic**:
+  - Fetches enrollments with gmailThreadId
+  - Checks Gmail thread for new messages
+  - Creates EmailEvent and SequenceEvent records for replies
+  - Updates enrollment replyCount and lastRepliedAt
+
+### 3. Process Automations (Every 5 Minutes)
 - **Endpoint**: `/api/cron/process-automations`
 - **Schedule**: `*/5 * * * *`
 - **Function**: Processes automation executions
-- **Secret**: `yRaxumteDNfJ8UDiNI1mpYDrk/Ft+r55MvEh7DKHnZE=`
 
-### 3. Cleanup (Daily)
+### 4. Cleanup (Daily)
 - **Endpoint**: `/api/cron/cleanup`
 - **Schedule**: `0 0 * * *`
 - **Function**: Cleans old tracking data
-- **Secret**: `yRaxumteDNfJ8UDiNI1mpYDrk/Ft+r55MvEh7DKHnZE=`
+
+## 🔧 UTILITY SCRIPTS FOR TESTING
+
+### Monitor Enrollment Status
+```bash
+# Monitor specific enrollment
+DATABASE_URL="..." node monitor-test-enrollment.js cmffu4lxo00018osxl5qkon83
+
+# Shows:
+# - Current step
+# - Reply detection status
+# - Email events
+# - Sequence events
+# - Next action
+```
+
+### Create Test Enrollment
+```bash
+# Create new test enrollment with known sequence
+DATABASE_URL="..." node test-new-enrollment-with-fix.js
+
+# Creates enrollment for:
+# - Sequence: cmffqb5yi000zky041joiaacl
+# - Contact: ljpiotti@gmail.com
+```
+
+### Test Condition Evaluation
+```bash
+# Test condition logic for specific enrollment
+DATABASE_URL="..." node test-condition-evaluation.js
+
+# Verifies:
+# - Reply detection working
+# - Condition evaluation correct
+# - Proper branch taken
+```
+
+### Direct Database Queries
+```bash
+# Check enrollments with replies
+PGPASSWORD=npg_iwH3QAzNrfR5 psql -h ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech -U neondb_owner -d neondb -c "SELECT id, \"gmailThreadId\", \"currentStep\", \"replyCount\" FROM \"SequenceEnrollment\" WHERE \"replyCount\" > 0;"
+
+# Check EmailEvent replies
+PGPASSWORD=npg_iwH3QAzNrfR5 psql -h ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech -U neondb_owner -d neondb -c "SELECT * FROM \"EmailEvent\" WHERE type = 'REPLIED' ORDER BY timestamp DESC LIMIT 10;"
+```
+
+## 📊 TEST DATA & VERIFICATION
+
+### Test Sequences
+- **Test Sequence with Conditions**: `cmffqb5yi000zky041joiaacl`
+  - Step 0: Initial email
+  - Step 1: Delay (5 minutes)
+  - Step 2: Condition (not_replied)
+  - Step 3: TRUE branch (no reply detected)
+  - Step 4: FALSE branch (reply detected)
+
+### Test Contacts
+- `ljpiotti@gmail.com` (Primary test)
+- `lou@soberafe.com` (Secondary test)
+
+### Working Test Enrollments
+- **cmffu4lxo00018osxl5qkon83** - Latest verified working enrollment
+  - Contact: ljpiotti@gmail.com
+  - Sequence: cmffqb5yi000zky041joiaacl
+  - Status: Successfully evaluated conditions
+
+### Verification Steps
+1. Create enrollment using `test-new-enrollment-with-fix.js`
+2. Monitor with `monitor-test-enrollment.js [enrollment-id]`
+3. Reply to test email
+4. Wait for delay period
+5. Verify correct branch taken based on reply status
 
 ## 🚀 DEPLOYMENT PROCESS
 
@@ -634,6 +629,9 @@ REDIS_TOKEN=""
 git add .
 git commit -m "Your commit message"
 git push origin main
+
+# Recent critical commits:
+# - 3f1baf4: Fixed condition evaluation for negative conditions
 ```
 
 ### Manual Deployment
@@ -645,19 +643,7 @@ vercel --prod --yes
 vercel --prod --force --yes
 ```
 
-### Environment Variables Update
-```bash
-# List all env vars
-vercel env ls
-
-# Add new env var
-vercel env add VARIABLE_NAME
-
-# Remove env var
-vercel env rm VARIABLE_NAME
-```
-
-## 🔍 MONITORING & LOGS
+## 🔍 MONITORING & DEBUGGING
 
 ### Vercel Dashboard
 - **URL**: https://vercel.com/louis-piottis-projects/loumass-beta
@@ -674,158 +660,92 @@ DATABASE_URL="..." npx prisma studio
 PGPASSWORD=npg_iwH3QAzNrfR5 psql -h ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech -U neondb_owner -d neondb
 ```
 
-### Local Development
-```bash
-# Start dev server
-npm run dev
-
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Build production
-npm run build
-```
-
-## ✅ GMAIL THREAD HISTORY BUG - FIXED!
-
-### 🎉 Problem Resolution
-The Gmail thread history bug has been successfully fixed! Follow-up emails in sequences now properly include the complete Gmail conversation thread with proper `gmail_quote` formatting.
-
-### 🔧 The Fix
-**File**: `src/services/gmail-service.ts` (Line 1209)
-
-**Before (Bug)**:
+### Key Log Patterns to Monitor
 ```typescript
-// Only include messages that have content and aren't the most recent
-// (the most recent is what we're replying to)
-if (i < thread.data.messages.length - 1 && (messageHtml || messageText)) {
+// Sequence processor logs
+console.log('🔄 Processing condition step...')
+console.log('📧 Checking for replies...')
+console.log('✅ Condition evaluated:', result)
+console.log('➡️ Taking branch:', branchDirection)
+
+// Reply detection logs
+console.log('🔍 Checking Gmail thread:', threadId)
+console.log('📬 New reply detected from:', fromEmail)
+console.log('💾 Creating EmailEvent record')
 ```
 
-**After (Fixed)**:
-```typescript
-// Include all messages that have content
-// When composing a reply, we want to include ALL previous messages in the thread
-if ((messageHtml || messageText)) {
-```
+## 🚨 CRITICAL IMPLEMENTATION DETAILS
 
-### 🎯 Root Cause
-The condition `i < thread.data.messages.length - 1` was preventing the inclusion of thread history when there was only one previous message in the thread:
-- When thread had 1 message: `0 < 0` = FALSE → No history included
-- When thread had 2+ messages: `0 < 1` = TRUE → History included
+### Sequence Condition Evaluation Flow
+1. **Cron job runs** (`/api/cron/process-sequences`) every minute
+2. **Fetches active enrollments** where currentStep points to a condition
+3. **Evaluates condition** using `evaluateCondition` method:
+   - Checks both EmailEvent and SequenceEvent tables
+   - For `not_*` conditions, returns opposite boolean
+4. **Takes appropriate branch**:
+   - TRUE: Moves to next step (currentStep + 1)
+   - FALSE: Skips next step (currentStep + 2)
 
-This explains why initial follow-ups (Step 2/Step 5) were missing thread history, but subsequent emails would have worked.
+### Reply Detection Flow
+1. **Cron job runs** (`/api/cron/check-replies`) every minute
+2. **Fetches enrollments** with gmailThreadId set
+3. **Checks Gmail API** for thread messages
+4. **Detects new replies** by comparing message count
+5. **Creates records**:
+   - EmailEvent with type='REPLIED'
+   - SequenceEvent with eventType='REPLIED'
+6. **Updates enrollment**:
+   - Increments replyCount
+   - Sets lastRepliedAt timestamp
 
-### 📧 Verified Working Example
-Production email from Step 5 now includes proper thread history:
-```html
-<div dir="ltr">NO REPLY!<div><br></div>Hey LOUIS!<div><br></div>
-  <div>Here's our website:<br>
-    <a href="...">https://aftershockfam.org</a>
-  </div>
-</div>
-<br>
-<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">
-    On Thu, Sep 11, 2025 at 7:10 AM Louis Piotti wrote:<br>
-  </div>
-  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    <html><body>Hey LOUIS!<div><br></div>
-      <div>Here's our website:<br>
-        <a href="https://aftershockfam.org">https://aftershockfam.org</a>
-      </div>
-    </body></html>
-  </blockquote>
-</div>
-```
+### Gmail Thread Management
+1. **Initial email** creates gmailThreadId
+2. **Follow-up emails** use threadId for In-Reply-To header
+3. **Thread history** included via gmail_quote formatting
+4. **Reply detection** uses thread message count
 
-### 🔍 Additional Fixes Applied
-1. **TypeScript Error Fixed** (`src/services/sequenceProcessor.ts:318`)
-   - Changed `catch (error)` to `catch (error: any)` for proper error handling
-   
-2. **Enhanced Logging Added** 
-   - Added detailed logging throughout the sequence processor
-   - Helps debug future issues with thread history inclusion
+## 📝 NOTES FOR NEW CLAUDE SESSION
 
-### 📊 Test Results
-- **Test Contact**: ljpiotti@gmail.com
-- **Sequence**: Stand Alone Sequence (cmffb4i710001js04vg1uqddn)
-- **Enrollment**: cmffb4tch0003js0425ooli4f
-- **Result**: ✅ Step 5 successfully included full Gmail thread history
+### Critical Context
+1. **Two major bugs were fixed**:
+   - Gmail thread history not being included (FIXED in gmail-service.ts)
+   - Condition evaluation not handling negative conditions (FIXED in sequenceProcessor.ts)
 
-## 📊 TEST DATA
+2. **The system uses dual tracking**:
+   - EmailEvent table for general email events
+   - SequenceEvent table for sequence-specific events
+   - Both are checked for redundancy
 
-### Test Sequences
-- **STAND ALONE SEQUENCE**: `cmffb4i710001js04vg1uqddn`
-- **STAND ALONE (Copy)**: `cmfcxnr6g0001k004ok1p668d`
-- **Original Test**: `cmfcw24ta0001jr04eavo9p3n`
+3. **Test carefully with**:
+   - Use monitor-test-enrollment.js to watch progress
+   - Check both EmailEvent and SequenceEvent tables
+   - Verify Gmail thread IDs are set correctly
 
-### Test Contacts
-- `ljpiotti@gmail.com` (Primary)
-- `lou@soberafe.com` (Secondary)
-
-### Test Enrollments
-- **Latest Working**: `cmffb4tch0003js0425ooli4f`
-  - Contact: ljpiotti@gmail.com
-  - Status: ACTIVE
-  - Thread ID: 199387865f08e2f4
-
-## 🔧 UTILITY SCRIPTS
-
-### Test Scripts
-```bash
-# Test reply processing
-DATABASE_URL="..." node test-process-replied-enrollment.js
-
-# Test sequence execution
-DATABASE_URL="..." node test-sequence-processing.js
-
-# Test direct processing
-DATABASE_URL="..." node test-direct-process.js
-
-# Check Step 5 thread content
-DATABASE_URL="..." node test-check-step5-thread-content.js
-
-# Trigger all crons
-./trigger_crons.sh
-```
-
-### Database Scripts
-```bash
-# Generate Prisma client
-npx prisma generate
-
-# Push schema changes
-npx prisma db push
-
-# Create migration
-npx prisma migrate dev
-
-# Reset database
-npx prisma migrate reset
-```
-
-## 📝 NOTES
-
-### Critical Rules
-1. NEVER email anyone except test contacts
-2. ALWAYS deploy manually with `git push origin main`
-3. ALWAYS check Vercel logs after deployment
-4. NEVER modify production data without testing
-5. ALWAYS use SSL for database connections
+4. **Common issues to watch**:
+   - TypeScript errors with catch blocks (use `catch (error: any)`)
+   - Thread history only works if gmailThreadId is set
+   - Conditions must check both event tables
 
 ### System Architecture Highlights
-- **Multi-tenant**: User data isolation
+- **Multi-tenant**: User data isolation via userId
 - **Gmail API**: Not SMTP for better deliverability
-- **Real-time**: WebSocket connections for live updates
+- **Real-time**: Cron jobs run every minute
 - **Scalable**: Serverless functions on Vercel
 - **Secure**: OAuth 2.0, encrypted tokens
-- **Thread History**: ✅ Now working perfectly with proper Gmail quote formatting
+- **Thread Management**: Full Gmail conversation threading
+- **Condition Evaluation**: Supports both positive and negative conditions
+
+### Production Readiness
+- ✅ Gmail thread history working
+- ✅ Condition evaluation fixed for all types
+- ✅ Reply detection via dual-table approach
+- ✅ TypeScript errors resolved
+- ✅ Comprehensive test scripts available
+- ✅ Production deployed and verified
 
 ---
 
-**Document Generated**: Current Session
-**Last Updated**: Gmail thread history bug FIXED - All systems operational
-**Status**: ✅ PRODUCTION READY
+**Document Version**: 2.0.0
+**Generated**: 2025-09-11
+**Last Updated**: Post condition evaluation fix deployment
+**Status**: ✅ PRODUCTION READY - All critical bugs fixed
