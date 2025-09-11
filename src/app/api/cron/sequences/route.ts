@@ -5,16 +5,27 @@ export const maxDuration = 60 // Maximum function duration: 60 seconds
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify the request is from Vercel Cron
+    // Verify this is a cron job request (from Vercel or local testing)
     const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    const userAgent = request.headers.get('user-agent')
     
-    // In production, verify the cron secret
-    if (process.env.NODE_ENV === 'production' && cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.error('[Cron] Unauthorized cron request')
+    console.log(`=== SEQUENCES CRON JOB AUTH CHECK ===`)
+    console.log(`Auth Header: ${authHeader || 'Missing'}`)
+    console.log(`User Agent: ${userAgent || 'Missing'}`)
+    console.log(`Expected: Bearer ${process.env.CRON_SECRET}`)
+    console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
+    
+    // In production, check if it's from Vercel cron or has correct auth
+    if (process.env.NODE_ENV === 'production') {
+      const isVercelCron = userAgent?.includes('vercel-cron') || userAgent?.includes('Vercel-Cron')
+      const hasValidAuth = authHeader === `Bearer ${process.env.CRON_SECRET}`
+      
+      if (!isVercelCron && !hasValidAuth) {
+        console.error('Unauthorized cron job request - Not from Vercel cron and invalid auth')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      
+      console.log(`✅ Authorized: Vercel Cron: ${isVercelCron}, Valid Auth: ${hasValidAuth}`)
     }
 
     console.log('[Cron] Starting sequence processing...')
