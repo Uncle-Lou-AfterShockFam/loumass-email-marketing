@@ -11,8 +11,10 @@ async function testThreadHistory() {
     const enrollment = await prisma.sequenceEnrollment.findFirst({
       where: {
         gmailThreadId: {
-          not: null,
-          not: {
+          not: null
+        },
+        NOT: {
+          gmailThreadId: {
             startsWith: 'thread-'
           }
         },
