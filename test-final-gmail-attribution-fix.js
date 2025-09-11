@@ -110,13 +110,13 @@ async function testFinalFixes() {
       let quotedContent = html.substring(quoteIndex)
       
       // Strip tracking pixels
-      quotedContent = quotedContent.replace(/<img[^>]*\\/api\\/track\\/open\\/[^>]*>/gi, '')
+      quotedContent = quotedContent.replace(/<img[^>]*\/api\/track\/open\/[^>]*>/gi, '')
       
       // Strip tracked links
       quotedContent = quotedContent.replace(
-        /<a\\s+(?:[^>]*?\\s+)?href=(["'])(.*?)\\1/gi,
+        /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi,
         (match, quote, url) => {
-          const trackingMatch = url.match(/\\/api\\/track\\/click\\/[^?]+\\?u=(.+)/)
+          const trackingMatch = url.match(/\/api\/track\/click\/[^?]+\?u=(.+)/)
           if (trackingMatch) {
             const originalUrl = decodeURIComponent(trackingMatch[1])
             return match.replace(url, originalUrl)
@@ -131,8 +131,8 @@ async function testFinalFixes() {
     const cleanedHtml = simulateStripTracking(testHtml)
     
     // Count tracking before and after
-    const trackingBefore = (testHtml.match(/\\/api\\/track\\//g) || []).length
-    const trackingAfter = (cleanedHtml.match(/\\/api\\/track\\//g) || []).length
+    const trackingBefore = (testHtml.match(/\/api\/track\//g) || []).length
+    const trackingAfter = (cleanedHtml.match(/\/api\/track\//g) || []).length
     
     console.log(`   Tracking links before: ${trackingBefore}`)
     console.log(`   Tracking links after: ${trackingAfter}`)
