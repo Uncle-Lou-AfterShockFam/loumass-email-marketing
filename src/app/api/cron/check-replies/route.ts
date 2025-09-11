@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         const messages = await gmail.users.messages.list({
           userId: 'me',
           labelIds: ['INBOX'],
-          q: 'newer_than:1h', // Check messages from last hour (since cron runs hourly)
+          q: 'newer_than:2m', // Check messages from last 2 minutes (cron runs every minute)
           maxResults: 50
         })
         
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
             
             // Process reply for each matching sequence enrollment
             for (const enrollment of sequenceEnrollments) {
-              // Check if we've already recorded this reply
+              // Check if we've already recorded this reply in SequenceEvent
               const existingReply = await prisma.sequenceEvent.findFirst({
                 where: {
                   enrollmentId: enrollment.id,
@@ -144,10 +144,26 @@ export async function GET(request: NextRequest) {
               
               if (existingReply) continue
               
+              // Also check if we have an EmailEvent for this reply
+              const existingEmailEvent = await prisma.emailEvent.findFirst({
+                where: {
+                  type: 'REPLIED',
+                  sequenceId: enrollment.sequenceId,
+                  contactId: contact.id,
+                  metadata: {
+                    path: ['gmailMessageId'],
+                    equals: message.id
+                  }
+                }
+              })
+              
+              if (existingEmailEvent) continue
+              
               // Get the current step index
               const stepIndex = enrollment.currentStep > 0 ? enrollment.currentStep - 1 : 0
               
-              // Create sequence reply event
+              // Create BOTH SequenceEvent AND EmailEvent for reply detection
+              // SequenceEvent for tracking
               await prisma.sequenceEvent.create({
                 data: {
                   enrollmentId: enrollment.id,
@@ -164,6 +180,29 @@ export async function GET(request: NextRequest) {
                     inReplyTo,
                     references,
                     timestamp: new Date().toISOString()
+                  }
+                }
+              })
+              
+              // EmailEvent for condition evaluation
+              await prisma.emailEvent.create({
+                data: {
+                  type: 'REPLIED',
+                  sequenceId: enrollment.sequenceId,
+                  contactId: contact.id,
+                  timestamp: new Date(),
+                  metadata: {
+                    gmailMessageId: message.id,
+                    gmailThreadId: threadId,
+                    gmailMessageIdHeader: messageId,
+                    subject,
+                    fromEmail,
+                    date,
+                    messageBody: messageBody.substring(0, 1000), // Limit size
+                    inReplyTo,
+                    references,
+                    enrollmentId: enrollment.id,
+                    stepIndex: stepIndex
                   }
                 }
               })
