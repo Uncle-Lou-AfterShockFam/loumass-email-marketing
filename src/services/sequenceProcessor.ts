@@ -347,63 +347,69 @@ ${fullHistory.textContent}`
           console.log(`[SequenceProcessor] Building thread history from Gmail for contact ${contact.email}`)
           
           try {
-            // First, check if we have a previous Gmail message ID to fetch
-            if (enrollment.gmailMessageId) {
-              console.log(`[SequenceProcessor] Fetching previous message content from Gmail: ${enrollment.gmailMessageId}`)
+            // First, check if we have a Gmail thread ID to fetch
+            if (enrollment.gmailThreadId) {
+              console.log(`[SequenceProcessor] Fetching entire thread from Gmail: ${enrollment.gmailThreadId}`)
               
               // Import and use GmailFetchService
               const { GmailFetchService } = await import('./gmail-fetch-service')
               const gmailFetchService = new GmailFetchService()
               
               try {
-                const previousMessage = await gmailFetchService.getFullMessage(
+                const threadMessages = await gmailFetchService.getThreadMessages(
                   user.id,
                   user.email,
-                  enrollment.gmailMessageId
+                  enrollment.gmailThreadId
                 )
                 
-                if (previousMessage.htmlBody || previousMessage.textBody) {
-                  console.log(`[SequenceProcessor] Successfully fetched previous message content`)
+                if (threadMessages && threadMessages.length > 0) {
+                  console.log(`[SequenceProcessor] Successfully fetched ${threadMessages.length} messages from thread`)
                   
-                  // Format the date for attribution
-                  const messageDate = new Date(previousMessage.date)
-                  const formattedDate = messageDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })
-                  const formattedTime = messageDate.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })
+                  // Build thread history from ALL messages (oldest to newest)
+                  let threadHistoryHtml = ''
+                  let threadHistoryText = ''
                   
-                  // Build Gmail-style attribution
-                  const attribution = `On ${formattedDate} at ${formattedTime} ${previousMessage.from} wrote:`
-                  
-                  // Use the actual HTML content if available, otherwise use text
-                  const quotedContent = previousMessage.htmlBody || 
-                    previousMessage.textBody.replace(/\n/g, '<br>')
-                  
-                  // Build thread history HTML
-                  const threadHistoryHtml = `<div class="gmail_quote">
+                  // Process each message in the thread
+                  for (const message of threadMessages) {
+                    // Format the date for attribution
+                    const messageDate = new Date(message.date)
+                    const formattedDate = messageDate.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                    const formattedTime = messageDate.toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })
+                    
+                    // Build Gmail-style attribution with email address
+                    const attribution = `On ${formattedDate} at ${formattedTime} ${message.from} wrote:`
+                    
+                    // Use the actual HTML content if available, otherwise use text
+                    const quotedContent = message.htmlBody || 
+                      message.textBody.replace(/\n/g, '<br>')
+                    
+                    // Add each message to the thread history
+                    threadHistoryHtml += `<div class="gmail_quote">
 <div dir="ltr" class="gmail_attr">${attribution}</div>
 <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
 ${quotedContent}
 </blockquote>
 </div>`
-                  
-                  // Build thread history text
-                  const threadHistoryText = `\n\n${attribution}\n> ${previousMessage.textBody.replace(/\n/g, '\n> ')}`
+                    
+                    threadHistoryText += `\n\n${attribution}\n> ${message.textBody.replace(/\n/g, '\n> ')}`
+                  }
                   
                   // Combine with new content
                   finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
                   finalTextContent = `${finalTextContent}${threadHistoryText}`
                   
-                  console.log(`[SequenceProcessor] ✅ SUCCESS: Built thread history from Gmail API (${threadHistoryHtml.length} chars)`)
+                  console.log(`[SequenceProcessor] ✅ SUCCESS: Built thread history from ${threadMessages.length} messages (${threadHistoryHtml.length} chars)`)
                 } else {
-                  console.log(`[SequenceProcessor] Previous message had no body content`)
+                  console.log(`[SequenceProcessor] Thread had no messages`)
                 }
               } catch (gmailError) {
                 console.error(`[SequenceProcessor] Failed to fetch message from Gmail:`, gmailError)
