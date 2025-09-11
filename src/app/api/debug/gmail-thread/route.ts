@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
     // Get step content  
     const steps = enrollment.sequence.steps
-    const step = steps[enrollment.currentStep - 1]
+    const step = steps?.[enrollment.currentStep - 1]
 
     const result = {
       enrollment: {
