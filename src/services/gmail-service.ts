@@ -1095,9 +1095,11 @@ export class GmailService {
             } else if (from.includes('@')) {
               currentFromEmail = from.trim()
             } else {
-              // Try other headers for current message
-              const senderVal = senderHeader?.value
-              const returnVal = returnPathHeader?.value
+              // Try other headers for current message - reuse the headers we already found
+              const msgSenderHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'sender')
+              const msgReturnPathHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'return-path')
+              const senderVal = msgSenderHeader?.value
+              const returnVal = msgReturnPathHeader?.value
               if (senderVal) {
                 const match = senderVal.match(/<(.+?)>/) || senderVal.match(/([^\s]+@[^\s]+)/)
                 if (match) currentFromEmail = match[1].trim()
