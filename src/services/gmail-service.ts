@@ -630,12 +630,23 @@ export class GmailService {
    * This is critical for standalone sequences that reply to tracked emails
    */
   private stripTrackingFromQuotedContent(html: string): string {
+    console.log('[Tracking] PRODUCTION DEBUG: stripTrackingFromQuotedContent called')
+    console.log(`[Tracking] PRODUCTION DEBUG: Input HTML length: ${html.length}`)
+    console.log(`[Tracking] PRODUCTION DEBUG: Input has gmail_quote: ${html.includes('gmail_quote')}`)
+    
+    // PRODUCTION SAFETY: Return original if content too small
+    if (html.length < 50) {
+      console.log('[Tracking] PRODUCTION SAFETY: HTML too small, returning original')
+      return html
+    }
+    
     // Find gmail_quote section
     const quoteStartRegex = /<(?:div|blockquote)[^>]*class="gmail_quote[^"]*"[^>]*>/i
     const quoteMatch = html.match(quoteStartRegex)
     
     if (!quoteMatch) {
       // No quoted section found
+      console.log('[Tracking] PRODUCTION DEBUG: No gmail_quote found, returning original')
       return html
     }
     
@@ -646,11 +657,28 @@ export class GmailService {
     
     console.log('[Tracking] Stripping tracking from quoted content')
     console.log(`[Tracking] Quote starts at index ${quoteIndex}`)
+    console.log(`[Tracking] PRODUCTION DEBUG: Main content length: ${mainContent.length}`)
+    console.log(`[Tracking] PRODUCTION DEBUG: Quoted content length: ${quotedContent.length}`)
+    
+    // PRODUCTION SAFETY: Validate split worked correctly
+    if (mainContent.length + quotedContent.length !== html.length) {
+      console.error('[Tracking] PRODUCTION ERROR: Split failed, content length mismatch!')
+      console.error(`[Tracking] Original: ${html.length}, Main: ${mainContent.length}, Quoted: ${quotedContent.length}`)
+      return html // Return original on error
+    }
     
     // Count tracking before stripping
     const trackingBefore = (quotedContent.match(/\/api\/track\/click\//g) || []).length
     const pixelsBefore = (quotedContent.match(/\/api\/track\/open\//g) || []).length
     console.log(`[Tracking] Found ${trackingBefore} tracked links and ${pixelsBefore} pixels in quoted content`)
+    
+    // PRODUCTION SAFETY: Only strip if tracking found
+    if (trackingBefore === 0 && pixelsBefore === 0) {
+      console.log('[Tracking] PRODUCTION DEBUG: No tracking found, returning original')
+      return html
+    }
+    
+    const originalQuotedLength = quotedContent.length
     
     // 1. Remove ALL tracking pixels from quoted content
     quotedContent = quotedContent.replace(
@@ -682,19 +710,56 @@ export class GmailService {
     const pixelsAfter = (quotedContent.match(/\/api\/track\/open\//g) || []).length
     console.log(`[Tracking] After stripping: ${trackingAfter} tracked links and ${pixelsAfter} pixels remain`)
     
+    // PRODUCTION SAFETY: Check if content was damaged
+    if (quotedContent.length < originalQuotedLength / 2) {
+      console.error('[Tracking] PRODUCTION ERROR: Too much content removed, returning original!')
+      console.error(`[Tracking] Original quoted: ${originalQuotedLength}, After stripping: ${quotedContent.length}`)
+      return html
+    }
+    
     // Recombine
-    return mainContent + quotedContent
+    const result = mainContent + quotedContent
+    console.log(`[Tracking] PRODUCTION DEBUG: Final result length: ${result.length}`)
+    console.log(`[Tracking] PRODUCTION DEBUG: Result has gmail_quote: ${result.includes('gmail_quote')}`)
+    
+    return result
   }
 
   private async addTrackingToEmail(html: string, trackingId: string, userId: string): Promise<string> {
     console.log('=== addTrackingToEmail CALLED ===')
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
+    console.log('PRODUCTION DEBUG: Input has gmail_quote:', html.includes('gmail_quote'))
+    
+    // PRODUCTION SAFETY: Return original if content too small or missing
+    if (!html || html.length < 10) {
+      console.log('PRODUCTION SAFETY: HTML too small or empty, returning original')
+      return html
+    }
+    
+    const originalHtml = html
+    const originalLength = html.length
+    const originalHasQuote = html.includes('gmail_quote')
     
     // CRITICAL FIX: Strip any existing tracking from quoted content FIRST
     // This prevents double/triple tracking when replying to tracked emails
     html = this.stripTrackingFromQuotedContent(html)
     console.log('HTML after stripping quoted tracking:', html.length)
+    console.log('PRODUCTION DEBUG: After stripping has gmail_quote:', html.includes('gmail_quote'))
+    
+    // PRODUCTION SAFETY: Check if stripping damaged content
+    if (html.length < originalLength / 3) {
+      console.error('PRODUCTION ERROR: Too much content removed by stripping, reverting!')
+      console.error(`Original: ${originalLength}, After stripping: ${html.length}`)
+      html = originalHtml
+    }
+    
+    // PRODUCTION SAFETY: Ensure gmail_quote is preserved
+    if (originalHasQuote && !html.includes('gmail_quote')) {
+      console.error('PRODUCTION ERROR: gmail_quote content lost during stripping!')
+      console.log('PRODUCTION FALLBACK: Reverting to original content')
+      html = originalHtml
+    }
     
     // Fetch user's tracking domain from database
     const userTrackingDomain = await prisma.trackingDomain.findUnique({
@@ -891,6 +956,23 @@ export class GmailService {
     console.log('=== addTrackingToEmail COMPLETE ===')
     console.log('Final HTML length:', trackedHtml.length)
     console.log('Final HTML (last 200 chars):', trackedHtml.slice(-200))
+    console.log('PRODUCTION DEBUG: Final result has gmail_quote:', trackedHtml.includes('gmail_quote'))
+    
+    // FINAL PRODUCTION SAFETY CHECK
+    if (originalHasQuote && !trackedHtml.includes('gmail_quote')) {
+      console.error('CRITICAL PRODUCTION ERROR: gmail_quote lost during tracking process!')
+      console.error(`Original had quote: ${originalHasQuote}, Final has quote: ${trackedHtml.includes('gmail_quote')}`)
+      console.log('EMERGENCY FALLBACK: Using original HTML to preserve thread history')
+      return originalHtml
+    }
+    
+    // FINAL LENGTH SAFETY CHECK  
+    if (trackedHtml.length < originalLength / 4) {
+      console.error('CRITICAL PRODUCTION ERROR: Too much content lost during tracking!')
+      console.error(`Original: ${originalLength}, Final: ${trackedHtml.length}`)
+      console.log('EMERGENCY FALLBACK: Using original HTML')
+      return originalHtml
+    }
     
     return trackedHtml
   }
