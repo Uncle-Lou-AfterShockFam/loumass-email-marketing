@@ -36,8 +36,8 @@ export async function GET(request: Request) {
     )
 
     // Get step content  
-    const steps = enrollment.sequence.steps
-    const step = steps?.[enrollment.currentStep - 1]
+    const steps = enrollment.sequence.steps as any[]
+    const step = steps?.[enrollment.currentStep - 1] as any
 
     const result = {
       enrollment: {
@@ -56,7 +56,6 @@ export async function GET(request: Request) {
         htmlLength: threadHistory?.htmlContent?.length || 0,
         textLength: threadHistory?.textContent?.length || 0,
         hasGmailQuote: threadHistory?.htmlContent?.includes('gmail_quote') || false,
-        lastMessageId: threadHistory?.lastMessageId,
         preview: threadHistory?.htmlContent?.substring(0, 200) + '...' || null
       },
       environment: {
@@ -70,10 +69,11 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error('Debug Gmail Thread Error:', error)
+    const err = error as Error
     return NextResponse.json({ 
       error: 'Debug failed',
-      message: error.message,
-      stack: error.stack 
+      message: err.message,
+      stack: err.stack 
     }, { status: 500 })
   }
 }
