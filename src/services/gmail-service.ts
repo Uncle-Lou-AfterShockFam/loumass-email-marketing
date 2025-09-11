@@ -1419,15 +1419,36 @@ export class GmailService {
             )
           }
           
-          // Build the quoted content with proper nesting
-          const quotedHtml = `<div class="gmail_quote gmail_quote_container">
+          // Build the quoted content
+          // Only add our quote wrapper if this message doesn't already have one
+          const hasExistingQuote = messageHtml && (
+            messageHtml.includes('class="gmail_quote"') || 
+            messageHtml.includes('<blockquote')
+          )
+          
+          if (hasExistingQuote) {
+            // Message already contains quoted content, just add attribution before it
+            const quotedHtml = `<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
+  ${messageHtml}
+</div>`
+            fullHtmlContent = quotedHtml
+          } else {
+            // Message doesn't have quotes, wrap it properly
+            const quotedHtml = `<div class="gmail_quote gmail_quote_container">
   <div dir="ltr" class="gmail_attr">${attribution}<br></div>
   <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    ${messageHtml}${fullHtmlContent ? '\n' + fullHtmlContent : ''}
+    ${messageHtml}
   </blockquote>
 </div>`
+            fullHtmlContent = quotedHtml
+          }
           
-          fullHtmlContent = quotedHtml
+          // Append any previous thread history OUTSIDE of the current blockquote
+          if (fullHtmlContent && i < thread.data.messages.length - 1) {
+            // Only append if there are more messages in the thread
+            fullHtmlContent = fullHtmlContent // Keep current structure
+          }
           
           // For text version
           const quotedText = `${attribution}\n> ${messageText.split('\n').join('\n> ')}${fullTextContent ? '\n>\n> ' + fullTextContent.split('\n').join('\n> ') : ''}`
