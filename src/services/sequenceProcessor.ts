@@ -313,10 +313,10 @@ export class SequenceProcessor {
               console.log(`[SequenceProcessor]   HTML length: ${fullHistory.htmlContent?.length || 0}`)
               console.log(`[SequenceProcessor]   Text length: ${fullHistory.textContent?.length || 0}`)
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error(`[SequenceProcessor] ❌ ERROR calling getFullThreadHistory:`, error)
-            console.error(`[SequenceProcessor]   Error message: ${error.message}`)
-            console.error(`[SequenceProcessor]   Error stack: ${error.stack}`)
+            console.error(`[SequenceProcessor]   Error message: ${error?.message || 'Unknown error'}`)
+            console.error(`[SequenceProcessor]   Error stack: ${error?.stack || 'No stack trace'}`)
           }
           retryCount++
         }
