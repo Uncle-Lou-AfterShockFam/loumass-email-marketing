@@ -1020,13 +1020,67 @@ export class GmailService {
             // Gmail format: "On [Date] at [Time] Name <email> wrote:"
             attribution = `On ${formattedDate} at ${formattedTime} ${fromName} <${fromEmail}> wrote:`
           } else {
-            // If it's just an email, show it as Gmail does
-            const emailOnly = from.trim()
-            // Check if it's already an email address
-            if (emailOnly.includes('@')) {
-              attribution = `On ${formattedDate} at ${formattedTime} ${emailOnly} <${emailOnly}> wrote:`
+            // If it's just a plain name or email without angle brackets
+            const trimmedFrom = from.trim()
+            
+            // Try to find the email address from other headers
+            const senderHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'sender')
+            const returnPathHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'return-path')
+            const replyToHeader = message.payload?.headers?.find((h: any) => h.name?.toLowerCase() === 'reply-to')
+            
+            // Debug logging
+            console.log(`[GmailService] Attribution debug for message ${i}:`)
+            console.log(`  From header: ${from}`)
+            console.log(`  Sender header: ${senderHeader?.value}`)
+            console.log(`  Return-Path header: ${returnPathHeader?.value}`)
+            console.log(`  Reply-To header: ${replyToHeader?.value}`)
+            
+            // Try to find the email address
+            let emailAddress = ''
+            if (trimmedFrom.includes('@')) {
+              // It's already an email address
+              emailAddress = trimmedFrom
             } else {
-              attribution = `On ${formattedDate} at ${formattedTime} ${emailOnly} wrote:`
+              // Try to extract from other headers
+              // Often, when From header just has a name, the email is in Sender or Return-Path
+              if (senderHeader?.value) {
+                const senderMatch = senderHeader.value.match(/<(.+?)>/) || senderHeader.value.match(/([^\s]+@[^\s]+)/)
+                if (senderMatch) emailAddress = senderMatch[1].trim()
+              }
+              if (!emailAddress && returnPathHeader?.value) {
+                const returnMatch = returnPathHeader.value.match(/<(.+?)>/) || returnPathHeader.value.match(/([^\s]+@[^\s]+)/)
+                if (returnMatch) emailAddress = returnMatch[1].trim()
+              }
+              if (!emailAddress && replyToHeader?.value) {
+                const replyMatch = replyToHeader.value.match(/<(.+?)>/) || replyToHeader.value.match(/([^\s]+@[^\s]+)/)
+                if (replyMatch) emailAddress = replyMatch[1].trim()
+              }
+              
+              // As a last resort, check if the from field is in format "name@domain" without spaces
+              if (!emailAddress && trimmedFrom.match(/^[^\s]+@[^\s]+$/)) {
+                emailAddress = trimmedFrom
+              }
+            }
+            
+            console.log(`  Extracted email: ${emailAddress}`)
+            
+            // Build the attribution
+            if (emailAddress) {
+              // If we have an email, always include it in angle brackets
+              if (trimmedFrom === emailAddress) {
+                // Just the email address
+                attribution = `On ${formattedDate} at ${formattedTime} ${emailAddress} <${emailAddress}> wrote:`
+              } else if (trimmedFrom.includes('@')) {
+                // Email without name
+                attribution = `On ${formattedDate} at ${formattedTime} ${trimmedFrom} <${trimmedFrom}> wrote:`
+              } else {
+                // Name with email from other headers
+                attribution = `On ${formattedDate} at ${formattedTime} ${trimmedFrom} <${emailAddress}> wrote:`
+              }
+            } else {
+              // No email found, just use the name (shouldn't happen in real Gmail threads)
+              console.warn(`[GmailService] No email found for sender: ${trimmedFrom}`)
+              attribution = `On ${formattedDate} at ${formattedTime} ${trimmedFrom} wrote:`
             }
           }
           
