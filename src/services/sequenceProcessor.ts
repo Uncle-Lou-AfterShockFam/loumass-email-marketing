@@ -539,6 +539,13 @@ ${threadHistoryHtml}`
       return
     }
 
+    // CRITICAL FIX: Check for replies RIGHT BEFORE evaluating condition
+    // This ensures we have the most up-to-date reply status
+    if (step.condition.type === 'replied') {
+      console.log(`[SequenceProcessor] Checking for replies before condition evaluation for enrollment ${enrollment.id}`)
+      await this.checkForRepliesForEnrollment(enrollment)
+    }
+
     console.log(`[SequenceProcessor] Evaluating condition type: ${step.condition.type} for enrollment ${enrollment.id}`)
     const conditionMet = await this.evaluateCondition(enrollment, step.condition)
     console.log(`[SequenceProcessor] Condition result: ${conditionMet}`)
@@ -620,6 +627,169 @@ ${threadHistoryHtml}`
         return events.some(e => e.type === 'REPLIED')
       default:
         return false
+    }
+  }
+
+  /**
+   * Check for replies for a specific enrollment right before condition evaluation
+   */
+  async checkForRepliesForEnrollment(enrollment: any) {
+    console.log(`[SequenceProcessor] Checking for replies for enrollment ${enrollment.id}`)
+    
+    if (!enrollment.gmailThreadId) {
+      console.log(`[SequenceProcessor] No Gmail thread ID for enrollment ${enrollment.id}`)
+      return
+    }
+
+    try {
+      const { sequence, contact } = enrollment
+      const { user } = sequence
+      
+      if (!user.gmailToken) {
+        console.log(`[SequenceProcessor] No Gmail token for user ${user.id}`)
+        return
+      }
+
+      // Initialize Gmail client
+      const gmailClient = new (await import('@/lib/gmail-client')).GmailClient()
+      const gmail = await gmailClient.getGmailService(user.id, user.gmailToken.email)
+      
+      // Get the thread to check for replies
+      const thread = await gmail.users.threads.get({
+        userId: 'me',
+        id: enrollment.gmailThreadId,
+        format: 'metadata',
+        metadataHeaders: ['From', 'To', 'Subject', 'Date', 'Message-ID', 'In-Reply-To', 'References']
+      })
+      
+      if (!thread.data.messages || thread.data.messages.length <= 1) {
+        console.log(`[SequenceProcessor] No replies found in thread ${enrollment.gmailThreadId}`)
+        return
+      }
+      
+      // Check each message in the thread (skip the first one which is our sent email)
+      for (let i = 1; i < thread.data.messages.length; i++) {
+        const message = thread.data.messages[i]
+        if (!message.id || !message.payload?.headers) continue
+        
+        const headers = message.payload.headers
+        const from = headers.find((h: any) => h.name === 'From')?.value
+        const messageId = headers.find((h: any) => h.name === 'Message-ID')?.value
+        const inReplyTo = headers.find((h: any) => h.name === 'In-Reply-To')?.value
+        const date = headers.find((h: any) => h.name === 'Date')?.value
+        const subject = headers.find((h: any) => h.name === 'Subject')?.value
+        
+        if (!from) continue
+        
+        // Extract email from "Name <email>" format
+        const emailMatch = from.match(/<(.+)>/)
+        const fromEmail = emailMatch ? emailMatch[1] : from
+        
+        // Skip if this is from the user's own email
+        if (fromEmail === user.gmailToken.email) continue
+        
+        // Check if this is from the contact
+        if (fromEmail !== contact.email) continue
+        
+        console.log(`[SequenceProcessor] Found reply from ${fromEmail} in thread ${enrollment.gmailThreadId}`)
+        
+        // Check if we've already recorded this reply
+        const existingReply = await prisma.sequenceEvent.findFirst({
+          where: {
+            enrollmentId: enrollment.id,
+            eventType: 'REPLIED',
+            eventData: {
+              path: ['gmailMessageId'],
+              equals: message.id
+            }
+          }
+        })
+        
+        if (existingReply) {
+          console.log(`[SequenceProcessor] Reply already recorded for message ${message.id}`)
+          continue
+        }
+        
+        // Also check EmailEvent
+        const existingEmailEvent = await prisma.emailEvent.findFirst({
+          where: {
+            type: 'REPLIED',
+            sequenceId: enrollment.sequenceId,
+            contactId: contact.id,
+            eventData: {
+              path: ['gmailMessageId'],
+              equals: message.id
+            }
+          }
+        })
+        
+        if (existingEmailEvent) {
+          console.log(`[SequenceProcessor] EmailEvent already recorded for message ${message.id}`)
+          continue
+        }
+        
+        // Get the current step index
+        const stepIndex = enrollment.currentStep > 0 ? enrollment.currentStep - 1 : 0
+        
+        console.log(`[SequenceProcessor] Recording new reply for enrollment ${enrollment.id}`)
+        
+        // Create BOTH SequenceEvent AND EmailEvent for reply detection
+        await prisma.sequenceEvent.create({
+          data: {
+            enrollmentId: enrollment.id,
+            stepIndex: stepIndex,
+            eventType: 'REPLIED',
+            eventData: {
+              gmailMessageId: message.id,
+              gmailThreadId: enrollment.gmailThreadId,
+              gmailMessageIdHeader: messageId,
+              subject,
+              fromEmail,
+              date,
+              inReplyTo,
+              timestamp: new Date().toISOString()
+            }
+          }
+        })
+        
+        // EmailEvent for condition evaluation
+        await prisma.emailEvent.create({
+          data: {
+            type: 'REPLIED',
+            sequenceId: enrollment.sequenceId,
+            contactId: contact.id,
+            timestamp: new Date(),
+            eventData: {
+              gmailMessageId: message.id,
+              gmailThreadId: enrollment.gmailThreadId,
+              gmailMessageIdHeader: messageId,
+              subject,
+              fromEmail,
+              date,
+              inReplyTo,
+              enrollmentId: enrollment.id,
+              stepIndex: stepIndex
+            }
+          }
+        })
+        
+        // Update enrollment reply stats
+        if (!enrollment.lastRepliedAt) {
+          await prisma.sequenceEnrollment.update({
+            where: { id: enrollment.id },
+            data: {
+              lastRepliedAt: new Date(),
+              replyCount: {
+                increment: 1
+              }
+            }
+          })
+        }
+        
+        console.log(`[SequenceProcessor] ✅ Reply recorded successfully for enrollment ${enrollment.id}`)
+      }
+    } catch (error) {
+      console.error(`[SequenceProcessor] Error checking replies for enrollment ${enrollment.id}:`, error)
     }
   }
 
