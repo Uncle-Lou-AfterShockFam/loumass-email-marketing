@@ -24,6 +24,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Enrollment not found' }, { status: 404 })
     }
 
+    if (!enrollment.gmailThreadId) {
+      return NextResponse.json({ error: 'Enrollment has no Gmail thread ID' }, { status: 400 })
+    }
+
     // Test getFullThreadHistory in production
     const gmailService = new GmailService()
     const threadHistory = await gmailService.getFullThreadHistory(
