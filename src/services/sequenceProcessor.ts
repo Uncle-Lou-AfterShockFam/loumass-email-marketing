@@ -606,8 +606,8 @@ ${threadHistoryHtml}`
 
     // For replies, we check ALL events (not just recent) since replies can come at any time
     // For opens/clicks, we check events since the last email was sent
-    if (type === 'replied') {
-      console.log(`[SequenceProcessor] Checking for ANY replies for enrollment ${enrollment.id}`)
+    if (type === 'replied' || type === 'not_replied') {
+      console.log(`[SequenceProcessor] Checking for ${type} condition for enrollment ${enrollment.id}`)
       
       // Look for ANY reply event for this contact/sequence combination
       const replyEvents = await prisma.emailEvent.findMany({
@@ -633,8 +633,18 @@ ${threadHistoryHtml}`
       
       console.log(`[SequenceProcessor] Found ${sequenceReplyEvents.length} sequence reply events for enrollment ${enrollment.id}`)
       
-      // Return true if we have ANY reply events
-      return replyEvents.length > 0 || sequenceReplyEvents.length > 0
+      const hasReplied = replyEvents.length > 0 || sequenceReplyEvents.length > 0
+      
+      // For 'replied', return true if we have replies
+      // For 'not_replied', return true if we DON'T have replies (opposite)
+      if (type === 'replied') {
+        console.log(`[SequenceProcessor] Condition 'replied' returns: ${hasReplied}`)
+        return hasReplied
+      } else {
+        // type === 'not_replied'
+        console.log(`[SequenceProcessor] Condition 'not_replied' returns: ${!hasReplied}`)
+        return !hasReplied
+      }
     }
 
     // For opens and clicks, check recent events (since last email)
@@ -654,9 +664,14 @@ ${threadHistoryHtml}`
     switch (type) {
       case 'opened':
         return events.some(e => e.type === 'OPENED')
+      case 'not_opened':
+        return !events.some(e => e.type === 'OPENED')
       case 'clicked':
         return events.some(e => e.type === 'CLICKED')
+      case 'not_clicked':
+        return !events.some(e => e.type === 'CLICKED')
       default:
+        console.log(`[SequenceProcessor] Unknown condition type: ${type}`)
         return false
     }
   }
