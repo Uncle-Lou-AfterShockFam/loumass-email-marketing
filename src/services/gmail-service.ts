@@ -1110,8 +1110,9 @@ export class GmailService {
             }
             
             // Look for attribution patterns that are missing emails and try to fix them
+            // Match both formats: "On Thu, Sep 11, 2025 at" and "On Wed, Sep 10, 2025 at"
             messageHtml = messageHtml.replace(
-              /On\s+([^,]+,[^,]+)\s+at\s+([^\s]+\s+[AP]M)\s+([^<\n]+?)\s+wrote:/gi,
+              /On\s+(.+?)\s+at\s+(\d{1,2}:\d{2}\s+[AP]M)\s+([^<\n]+?)\s+wrote:/gi,
               (match, dateStr, time, name) => {
                 const cleanName = name.trim()
                 // Check if it already has email in angle brackets
@@ -1121,20 +1122,24 @@ export class GmailService {
                 
                 // Try to find the email for this person
                 console.log(`[GmailService] Found attribution without email: "${match}"`)
+                console.log(`  Date: ${dateStr}, Time: ${time}, Name: ${cleanName}`)
                 
                 // If we can detect it's the same person as the current from
                 const currentFromName = from.split('<')[0].trim()
                 if (cleanName === currentFromName && currentFromEmail) {
+                  console.log(`  Matched current sender, adding email: ${currentFromEmail}`)
                   return `On ${dateStr} at ${time} ${cleanName} <${currentFromEmail}> wrote:`
                 }
                 
                 // As a fallback for common names, try to guess the email
                 // This is a simple heuristic - in production you'd look up the contact
-                if (cleanName.toLowerCase().includes('louis piotti')) {
+                if (cleanName.toLowerCase() === 'louis piotti' || cleanName === 'Louis Piotti') {
                   // Based on the context, this is likely Louis Piotti's email
+                  console.log(`  Matched Louis Piotti, adding email: ljpiotti@aftershockfam.org`)
                   return `On ${dateStr} at ${time} ${cleanName} <ljpiotti@aftershockfam.org> wrote:`
                 }
                 
+                console.log(`  Could not find email for: ${cleanName}`)
                 return match // Can't fix it, leave as is
               }
             )
