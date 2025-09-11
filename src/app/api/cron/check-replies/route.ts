@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
                   type: 'REPLIED',
                   sequenceId: enrollment.sequenceId,
                   contactId: contact.id,
-                  metadata: {
+                  eventData: {
                     path: ['gmailMessageId'],
                     equals: message.id
                   }
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
                   sequenceId: enrollment.sequenceId,
                   contactId: contact.id,
                   timestamp: new Date(),
-                  metadata: {
+                  eventData: {
                     gmailMessageId: message.id,
                     gmailThreadId: threadId,
                     gmailMessageIdHeader: messageId,
