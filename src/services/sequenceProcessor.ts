@@ -260,14 +260,8 @@ export class SequenceProcessor {
       let finalHtmlContent = content
       let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
       
-      // PRODUCTION DEBUG: Log every condition check
-      console.error(`[PROD-DEBUG] Step check: enrollment.currentStep=${enrollment.currentStep}, > 0? ${enrollment.currentStep > 0}`)
-      console.error(`[PROD-DEBUG] Thread check: enrollment.gmailThreadId=${enrollment.gmailThreadId}, exists? ${!!enrollment.gmailThreadId}`)
-      console.error(`[PROD-DEBUG] Combined condition: ${enrollment.currentStep > 0 && enrollment.gmailThreadId}`)
-      
       // ALWAYS include thread history when replying (Gmail's default behavior)
       if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-        console.error(`[PROD-DEBUG] ✅ ENTERING THREAD HISTORY BLOCK - Step ${enrollment.currentStep}, Thread: ${enrollment.gmailThreadId}`)
         console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
         // CRITICAL FIX: Ensure enough time has passed for Gmail thread to be established
@@ -277,17 +271,13 @@ export class SequenceProcessor {
           Date.now() - new Date(enrollment.lastEmailSentAt).getTime() : 
           threadEstablishmentTime + 1000
           
-        console.error(`[PROD-DEBUG] Time since last email: ${timeSinceLastEmail}ms, required: ${threadEstablishmentTime}ms`)
-          
         if (timeSinceLastEmail < threadEstablishmentTime) {
           const waitTime = threadEstablishmentTime - timeSinceLastEmail
-          console.error(`[PROD-DEBUG] Waiting ${Math.ceil(waitTime/1000)}s for thread establishment`)
           console.log(`[SequenceProcessor] ⏰ TIMING FIX: Waiting ${Math.ceil(waitTime/1000)}s for Gmail thread to be established...`)
           await new Promise(resolve => setTimeout(resolve, waitTime))
         }
         
         // CRITICAL: Fetch the ACTUAL thread history from Gmail API with retry logic
-        console.error(`[PROD-DEBUG] About to call getFullThreadHistory for user: ${user.id}, thread: ${enrollment.gmailThreadId}`)
         console.log(`[SequenceProcessor] FETCHING REAL EMAIL THREAD CONTENT for thread: ${enrollment.gmailThreadId}`)
         let fullHistory = null
         let retryCount = 0
@@ -296,23 +286,15 @@ export class SequenceProcessor {
         // Retry logic for thread history fetching
         while (!fullHistory && retryCount < maxRetries) {
           if (retryCount > 0) {
-            console.error(`[PROD-DEBUG] Retry ${retryCount}/${maxRetries}`)
             console.log(`[SequenceProcessor] 🔄 Retry ${retryCount}/${maxRetries} for thread history...`)
             await new Promise(resolve => setTimeout(resolve, 5000)) // 5 second delay between retries
           }
           
-          try {
-            console.error(`[PROD-DEBUG] Calling gmailService.getFullThreadHistory...`)
-            fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
-            console.error(`[PROD-DEBUG] getFullThreadHistory returned: ${fullHistory ? `${fullHistory.htmlContent?.length} chars` : 'null'}`)
-          } catch (error) {
-            console.error(`[PROD-DEBUG] ERROR in getFullThreadHistory:`, error)
-          }
+          fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
           retryCount++
         }
         
         if (fullHistory) {
-          console.error(`[PROD-DEBUG] ✅ GOT THREAD HISTORY: ${fullHistory.htmlContent.length} chars`)
           console.log(`[SequenceProcessor] ✅ SUCCESS: Got ACTUAL Gmail thread history with ${fullHistory.htmlContent.length} chars`)
           console.log(`[SequenceProcessor] This includes the real email content from the conversation thread`)
           
@@ -321,15 +303,12 @@ export class SequenceProcessor {
 <br>
 ${fullHistory.htmlContent}`
           
-          console.error(`[PROD-DEBUG] Final HTML content includes thread: ${finalHtmlContent.includes('gmail_quote')}`)
-          
           // Build text content with full thread history  
           finalTextContent = `${finalTextContent}
 
 ${fullHistory.textContent}`
           
         } else {
-          console.error(`[PROD-DEBUG] ❌ FAILED TO GET THREAD HISTORY after ${retryCount} attempts`)
           console.error(`[SequenceProcessor] CRITICAL: Failed to fetch Gmail thread content for thread ${enrollment.gmailThreadId}`)
           console.error(`[SequenceProcessor] Implementing EmailEvent database fallback to build thread history`)
           
@@ -399,9 +378,6 @@ ${threadHistoryHtml}`
             console.error(`[SequenceProcessor] Proceeding with email but WITHOUT thread history`)
           }
         }
-      } else {
-        console.error(`[PROD-DEBUG] ❌ NOT FETCHING THREAD HISTORY - Condition failed`)
-        console.error(`[PROD-DEBUG] Reason: Step=${enrollment.currentStep} (need >0), Thread=${enrollment.gmailThreadId} (need truthy)`)
       }
 
       // Check if tracking is enabled for this sequence AND step
