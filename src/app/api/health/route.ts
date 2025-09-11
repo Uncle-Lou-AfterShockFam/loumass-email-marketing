@@ -6,10 +6,10 @@ export async function GET() {
       status: 'ok', 
       timestamp: new Date().toISOString(),
       message: 'LOUMASS API is working',
-      version: 'v1.8-AUTO-REFRESH-GMAIL-TOKENS',
+      version: 'v1.9-TRACKING-FIX',
       deploymentTime: new Date().toISOString(),
-      commitId: 'df27cad',
-      automationFixStatus: 'DEPLOYED_WITH_AUTO_TOKEN_REFRESH',
+      commitId: '8c1f52d',
+      automationFixStatus: 'TRACKING_IN_QUOTES_FIXED',
       fixesIncluded: [
         'currentNodeId setting', 
         'auto-generation', 
@@ -17,7 +17,9 @@ export async function GET() {
         'direct database repair completed',
         'automatic Gmail token refresh',
         'enhanced error handling',
-        'retry logic for expired tokens'
+        'retry logic for expired tokens',
+        'NO tracking in quoted email sections',
+        'Prevent nested tracking URLs'
       ]
     })
   } catch (error) {

@@ -742,44 +742,26 @@ export class GmailService {
     }
     
     // STEP 4: Replace all HTML links for click tracking - BUT NOT IN QUOTED SECTIONS
-    // Split HTML into sections to avoid tracking quoted content (gmail_quote sections)
-    const sections = trackedHtml.split(/(<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>|<\/(?:blockquote|div)>)/i)
+    // Find the gmail_quote section and only track links BEFORE it
+    const quoteStartRegex = /<(?:div|blockquote)[^>]*class="gmail_quote[^"]*"[^>]*>/i
+    const quoteMatch = trackedHtml.match(quoteStartRegex)
     
-    let insideQuote = false
     let linkCount = 0
     const replacedLinks: string[] = []
     
-    trackedHtml = sections.map((section, index) => {
-      // Check if we're entering a quote block
-      if (section.match(/<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>/i)) {
-        insideQuote = true
-        console.log(`[Tracking] Entering quoted section at index ${index}`)
-        return section
-      }
+    if (quoteMatch) {
+      // Found quoted section - split the email
+      const quoteIndex = trackedHtml.indexOf(quoteMatch[0])
+      const mainContent = trackedHtml.substring(0, quoteIndex)
+      const quotedContent = trackedHtml.substring(quoteIndex)
       
-      // Check if we're leaving a quote block
-      if (section.match(/<\/(?:blockquote|div)>/i) && insideQuote) {
-        // Only mark as outside quote if this is the closing tag for a gmail_quote
-        // Check if the next non-empty section has gmail_quote
-        const hasMoreQuotes = sections.slice(index + 1).some(s => 
-          s.match(/<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>/i)
-        )
-        if (!hasMoreQuotes) {
-          insideQuote = false
-          console.log(`[Tracking] Exiting quoted section at index ${index}`)
-        }
-        return section
-      }
+      console.log(`[Tracking] Found quoted section at index ${quoteIndex}`)
+      console.log(`[Tracking] Main content length: ${mainContent.length}`)
+      console.log(`[Tracking] Quoted content length: ${quotedContent.length}`)
       
-      // Only track links in non-quoted sections
-      if (insideQuote) {
-        console.log(`[Tracking] Skipping tracking in quoted section (${section.length} chars)`)
-        return section
-      }
-      
-      // Track links only in main content
+      // Only track links in main content
       const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
-      return section.replace(linkRegex, (match, quote, url) => {
+      const trackedMain = mainContent.replace(linkRegex, (match, quote, url) => {
         // Skip if already tracked
         if (url.includes('/api/track/click/')) {
           console.log(`[Tracking] Skipping already tracked URL: ${url.substring(0, 50)}...`)
@@ -797,7 +779,33 @@ export class GmailService {
         console.log(`[Tracking] Tracking link ${linkCount}: ${url.substring(0, 50)}...`)
         return match.replace(url, trackedUrl)
       })
-    }).join('')
+      
+      // Recombine with untracked quoted content
+      trackedHtml = trackedMain + quotedContent
+      console.log(`[Tracking] Skipped tracking in quoted section`)
+    } else {
+      // No quoted section - track all links
+      console.log(`[Tracking] No quoted section found, tracking all links`)
+      const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+      trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
+        // Skip if already tracked
+        if (url.includes('/api/track/click/')) {
+          console.log(`[Tracking] Skipping already tracked URL: ${url.substring(0, 50)}...`)
+          return match
+        }
+        
+        // Don't track unsubscribe or mailto links
+        if (url.includes('unsubscribe') || url.includes('mailto:')) {
+          return match
+        }
+        
+        linkCount++
+        const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
+        replacedLinks.push(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
+        console.log(`[Tracking] Tracking link ${linkCount}: ${url.substring(0, 50)}...`)
+        return match.replace(url, trackedUrl)
+      })
+    }
     
     // Write final result to debug log
     const finalDebug = [
