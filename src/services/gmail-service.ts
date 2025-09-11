@@ -625,10 +625,76 @@ export class GmailService {
     return result
   }
 
+  /**
+   * Strip existing tracking from quoted content to prevent double/triple tracking
+   * This is critical for standalone sequences that reply to tracked emails
+   */
+  private stripTrackingFromQuotedContent(html: string): string {
+    // Find gmail_quote section
+    const quoteStartRegex = /<(?:div|blockquote)[^>]*class="gmail_quote[^"]*"[^>]*>/i
+    const quoteMatch = html.match(quoteStartRegex)
+    
+    if (!quoteMatch) {
+      // No quoted section found
+      return html
+    }
+    
+    // Split content at quote boundary
+    const quoteIndex = html.indexOf(quoteMatch[0])
+    const mainContent = html.substring(0, quoteIndex)
+    let quotedContent = html.substring(quoteIndex)
+    
+    console.log('[Tracking] Stripping tracking from quoted content')
+    console.log(`[Tracking] Quote starts at index ${quoteIndex}`)
+    
+    // Count tracking before stripping
+    const trackingBefore = (quotedContent.match(/\/api\/track\/click\//g) || []).length
+    const pixelsBefore = (quotedContent.match(/\/api\/track\/open\//g) || []).length
+    console.log(`[Tracking] Found ${trackingBefore} tracked links and ${pixelsBefore} pixels in quoted content`)
+    
+    // 1. Remove ALL tracking pixels from quoted content
+    quotedContent = quotedContent.replace(
+      /<img[^>]*\/api\/track\/open\/[^>]*>/gi,
+      ''
+    )
+    
+    // 2. Replace tracked links with original URLs
+    const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+    quotedContent = quotedContent.replace(linkRegex, (match, quote, url) => {
+      // Check if this is a tracking URL
+      const trackingMatch = url.match(/\/api\/track\/click\/[^?]+\?u=(.+)/)
+      if (trackingMatch) {
+        // Decode the original URL
+        try {
+          const originalUrl = decodeURIComponent(trackingMatch[1])
+          console.log(`[Tracking] Reverting tracked URL to: ${originalUrl}`)
+          return match.replace(url, originalUrl)
+        } catch (e) {
+          console.log('[Tracking] Failed to decode tracked URL, keeping as-is')
+          return match
+        }
+      }
+      return match
+    })
+    
+    // Count tracking after stripping
+    const trackingAfter = (quotedContent.match(/\/api\/track\/click\//g) || []).length
+    const pixelsAfter = (quotedContent.match(/\/api\/track\/open\//g) || []).length
+    console.log(`[Tracking] After stripping: ${trackingAfter} tracked links and ${pixelsAfter} pixels remain`)
+    
+    // Recombine
+    return mainContent + quotedContent
+  }
+
   private async addTrackingToEmail(html: string, trackingId: string, userId: string): Promise<string> {
     console.log('=== addTrackingToEmail CALLED ===')
     console.log('Input HTML length:', html.length)
     console.log('Tracking ID:', trackingId)
+    
+    // CRITICAL FIX: Strip any existing tracking from quoted content FIRST
+    // This prevents double/triple tracking when replying to tracked emails
+    html = this.stripTrackingFromQuotedContent(html)
+    console.log('HTML after stripping quoted tracking:', html.length)
     
     // Fetch user's tracking domain from database
     const userTrackingDomain = await prisma.trackingDomain.findUnique({
