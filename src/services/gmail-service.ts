@@ -1204,9 +1204,9 @@ export class GmailService {
           }
         }
         
-        // Only include messages that have content and aren't the most recent
-        // (the most recent is what we're replying to)
-        if (i < thread.data.messages.length - 1 && (messageHtml || messageText)) {
+        // Include all messages that have content
+        // When composing a reply, we want to include ALL previous messages in the thread
+        if ((messageHtml || messageText)) {
           // Format date like Gmail
           const formattedDate = date.toLocaleDateString('en-US', {
             weekday: 'short',
