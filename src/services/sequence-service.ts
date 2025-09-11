@@ -1099,8 +1099,11 @@ export class SequenceService {
     let linkCount = 0
     
     trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
-      // Don't track unsubscribe links
-      if (url.includes('unsubscribe') || url.includes('mailto:')) {
+      // Don't track unsubscribe links, mailto links, or already-tracked links
+      if (url.includes('unsubscribe') || 
+          url.includes('mailto:') || 
+          url.includes('/api/track/click/') ||
+          url.includes('/api/track/open/')) {
         return match
       }
       

@@ -1111,34 +1111,42 @@ export class GmailService {
             
             // Fix existing Gmail attribution lines that are missing email addresses
             // These come from Gmail's own quote formatting
-            // Look for patterns in gmail_attr divs: "On Thu, Sep 11, 2025 at 12:39 AM Louis Piotti  wrote:"
+            // Look for patterns in gmail_attr divs: "On Thu, Sep 11, 2025 at 12:51 AM Louis Piotti  wrote:"
             // Notice the double space after the name - that's where the email should be
+            // The regex needs to match the exact pattern Gmail uses
             messageHtml = messageHtml.replace(
-              /(<div[^>]*class="gmail_attr"[^>]*>)(On\s+.+?\s+at\s+\d{1,2}:\d{2}\s+[AP]M)\s+([^<]+?)\s+wrote:(<\/div>|<br>)/gi,
-              (match, divStart, dateTime, nameSection, divEnd) => {
-                const cleanName = nameSection.trim()
+              /(<div[^>]*class="gmail_attr"[^>]*>)(.*?)(<br>|<\/div>)/gi,
+              (match, divStart, content, divEnd) => {
+                // Check if this is an attribution line
+                const attrMatch = content.match(/^(On\s+.+?\s+at\s+\d{1,2}:\d{2}\s*[AP]M)\s+(.+?)\s+wrote:$/i)
+                if (!attrMatch) {
+                  return match // Not an attribution line
+                }
+                
+                const dateTime = attrMatch[1]
+                const nameSection = attrMatch[2].trim()
                 
                 // Check if it already has email in angle brackets
-                if (cleanName.includes('<') && cleanName.includes('>')) {
+                if (nameSection.includes('<') && nameSection.includes('>')) {
                   return match // Already formatted correctly
                 }
                 
-                console.log(`[GmailService] Found Gmail attribution without email: "${dateTime} ${cleanName} wrote:"`)
+                console.log(`[GmailService] Found Gmail attribution without email: "${dateTime} ${nameSection} wrote:"`)
                 
                 // For Louis Piotti, we know the email
-                if (cleanName === 'Louis Piotti' || cleanName.toLowerCase() === 'louis piotti') {
+                if (nameSection === 'Louis Piotti' || nameSection.toLowerCase() === 'louis piotti') {
                   console.log(`  Adding email for Louis Piotti: ljpiotti@aftershockfam.org`)
-                  return `${divStart}${dateTime} ${cleanName} <ljpiotti@aftershockfam.org> wrote:${divEnd}`
+                  return `${divStart}${dateTime} ${nameSection} &lt;<a href="mailto:ljpiotti@aftershockfam.org">ljpiotti@aftershockfam.org</a>&gt; wrote:${divEnd}`
                 }
                 
                 // If we can detect it's the same person as the current from
                 const currentFromName = from.split('<')[0].trim()
-                if (cleanName === currentFromName && currentFromEmail) {
+                if (nameSection === currentFromName && currentFromEmail) {
                   console.log(`  Matched current sender, adding email: ${currentFromEmail}`)
-                  return `${divStart}${dateTime} ${cleanName} <${currentFromEmail}> wrote:${divEnd}`
+                  return `${divStart}${dateTime} ${nameSection} &lt;<a href="mailto:${currentFromEmail}">${currentFromEmail}</a>&gt; wrote:${divEnd}`
                 }
                 
-                console.log(`  Could not determine email for: ${cleanName}`)
+                console.log(`  Could not determine email for: ${nameSection}`)
                 return match // Can't fix it, leave as is
               }
             )
