@@ -1095,23 +1095,45 @@ export class SequenceService {
     }
     
     // Replace all HTML links for click tracking - FIXED: Use 'u' parameter like campaigns
+    // IMPORTANT: Only track links in the main content, not in quoted sections
     const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
     let linkCount = 0
+    let insideQuote = false
     
-    trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
-      // Don't track unsubscribe links, mailto links, or already-tracked links
-      if (url.includes('unsubscribe') || 
-          url.includes('mailto:') || 
-          url.includes('/api/track/click/') ||
-          url.includes('/api/track/open/')) {
-        return match
+    // Split HTML into sections to avoid tracking quoted content
+    const sections = trackedHtml.split(/(<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>|<\/(?:blockquote|div)>)/i)
+    
+    trackedHtml = sections.map((section, index) => {
+      // Check if we're entering or leaving a quote block
+      if (section.match(/<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>/i)) {
+        insideQuote = true
+        return section
+      } else if (section.match(/<\/(?:blockquote|div)>/i) && insideQuote) {
+        insideQuote = false
+        return section
       }
       
-      linkCount++
-      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
-      console.log(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
-      return match.replace(url, trackedUrl)
-    })
+      // If inside a quote, don't track links
+      if (insideQuote) {
+        return section
+      }
+      
+      // Track links only in non-quoted sections
+      return section.replace(linkRegex, (match, quote, url) => {
+        // Don't track unsubscribe links, mailto links, or already-tracked links
+        if (url.includes('unsubscribe') || 
+            url.includes('mailto:') || 
+            url.includes('/api/track/click/') ||
+            url.includes('/api/track/open/')) {
+          return match
+        }
+        
+        linkCount++
+        const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
+        console.log(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
+        return match.replace(url, trackedUrl)
+      })
+    }).join('')
     
     console.log('=== SEQUENCE addTrackingToEmail COMPLETE ===')
     console.log('Final HTML length:', trackedHtml.length)

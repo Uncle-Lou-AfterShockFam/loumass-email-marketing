@@ -741,22 +741,63 @@ export class GmailService {
       console.log('After pixel insertion:', trackedHtml)
     }
     
-    // STEP 4: Replace all HTML links for click tracking
-    const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+    // STEP 4: Replace all HTML links for click tracking - BUT NOT IN QUOTED SECTIONS
+    // Split HTML into sections to avoid tracking quoted content (gmail_quote sections)
+    const sections = trackedHtml.split(/(<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>|<\/(?:blockquote|div)>)/i)
+    
+    let insideQuote = false
     let linkCount = 0
     const replacedLinks: string[] = []
     
-    trackedHtml = trackedHtml.replace(linkRegex, (match, quote, url) => {
-      // Don't track unsubscribe links
-      if (url.includes('unsubscribe') || url.includes('mailto:')) {
-        return match
+    trackedHtml = sections.map((section, index) => {
+      // Check if we're entering a quote block
+      if (section.match(/<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>/i)) {
+        insideQuote = true
+        console.log(`[Tracking] Entering quoted section at index ${index}`)
+        return section
       }
       
-      linkCount++
-      const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
-      replacedLinks.push(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
-      return match.replace(url, trackedUrl)
-    })
+      // Check if we're leaving a quote block
+      if (section.match(/<\/(?:blockquote|div)>/i) && insideQuote) {
+        // Only mark as outside quote if this is the closing tag for a gmail_quote
+        // Check if the next non-empty section has gmail_quote
+        const hasMoreQuotes = sections.slice(index + 1).some(s => 
+          s.match(/<(?:blockquote|div)[^>]*class="gmail_quote[^"]*"[^>]*>/i)
+        )
+        if (!hasMoreQuotes) {
+          insideQuote = false
+          console.log(`[Tracking] Exiting quoted section at index ${index}`)
+        }
+        return section
+      }
+      
+      // Only track links in non-quoted sections
+      if (insideQuote) {
+        console.log(`[Tracking] Skipping tracking in quoted section (${section.length} chars)`)
+        return section
+      }
+      
+      // Track links only in main content
+      const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi
+      return section.replace(linkRegex, (match, quote, url) => {
+        // Skip if already tracked
+        if (url.includes('/api/track/click/')) {
+          console.log(`[Tracking] Skipping already tracked URL: ${url.substring(0, 50)}...`)
+          return match
+        }
+        
+        // Don't track unsubscribe or mailto links
+        if (url.includes('unsubscribe') || url.includes('mailto:')) {
+          return match
+        }
+        
+        linkCount++
+        const trackedUrl = `${baseUrl}/api/track/click/${trackingId}?u=${encodeURIComponent(url)}`
+        replacedLinks.push(`Link ${linkCount}: ${url} -> ${trackedUrl}`)
+        console.log(`[Tracking] Tracking link ${linkCount}: ${url.substring(0, 50)}...`)
+        return match.replace(url, trackedUrl)
+      })
+    }).join('')
     
     // Write final result to debug log
     const finalDebug = [
@@ -1109,41 +1150,60 @@ export class GmailService {
               }
             }
             
+            // IMPORTANT: Fix attribution BEFORE any tracking is applied
+            // First, remove any tracking from quoted content to prevent double-tracking
+            messageHtml = messageHtml.replace(
+              /href="[^"]*\/api\/track\/click\/[^"]*\?u=([^"]+)"/gi,
+              (match, encodedUrl) => {
+                try {
+                  const originalUrl = decodeURIComponent(encodedUrl)
+                  console.log(`[GmailService] Removing tracking from quoted URL: ${originalUrl}`)
+                  return `href="${originalUrl}"`
+                } catch (e) {
+                  return match
+                }
+              }
+            )
+            
             // Fix existing Gmail attribution lines that are missing email addresses
             // These come from Gmail's own quote formatting
             // Look for patterns in gmail_attr divs: "On Thu, Sep 11, 2025 at 12:51 AM Louis Piotti  wrote:"
             // Notice the double space after the name - that's where the email should be
-            // The regex needs to match the exact pattern Gmail uses
             messageHtml = messageHtml.replace(
-              /(<div[^>]*class="gmail_attr"[^>]*>)(.*?)(<br>|<\/div>)/gi,
+              /(<div[^>]*class="gmail_attr"[^>]*>)([\s\S]*?)(<\/div>)/gi,
               (match, divStart, content, divEnd) => {
+                // Remove any HTML tags from content for pattern matching
+                const plainContent = content.replace(/<[^>]+>/g, '').trim()
+                
                 // Check if this is an attribution line
-                const attrMatch = content.match(/^(On\s+.+?\s+at\s+\d{1,2}:\d{2}\s*[AP]M)\s+(.+?)\s+wrote:$/i)
+                // Match pattern: "On [date] at [time] [name] wrote:"
+                const attrMatch = plainContent.match(/^On\s+(.+?)\s+at\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(.+?)\s+wrote:$/i)
                 if (!attrMatch) {
                   return match // Not an attribution line
                 }
                 
-                const dateTime = attrMatch[1]
-                const nameSection = attrMatch[2].trim()
+                const dateStr = attrMatch[1]
+                const time = attrMatch[2]
+                const nameSection = attrMatch[3].trim()
                 
                 // Check if it already has email in angle brackets
                 if (nameSection.includes('<') && nameSection.includes('>')) {
                   return match // Already formatted correctly
                 }
                 
-                console.log(`[GmailService] Found Gmail attribution without email: "${dateTime} ${nameSection} wrote:"`)
+                console.log(`[GmailService] Found Gmail attribution without email: "${plainContent}"`)
                 
                 // For Louis Piotti, we know the email
                 if (nameSection === 'Louis Piotti' || nameSection.toLowerCase() === 'louis piotti') {
                   console.log(`  Adding email for Louis Piotti: ljpiotti@aftershockfam.org`)
-                  return `${divStart}${dateTime} ${nameSection} &lt;<a href="mailto:ljpiotti@aftershockfam.org">ljpiotti@aftershockfam.org</a>&gt; wrote:${divEnd}`
+                  return `${divStart}On ${dateStr} at ${time} ${nameSection} &lt;<a href="mailto:ljpiotti@aftershockfam.org">ljpiotti@aftershockfam.org</a>&gt; wrote:${divEnd}`
                 }
                 
                 // If we can detect it's the same person as the current from
                 const currentFromName = from.split('<')[0].trim()
                 if (nameSection === currentFromName && currentFromEmail) {
                   console.log(`  Matched current sender, adding email: ${currentFromEmail}`)
-                  return `${divStart}${dateTime} ${nameSection} &lt;<a href="mailto:${currentFromEmail}">${currentFromEmail}</a>&gt; wrote:${divEnd}`
+                  return `${divStart}On ${dateStr} at ${time} ${nameSection} &lt;<a href="mailto:${currentFromEmail}">${currentFromEmail}</a>&gt; wrote:${divEnd}`
                 }
                 
                 console.log(`  Could not determine email for: ${nameSection}`)
