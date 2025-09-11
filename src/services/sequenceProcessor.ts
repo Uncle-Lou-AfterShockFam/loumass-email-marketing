@@ -212,6 +212,13 @@ export class SequenceProcessor {
    * Process an email step
    */
   async processEmailStep(enrollment: any, step: SequenceStep) {
+    console.log(`[SequenceProcessor] 🎯 processEmailStep called:`)
+    console.log(`[SequenceProcessor]   Enrollment ID: ${enrollment.id}`)
+    console.log(`[SequenceProcessor]   Contact: ${enrollment.contact?.email}`)
+    console.log(`[SequenceProcessor]   Current Step (at start): ${enrollment.currentStep}`)
+    console.log(`[SequenceProcessor]   Gmail Thread ID: ${enrollment.gmailThreadId}`)
+    console.log(`[SequenceProcessor]   Step subject: ${step.subject}`)
+    
     const { sequence, contact } = enrollment
     const { user } = sequence
     let steps: SequenceStep[]
@@ -298,7 +305,19 @@ export class SequenceProcessor {
             await new Promise(resolve => setTimeout(resolve, 5000)) // 5 second delay between retries
           }
           
-          fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
+          try {
+            console.log(`[SequenceProcessor] 🔍 Calling getFullThreadHistory with userId: ${user.id}, threadId: ${enrollment.gmailThreadId}`)
+            fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
+            console.log(`[SequenceProcessor] 📊 getFullThreadHistory returned: ${fullHistory ? 'SUCCESS' : 'NULL'}`)
+            if (fullHistory) {
+              console.log(`[SequenceProcessor]   HTML length: ${fullHistory.htmlContent?.length || 0}`)
+              console.log(`[SequenceProcessor]   Text length: ${fullHistory.textContent?.length || 0}`)
+            }
+          } catch (error) {
+            console.error(`[SequenceProcessor] ❌ ERROR calling getFullThreadHistory:`, error)
+            console.error(`[SequenceProcessor]   Error message: ${error.message}`)
+            console.error(`[SequenceProcessor]   Error stack: ${error.stack}`)
+          }
           retryCount++
         }
         
