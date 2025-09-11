@@ -683,173 +683,22 @@ npm run lint
 npm run build
 ```
 
-## 🐛 CRITICAL BUG: GMAIL THREAD HISTORY MISSING
+## 🐛 CRITICAL BUGS TO FIX
 
-### ⚠️ PRODUCTION ISSUE - REQUIRES IMMEDIATE ATTENTION
+### 1. Threading Not Working
+- **File**: `/src/services/sequence-service.ts`
+- **Lines**: 531-537, 628-634
+- **Issue**: `In-Reply-To` headers not being added
 
-#### 🎯 Problem Summary
-Gmail thread history is completely missing from follow-up emails in sequences. While email tracking works correctly, the Gmail quote content (`<div class="gmail_quote">`) that shows previous conversation is not being included in subsequent emails. This makes follow-up emails appear as standalone messages instead of proper threaded conversations.
+### 2. Condition Evaluation Timing
+- **File**: `/src/services/sequence-service.ts`
+- **Lines**: 1066-1145
+- **Issue**: Evaluates before checking replies
 
-#### 📧 Expected vs Actual Behavior
-
-**Expected (Working):**
-```html
-<div dir="ltr">Step 5 email content here</div><br>
-<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">
-    On Mon, Jan 9, 2025 at 4:05 PM Louis Piotti &lt;...&gt; wrote:
-  </div>
-  <blockquote class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex;">
-    <div dir="ltr">Step 4 email content here</div>
-  </blockquote>
-</div>
-```
-
-**Actual (Broken):**
-```html
-<div dir="ltr">Step 5 email content here</div>
-<!-- Missing entire gmail_quote section -->
-```
-
-#### 🔍 Investigation Results
-
-All individual components work correctly when tested in isolation:
-
-1. **✅ Thread History Retrieval Works**
-   - `getFullThreadHistory()` successfully returns 872-873 characters
-   - Contains proper `gmail_quote` and `gmail_quote_container` classes
-   - Thread ID detection is working correctly
-
-2. **✅ Content Assembly Logic Works**
-   - Sequence processor correctly checks `enrollment.currentStep > 0 && enrollment.gmailThreadId`
-   - Content assembly: `<div dir="ltr">${content}</div><br>${fullHistory.htmlContent}`
-   - Logic at `src/services/sequence-service.ts:264-355` is correct
-
-3. **✅ Tracking Integration Preserves Content**
-   - `addTrackingToEmail()` method preserves all `gmail_quote` content
-   - Tracking pixels and click tracking work without stripping thread history
-
-4. **❌ Production Emails Still Missing Thread History**
-   - Despite all logic working correctly, production emails lack thread history
-   - Issue persists across multiple deployments and fixes
-
-#### 🔧 Attempted Fixes (All Failed)
-
-**Fix #1: Timing Issues**
-- Added 30-second minimum wait for Gmail thread establishment
-- Added retry logic (up to 3 attempts with 5-second delays)
-- **Result**: Still missing thread history
-
-**Fix #2: Environment Configuration**
-- Fixed production URL detection (VERCEL_URL vs localhost)
-- Updated environment variable handling in 4 service files
-- **Result**: Still missing thread history
-
-**Fix #3: Service Updates**
-- Updated `src/services/gmail-service.ts` (lines 776-794)
-- Updated `src/services/sequence-service.ts` (lines 264-355)
-- Updated `src/services/node-processors/email-node-processor.ts`
-- **Result**: Still missing thread history
-
-#### 🧪 Test Evidence
-
-**Test Script Results:**
-```javascript
-// test-step2-thread-history.js - SUCCESS
-const fullHistory = await gmailService.getFullThreadHistory('19937adf176b60e8')
-// Returns: 872 characters with proper gmail_quote formatting
-
-// debug-production-enrollment.js - SUCCESS  
-// Enrollment: cmff3qedg0001k004xzid78rp
-// Thread history: 873 chars with gmail_quote
-// Content assembly: Working correctly
-// Tracking integration: Preserves gmail_quote content
-```
-
-**Production Evidence:**
-```
-Deployment: https://loumassbeta-kphl6zv9v-louis-piottis-projects.vercel.app
-Sequence: STAND ALONE SEQUENCE
-Step 1: ✅ Proper tracking, no thread history needed
-Step 5: ❌ Has tracking but missing entire gmail_quote section
-```
-
-#### 🤔 Root Cause Hypothesis
-
-The disconnect between working test logic and failing production suggests:
-
-1. **Different Code Path**: Production may be using a different email sending path
-2. **Cron vs Manual Execution**: Different logic for cron-triggered vs manual sequences
-3. **Database Transaction Issues**: Thread history retrieval happening before thread is fully established
-4. **Service Layer Mismatch**: Gmail service vs sequence service coordination issue
-5. **Environment Variable Override**: Some production setting overriding local behavior
-
-#### 📂 Critical Files to Investigate
-
-1. **Sequence Processor** (`src/services/sequence-service.ts:264-355`)
-   ```typescript
-   // Critical logic - works in tests but not production
-   if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-     const fullHistory = await this.gmailService.getFullThreadHistory(enrollment.gmailThreadId)
-     // This part works but thread history isn't reaching final email
-   }
-   ```
-
-2. **Gmail Service** (`src/services/gmail-service.ts`)
-   - Thread history retrieval: Lines 267-295
-   - Email sending with history: Lines 776-794
-
-3. **Cron Processor** (`src/app/api/cron/process-sequences/route.ts`)
-   - May be using different execution path than manual testing
-
-#### 🚨 HANDOFF TO NEXT CLAUDE SESSION
-
-**MASTER MODE INSTRUCTIONS:**
-
-You are taking over a critical production bug where Gmail thread history is missing from follow-up emails in sequences. Here's what you need to know:
-
-**THE PROBLEM:**
-- Follow-up emails in sequences are missing Gmail quote content (`<div class="gmail_quote">`)
-- All individual components work correctly when tested
-- Production emails still fail despite multiple attempted fixes
-
-**WHAT WORKS:**
-- ✅ `getFullThreadHistory()` returns proper Gmail quote content (872-873 chars)
-- ✅ Sequence processor logic correctly assembles content with thread history
-- ✅ Tracking integration preserves Gmail quote formatting
-- ✅ Thread ID detection and enrollment logic
-
-**WHAT'S BROKEN:**
-- ❌ Production emails still missing thread history despite working logic
-- ❌ Cron job execution may be using different code path
-
-**CRITICAL FILES:**
-- `src/services/sequence-service.ts` (lines 264-355) - Thread history logic
-- `src/services/gmail-service.ts` (lines 267-295, 776-794) - Gmail integration  
-- `src/app/api/cron/process-sequences/route.ts` - Cron execution path
-- `src/services/node-processors/email-node-processor.ts` - Alternative email path
-
-**IMMEDIATE ACTIONS NEEDED:**
-1. Compare cron execution path vs manual execution path
-2. Add extensive logging to production to trace where thread history gets lost
-3. Check if `AutomationExecution` vs `SequenceEnrollment` use different email sending logic
-4. Verify the actual email sending service being called in production
-5. Check for any content truncation or HTML sanitization
-
-**TEST CONTACTS:**
-- `ljpiotti@gmail.com` (Primary test contact)
-- Active sequence: "STAND ALONE SEQUENCE" (cmfcxnr6g0001k004ok1p668d)
-
-**DATABASE ACCESS:**
-```bash
-DATABASE_URL="postgresql://neondb_owner:npg_iwH3QAzNrfR5@ep-jolly-recipe-adekvs9j-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
-```
-
-**YOUR MISSION:**
-Find why production emails are missing Gmail thread history when all tested components work correctly. The user has explicitly stated "YOU HAVE FAILED!" after multiple fix attempts. This is a critical production issue affecting email sequence functionality.
-
-**SUCCESS CRITERIA:**
-Follow-up emails in production must include proper Gmail quote formatting with complete conversation history, exactly like manual Gmail threading but with tracking functionality preserved.
+### 3. Tracking Missing
+- **File**: `/src/services/sequence-service.ts`
+- **Lines**: 730-746
+- **Issue**: Not added to follow-up emails
 
 ## 📊 TEST DATA
 

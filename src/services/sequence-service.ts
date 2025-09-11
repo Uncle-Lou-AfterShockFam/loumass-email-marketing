@@ -1026,8 +1026,24 @@ export class SequenceService {
       baseUrl = `https://${userTrackingDomain.domain}`.trim()
       console.log('Using user tracking domain:', baseUrl)
     } else {
-      baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://loumassbeta.vercel.app').trim()
-      console.log('Using default tracking domain:', baseUrl)
+      // PRODUCTION FIX: Better environment detection and URL handling
+      const nextPublicBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim()
+      const vercelUrl = process.env.VERCEL_URL?.trim()
+      const isProduction = process.env.NODE_ENV === 'production'
+      
+      if (nextPublicBaseUrl) {
+        baseUrl = nextPublicBaseUrl
+        console.log('Using NEXT_PUBLIC_BASE_URL:', baseUrl)
+      } else if (vercelUrl && isProduction) {
+        baseUrl = `https://${vercelUrl}`
+        console.log('Using VERCEL_URL for production:', baseUrl)
+      } else if (isProduction) {
+        baseUrl = 'https://loumassbeta.vercel.app'
+        console.log('Using fallback production URL:', baseUrl)
+      } else {
+        baseUrl = 'http://localhost:3000'
+        console.log('Using development URL:', baseUrl)
+      }
     }
     
     console.log('Base URL for tracking:', baseUrl)

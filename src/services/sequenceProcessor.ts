@@ -264,9 +264,35 @@ export class SequenceProcessor {
       if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
         console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
         
-        // CRITICAL: Fetch the ACTUAL thread history from Gmail API 
+        // CRITICAL FIX: Ensure enough time has passed for Gmail thread to be established
+        // Gmail needs time to fully establish thread after initial email is sent
+        const threadEstablishmentTime = 30000 // 30 seconds minimum
+        const timeSinceLastEmail = enrollment.lastEmailSentAt ? 
+          Date.now() - new Date(enrollment.lastEmailSentAt).getTime() : 
+          threadEstablishmentTime + 1000
+          
+        if (timeSinceLastEmail < threadEstablishmentTime) {
+          const waitTime = threadEstablishmentTime - timeSinceLastEmail
+          console.log(`[SequenceProcessor] ⏰ TIMING FIX: Waiting ${Math.ceil(waitTime/1000)}s for Gmail thread to be established...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+        }
+        
+        // CRITICAL: Fetch the ACTUAL thread history from Gmail API with retry logic
         console.log(`[SequenceProcessor] FETCHING REAL EMAIL THREAD CONTENT for thread: ${enrollment.gmailThreadId}`)
-        const fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
+        let fullHistory = null
+        let retryCount = 0
+        const maxRetries = 3
+        
+        // Retry logic for thread history fetching
+        while (!fullHistory && retryCount < maxRetries) {
+          if (retryCount > 0) {
+            console.log(`[SequenceProcessor] 🔄 Retry ${retryCount}/${maxRetries} for thread history...`)
+            await new Promise(resolve => setTimeout(resolve, 5000)) // 5 second delay between retries
+          }
+          
+          fullHistory = await gmailService.getFullThreadHistory(user.id, enrollment.gmailThreadId)
+          retryCount++
+        }
         
         if (fullHistory) {
           console.log(`[SequenceProcessor] ✅ SUCCESS: Got ACTUAL Gmail thread history with ${fullHistory.htmlContent.length} chars`)
