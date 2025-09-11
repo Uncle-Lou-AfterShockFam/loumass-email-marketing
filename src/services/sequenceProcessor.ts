@@ -261,8 +261,16 @@ export class SequenceProcessor {
       let finalTextContent = content.replace(/<[^>]*>/g, '').trim()
       
       // ALWAYS include thread history when replying (Gmail's default behavior)
+      console.log(`[SequenceProcessor] Thread history check:`)
+      console.log(`[SequenceProcessor]   enrollment.currentStep: ${enrollment.currentStep}`)
+      console.log(`[SequenceProcessor]   enrollment.gmailThreadId: ${enrollment.gmailThreadId}`)
+      console.log(`[SequenceProcessor]   step.replyToThread: ${step.replyToThread}`)
+      console.log(`[SequenceProcessor]   Condition (currentStep > 0): ${enrollment.currentStep > 0}`)
+      console.log(`[SequenceProcessor]   Condition (has threadId): ${!!enrollment.gmailThreadId}`)
+      console.log(`[SequenceProcessor]   Will include thread history: ${enrollment.currentStep > 0 && enrollment.gmailThreadId}`)
+      
       if (enrollment.currentStep > 0 && enrollment.gmailThreadId) {
-        console.log(`[SequenceProcessor] Replying to thread - fetching ACTUAL email content from Gmail`)
+        console.log(`[SequenceProcessor] ✅ INCLUDING THREAD HISTORY - fetching ACTUAL email content from Gmail`)
         
         // CRITICAL FIX: Ensure enough time has passed for Gmail thread to be established
         // Gmail needs time to fully establish thread after initial email is sent
@@ -309,7 +317,11 @@ ${fullHistory.htmlContent}`
 ${fullHistory.textContent}`
           
         } else {
-          console.error(`[SequenceProcessor] CRITICAL: Failed to fetch Gmail thread content for thread ${enrollment.gmailThreadId}`)
+          console.error(`[SequenceProcessor] ❌ CRITICAL: Failed to fetch Gmail thread content`)
+          console.error(`[SequenceProcessor]   Thread ID: ${enrollment.gmailThreadId}`)
+          console.error(`[SequenceProcessor]   User ID: ${user.id}`)
+          console.error(`[SequenceProcessor]   Enrollment: ${enrollment.id}`)
+          console.error(`[SequenceProcessor]   Step: ${enrollment.currentStep}`)
           console.error(`[SequenceProcessor] Implementing EmailEvent database fallback to build thread history`)
           
           // ROBUST FALLBACK: Build thread history from EmailEvent database records
