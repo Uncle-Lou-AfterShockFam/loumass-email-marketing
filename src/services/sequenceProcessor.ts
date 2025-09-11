@@ -343,69 +343,122 @@ ${fullHistory.textContent}`
           console.error(`[SequenceProcessor]   Step: ${enrollment.currentStep}`)
           console.error(`[SequenceProcessor] Implementing EmailEvent database fallback to build thread history`)
           
-          // ROBUST FALLBACK: Build thread history from EmailEvent database records
-          console.log(`[SequenceProcessor] Building thread history from EmailEvent database for contact ${contact.email}`)
+          // ROBUST FALLBACK: Build thread history from Gmail API
+          console.log(`[SequenceProcessor] Building thread history from Gmail for contact ${contact.email}`)
           
           try {
-            const emailEvents = await prisma.emailEvent.findMany({
-              where: {
-                contactId: contact.id,
-                sequenceId: sequence.id,
-                type: 'SENT'
-              },
-              orderBy: {
-                createdAt: 'asc'
-              }
-            })
-            
-            if (emailEvents.length > 0) {
-              console.log(`[SequenceProcessor] Found ${emailEvents.length} previous email events for thread history`)
+            // First, check if we have a previous Gmail message ID to fetch
+            if (enrollment.gmailMessageId) {
+              console.log(`[SequenceProcessor] Fetching previous message content from Gmail: ${enrollment.gmailMessageId}`)
               
-              // Build thread history from database records
-              let threadHistoryHtml = ''
-              let threadHistoryText = ''
+              // Import and use GmailFetchService
+              const { GmailFetchService } = await import('./gmail-fetch-service')
+              const gmailFetchService = new GmailFetchService()
               
-              for (let i = emailEvents.length - 1; i >= 0; i--) {
-                const event = emailEvents[i]
-                const eventDate = event.createdAt.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short', 
-                  day: 'numeric',
-                  year: 'numeric'
-                })
-                const eventTime = event.createdAt.toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })
+              try {
+                const previousMessage = await gmailFetchService.getFullMessage(
+                  user.id,
+                  user.email,
+                  enrollment.gmailMessageId
+                )
                 
-                // Build Gmail-style attribution
-                const attribution = `On ${eventDate} at ${eventTime} ${user.name || user.email} <${user.email}> wrote:`
-                
-                threadHistoryHtml += `<div class="gmail_quote gmail_quote_container">
-  <div dir="ltr" class="gmail_attr">${attribution}<br></div>
-  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-    <div>Subject: ${event.subject || 'No subject'}</div>
-  </blockquote>
+                if (previousMessage.htmlBody || previousMessage.textBody) {
+                  console.log(`[SequenceProcessor] Successfully fetched previous message content`)
+                  
+                  // Format the date for attribution
+                  const messageDate = new Date(previousMessage.date)
+                  const formattedDate = messageDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })
+                  const formattedTime = messageDate.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })
+                  
+                  // Build Gmail-style attribution
+                  const attribution = `On ${formattedDate} at ${formattedTime} ${previousMessage.from} wrote:`
+                  
+                  // Use the actual HTML content if available, otherwise use text
+                  const quotedContent = previousMessage.htmlBody || 
+                    previousMessage.textBody.replace(/\n/g, '<br>')
+                  
+                  // Build thread history HTML
+                  const threadHistoryHtml = `<div class="gmail_quote">
+<div dir="ltr" class="gmail_attr">${attribution}</div>
+<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+${quotedContent}
+</blockquote>
 </div>`
+                  
+                  // Build thread history text
+                  const threadHistoryText = `\n\n${attribution}\n> ${previousMessage.textBody.replace(/\n/g, '\n> ')}`
+                  
+                  // Combine with new content
+                  finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
+                  finalTextContent = `${finalTextContent}${threadHistoryText}`
+                  
+                  console.log(`[SequenceProcessor] ✅ SUCCESS: Built thread history from Gmail API (${threadHistoryHtml.length} chars)`)
+                } else {
+                  console.log(`[SequenceProcessor] Previous message had no body content`)
+                }
+              } catch (gmailError) {
+                console.error(`[SequenceProcessor] Failed to fetch message from Gmail:`, gmailError)
                 
-                threadHistoryText += `\n\n${attribution}\n${event.subject || 'No content'}`
-              }
-              
-              if (threadHistoryHtml) {
-                finalHtmlContent = `<div dir="ltr">${content}</div>
-<br>
-${threadHistoryHtml}`
+                // Fall back to database approach
+                console.log(`[SequenceProcessor] Falling back to EmailEvent database for thread history`)
+                const emailEvents = await prisma.emailEvent.findMany({
+                  where: {
+                    contactId: contact.id,
+                    sequenceId: sequence.id,
+                    type: 'SENT'
+                  },
+                  orderBy: {
+                    createdAt: 'desc'
+                  },
+                  take: 1
+                })
                 
-                finalTextContent = `${finalTextContent}${threadHistoryText}`
-                
-                console.log(`[SequenceProcessor] ✅ SUCCESS: Built thread history from EmailEvent database (${threadHistoryHtml.length} chars)`)
+                if (emailEvents.length > 0) {
+                  const event = emailEvents[0]
+                  const eventDate = event.createdAt.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })
+                  const eventTime = event.createdAt.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })
+                  
+                  const attribution = `On ${eventDate} at ${eventTime} ${user.name || user.email} <${user.email}> wrote:`
+                  
+                  // Since we don't have the actual content, include what we do have
+                  const threadHistoryHtml = `<div class="gmail_quote">
+<div dir="ltr" class="gmail_attr">${attribution}</div>
+<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+<div>[Previous message content]</div>
+</blockquote>
+</div>`
+                  
+                  const threadHistoryText = `\n\n${attribution}\n> [Previous message content]`
+                  
+                  finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
+                  finalTextContent = `${finalTextContent}${threadHistoryText}`
+                  
+                  console.log(`[SequenceProcessor] Used fallback thread history from database`)
+                }
               }
             } else {
-              console.log(`[SequenceProcessor] No previous EmailEvents found - this may be the first email in sequence`)
+              console.log(`[SequenceProcessor] No previous Gmail message ID - this is likely the first email`)
             }
-          } catch (dbError) {
-            console.error(`[SequenceProcessor] Failed to build thread history from database:`, dbError)
+          } catch (error) {
+            console.error(`[SequenceProcessor] Failed to build thread history:`, error)
             console.error(`[SequenceProcessor] Proceeding with email but WITHOUT thread history`)
           }
         }
