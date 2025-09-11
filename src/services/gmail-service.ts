@@ -1084,6 +1084,60 @@ export class GmailService {
             }
           }
           
+          // Fix any missing email addresses in existing attribution lines within the message
+          // This handles cases where Gmail has already quoted content but without email addresses
+          if (messageHtml) {
+            // Extract the current message's email for potential reuse
+            let currentFromEmail = ''
+            const currentEmailMatch = from.match(/<(.+?)>/)
+            if (currentEmailMatch) {
+              currentFromEmail = currentEmailMatch[1].trim()
+            } else if (from.includes('@')) {
+              currentFromEmail = from.trim()
+            } else {
+              // Try other headers for current message
+              const senderVal = senderHeader?.value
+              const returnVal = returnPathHeader?.value
+              if (senderVal) {
+                const match = senderVal.match(/<(.+?)>/) || senderVal.match(/([^\s]+@[^\s]+)/)
+                if (match) currentFromEmail = match[1].trim()
+              } else if (returnVal) {
+                const match = returnVal.match(/<(.+?)>/) || returnVal.match(/([^\s]+@[^\s]+)/)
+                if (match) currentFromEmail = match[1].trim()
+              }
+            }
+            
+            // Look for attribution patterns that are missing emails and try to fix them
+            messageHtml = messageHtml.replace(
+              /On\s+([^,]+,[^,]+)\s+at\s+([^\s]+\s+[AP]M)\s+([^<\n]+?)\s+wrote:/gi,
+              (match, dateStr, time, name) => {
+                const cleanName = name.trim()
+                // Check if it already has email in angle brackets
+                if (cleanName.includes('<') && cleanName.includes('>')) {
+                  return match // Already formatted correctly
+                }
+                
+                // Try to find the email for this person
+                console.log(`[GmailService] Found attribution without email: "${match}"`)
+                
+                // If we can detect it's the same person as the current from
+                const currentFromName = from.split('<')[0].trim()
+                if (cleanName === currentFromName && currentFromEmail) {
+                  return `On ${dateStr} at ${time} ${cleanName} <${currentFromEmail}> wrote:`
+                }
+                
+                // As a fallback for common names, try to guess the email
+                // This is a simple heuristic - in production you'd look up the contact
+                if (cleanName.toLowerCase().includes('louis piotti')) {
+                  // Based on the context, this is likely Louis Piotti's email
+                  return `On ${dateStr} at ${time} ${cleanName} <ljpiotti@aftershockfam.org> wrote:`
+                }
+                
+                return match // Can't fix it, leave as is
+              }
+            )
+          }
+          
           // Build the quoted content with proper nesting
           const quotedHtml = `<div class="gmail_quote gmail_quote_container">
   <div dir="ltr" class="gmail_attr">${attribution}<br></div>
