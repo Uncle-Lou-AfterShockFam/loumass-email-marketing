@@ -365,43 +365,48 @@ ${fullHistory.textContent}`
                 if (threadMessages && threadMessages.length > 0) {
                   console.log(`[SequenceProcessor] Successfully fetched ${threadMessages.length} messages from thread`)
                   
-                  // Build thread history from ALL messages (oldest to newest)
-                  let threadHistoryHtml = ''
-                  let threadHistoryText = ''
+                  // Get the LAST message (most recent) which should be the recipient's reply
+                  // Messages are sorted oldest first, so get the last one
+                  const lastMessage = threadMessages[threadMessages.length - 1]
                   
-                  // Process each message in the thread
-                  for (const message of threadMessages) {
-                    // Format the date for attribution
-                    const messageDate = new Date(message.date)
-                    const formattedDate = messageDate.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    })
-                    const formattedTime = messageDate.toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })
-                    
-                    // Build Gmail-style attribution with email address
-                    const attribution = `On ${formattedDate} at ${formattedTime} ${message.from} wrote:`
-                    
-                    // Use the actual HTML content if available, otherwise use text
-                    const quotedContent = message.htmlBody || 
-                      message.textBody.replace(/\n/g, '<br>')
-                    
-                    // Add each message to the thread history
-                    threadHistoryHtml += `<div class="gmail_quote">
-<div dir="ltr" class="gmail_attr">${attribution}</div>
-<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
-${quotedContent}
-</blockquote>
+                  console.log(`[SequenceProcessor] Using most recent message for thread history:`)
+                  console.log(`[SequenceProcessor]   From: ${lastMessage.from}`)
+                  console.log(`[SequenceProcessor]   Subject: ${lastMessage.subject}`)
+                  console.log(`[SequenceProcessor]   Date: ${lastMessage.date}`)
+                  
+                  // Format the date for attribution
+                  const messageDate = new Date(lastMessage.date)
+                  const formattedDate = messageDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })
+                  const formattedTime = messageDate.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })
+                  
+                  // Build Gmail-style attribution with email address
+                  const attribution = `On ${formattedDate} at ${formattedTime} ${lastMessage.from} wrote:`
+                  
+                  // Use the actual HTML content if available, otherwise use text
+                  const quotedContent = lastMessage.htmlBody || 
+                    lastMessage.textBody.replace(/\n/g, '<br>')
+                  
+                  // Build thread history HTML with proper Gmail quote formatting
+                  const threadHistoryHtml = `
+<br>
+<div class="gmail_quote gmail_quote_container">
+  <div dir="ltr" class="gmail_attr">${attribution}</div>
+  <blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">
+    ${quotedContent}
+  </blockquote>
 </div>`
-                    
-                    threadHistoryText += `\n\n${attribution}\n> ${message.textBody.replace(/\n/g, '\n> ')}`
-                  }
+                  
+                  // Build thread history text
+                  const threadHistoryText = `\n\n${attribution}\n> ${lastMessage.textBody.replace(/\n/g, '\n> ')}`
                   
                   // Combine with new content
                   finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
