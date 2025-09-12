@@ -365,17 +365,40 @@ ${fullHistory.textContent}`
                 if (threadMessages && threadMessages.length > 0) {
                   console.log(`[SequenceProcessor] Successfully fetched ${threadMessages.length} messages from thread`)
                   
-                  // Get the LAST message (most recent) which should be the recipient's reply
-                  // Messages are sorted oldest first, so get the last one
-                  const lastMessage = threadMessages[threadMessages.length - 1]
+                  // CRITICAL FIX: Find the RECIPIENT'S REPLY, not just the last message
+                  // Look for messages FROM the contact's email address
+                  let recipientReply = null
                   
-                  console.log(`[SequenceProcessor] Using most recent message for thread history:`)
-                  console.log(`[SequenceProcessor]   From: ${lastMessage.from}`)
-                  console.log(`[SequenceProcessor]   Subject: ${lastMessage.subject}`)
-                  console.log(`[SequenceProcessor]   Date: ${lastMessage.date}`)
+                  // Search from most recent to oldest for a reply from the recipient
+                  for (let i = threadMessages.length - 1; i >= 0; i--) {
+                    const msg = threadMessages[i]
+                    
+                    // Extract email from "Name <email>" format
+                    const fromEmail = msg.from.match(/<(.+)>/) ? 
+                      msg.from.match(/<(.+)>/)[1] : 
+                      msg.from
+                    
+                    console.log(`[SequenceProcessor] Checking message ${i}: From ${fromEmail} (looking for ${contact.email})`)
+                    
+                    // Check if this message is from the recipient
+                    if (fromEmail.toLowerCase() === contact.email.toLowerCase()) {
+                      recipientReply = msg
+                      console.log(`[SequenceProcessor] ✅ FOUND RECIPIENT'S REPLY!`)
+                      break
+                    }
+                  }
+                  
+                  // If we didn't find a reply from recipient, use the last message as fallback
+                  const messageToQuote = recipientReply || threadMessages[threadMessages.length - 1]
+                  
+                  console.log(`[SequenceProcessor] Using message for thread history:`)
+                  console.log(`[SequenceProcessor]   From: ${messageToQuote.from}`)
+                  console.log(`[SequenceProcessor]   Subject: ${messageToQuote.subject}`)
+                  console.log(`[SequenceProcessor]   Date: ${messageToQuote.date}`)
+                  console.log(`[SequenceProcessor]   Is recipient's reply: ${!!recipientReply}`)
                   
                   // Format the date for attribution
-                  const messageDate = new Date(lastMessage.date)
+                  const messageDate = new Date(messageToQuote.date)
                   const formattedDate = messageDate.toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short', 
@@ -389,11 +412,11 @@ ${fullHistory.textContent}`
                   })
                   
                   // Build Gmail-style attribution with email address
-                  const attribution = `On ${formattedDate} at ${formattedTime} ${lastMessage.from} wrote:`
+                  const attribution = `On ${formattedDate} at ${formattedTime} ${messageToQuote.from} wrote:`
                   
                   // Use the actual HTML content if available, otherwise use text
-                  const quotedContent = lastMessage.htmlBody || 
-                    lastMessage.textBody.replace(/\n/g, '<br>')
+                  const quotedContent = messageToQuote.htmlBody || 
+                    messageToQuote.textBody.replace(/\n/g, '<br>')
                   
                   // Build thread history HTML with proper Gmail quote formatting
                   const threadHistoryHtml = `
@@ -406,7 +429,7 @@ ${fullHistory.textContent}`
 </div>`
                   
                   // Build thread history text
-                  const threadHistoryText = `\n\n${attribution}\n> ${lastMessage.textBody.replace(/\n/g, '\n> ')}`
+                  const threadHistoryText = `\n\n${attribution}\n> ${messageToQuote.textBody.replace(/\n/g, '\n> ')}`
                   
                   // Combine with new content
                   finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
