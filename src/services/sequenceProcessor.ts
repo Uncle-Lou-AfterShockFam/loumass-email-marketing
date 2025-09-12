@@ -369,22 +369,67 @@ ${fullHistory.textContent}`
                   // Look for messages FROM the contact's email address
                   let recipientReply = null
                   
+                  // Log all messages for debugging
+                  console.log(`[SequenceProcessor] Thread has ${threadMessages.length} messages:`)
+                  threadMessages.forEach((msg, idx) => {
+                    console.log(`[SequenceProcessor]   Message ${idx}: From="${msg.from}", Subject="${msg.subject}", Date="${msg.date}"`)
+                  })
+                  
                   // Search from most recent to oldest for a reply from the recipient
                   for (let i = threadMessages.length - 1; i >= 0; i--) {
                     const msg = threadMessages[i]
                     
-                    // Extract email from "Name <email>" format
-                    const fromEmail = msg.from.match(/<(.+)>/) ? 
-                      msg.from.match(/<(.+)>/)[1] : 
-                      msg.from
+                    console.log(`[SequenceProcessor] Analyzing message ${i}:`)
+                    console.log(`[SequenceProcessor]   Raw from header: "${msg.from}"`)
                     
-                    console.log(`[SequenceProcessor] Checking message ${i}: From ${fromEmail} (looking for ${contact.email})`)
+                    // Extract email from various formats:
+                    // 1. "Name <email>" format
+                    // 2. Just "email" format  
+                    // 3. "email <email>" format (sometimes Gmail duplicates)
+                    let fromEmail = ''
+                    
+                    // Try to extract email from angle brackets first
+                    const angleMatch = msg.from.match(/<([^>]+)>/)
+                    if (angleMatch && angleMatch[1]) {
+                      fromEmail = angleMatch[1].trim().toLowerCase()
+                      console.log(`[SequenceProcessor]   Extracted from angle brackets: ${fromEmail}`)
+                    } else if (msg.from.includes('@')) {
+                      // No angle brackets, might be plain email
+                      // Remove any quotes and trim
+                      fromEmail = msg.from.replace(/['"]/g, '').trim().toLowerCase()
+                      console.log(`[SequenceProcessor]   Using plain email: ${fromEmail}`)
+                    } else {
+                      console.log(`[SequenceProcessor]   WARNING: Could not extract email from: "${msg.from}"`)
+                      continue
+                    }
+                    
+                    // Normalize contact email for comparison
+                    const contactEmailNormalized = contact.email.trim().toLowerCase()
+                    
+                    console.log(`[SequenceProcessor]   Comparing: "${fromEmail}" vs contact "${contactEmailNormalized}"`)
                     
                     // Check if this message is from the recipient
-                    if (fromEmail.toLowerCase() === contact.email.toLowerCase()) {
+                    // Also check if it's NOT from our own email (sometimes we see our sent messages)
+                    const isFromRecipient = fromEmail === contactEmailNormalized
+                    const userEmail = user.email?.toLowerCase() || ''
+                    const gmailTokenEmail = user.gmailToken?.email?.toLowerCase() || ''
+                    const isOurOwnEmail = fromEmail === userEmail || fromEmail === gmailTokenEmail
+                    
+                    if (isOurOwnEmail) {
+                      console.log(`[SequenceProcessor]   Skipping our own email: ${fromEmail}`)
+                      continue
+                    }
+                    
+                    if (isFromRecipient) {
                       recipientReply = msg
-                      console.log(`[SequenceProcessor] ✅ FOUND RECIPIENT'S REPLY!`)
+                      console.log(`[SequenceProcessor] ✅ FOUND RECIPIENT'S REPLY from ${fromEmail}!`)
+                      console.log(`[SequenceProcessor]   Subject: ${msg.subject}`)
+                      console.log(`[SequenceProcessor]   Date: ${msg.date}`)
+                      const bodyPreview = (msg.textBody || msg.htmlBody || '').substring(0, 200)
+                      console.log(`[SequenceProcessor]   Body preview: ${bodyPreview}`)
                       break
+                    } else {
+                      console.log(`[SequenceProcessor]   Not a match (${fromEmail} !== ${contactEmailNormalized})`)
                     }
                   }
                   

@@ -702,14 +702,40 @@ console.log('💾 Creating EmailEvent record')
 1. **Initial email** creates gmailThreadId
 2. **Follow-up emails** use threadId for In-Reply-To header
 3. **Thread history** included via gmail_quote formatting
+   - CRITICAL: Must identify recipient's reply by checking 'From' field
+   - Loop through thread messages to find messages FROM contact.email
+   - Only quote the recipient's reply, NOT our own sent messages
 4. **Reply detection** uses thread message count
+
+### CRITICAL BUG FIX: Thread History Issue
+**Problem**: When sending follow-up emails after receiving a reply, the system was including the WRONG message in the quoted thread history. It was quoting our own sent message instead of the recipient's reply.
+
+**Root Cause**: The code was using `threadMessages[threadMessages.length - 1]` (last message) without checking WHO sent it.
+
+**Solution** (in sequenceProcessor.ts:368-398):
+```typescript
+// CRITICAL FIX: Find the RECIPIENT'S REPLY, not just the last message
+let recipientReply = null;
+for (let i = threadMessages.length - 1; i >= 0; i--) {
+  const msg = threadMessages[i];
+  const fromEmail = msg.from.match(/<(.+)>/) ? 
+    msg.from.match(/<(.+)>/)[1] : msg.from;
+  
+  if (fromEmail.toLowerCase() === contact.email.toLowerCase()) {
+    recipientReply = msg;
+    break;
+  }
+}
+const messageToQuote = recipientReply || threadMessages[threadMessages.length - 1];
+```
 
 ## 📝 NOTES FOR NEW CLAUDE SESSION
 
 ### Critical Context
-1. **Two major bugs were fixed**:
+1. **Three major bugs were fixed**:
    - Gmail thread history not being included (FIXED in gmail-service.ts)
    - Condition evaluation not handling negative conditions (FIXED in sequenceProcessor.ts)
+   - Thread history showing OUR sent message instead of recipient's REPLY (FIXED in sequenceProcessor.ts)
 
 2. **The system uses dual tracking**:
    - EmailEvent table for general email events
@@ -736,16 +762,17 @@ console.log('💾 Creating EmailEvent record')
 - **Condition Evaluation**: Supports both positive and negative conditions
 
 ### Production Readiness
-- ✅ Gmail thread history working
+- ✅ Gmail thread history working WITH recipient's reply
 - ✅ Condition evaluation fixed for all types
 - ✅ Reply detection via dual-table approach
 - ✅ TypeScript errors resolved
 - ✅ Comprehensive test scripts available
 - ✅ Production deployed and verified
+- ✅ Thread history correctly shows recipient's reply, not our sent message
 
 ---
 
-**Document Version**: 2.0.0
+**Document Version**: 3.0.0
 **Generated**: 2025-09-11
-**Last Updated**: Post condition evaluation fix deployment
-**Status**: ✅ PRODUCTION READY - All critical bugs fixed
+**Last Updated**: Post thread history recipient reply fix
+**Status**: ✅ PRODUCTION READY - Thread history now correctly includes recipient's reply
