@@ -365,9 +365,8 @@ ${fullHistory.textContent}`
                 if (threadMessages && threadMessages.length > 0) {
                   console.log(`[SequenceProcessor] Successfully fetched ${threadMessages.length} messages from thread`)
                   
-                  // CRITICAL FIX: Find the RECIPIENT'S REPLY, not just the last message
-                  // Look for messages FROM the contact's email address
-                  let recipientReply = null
+                  // CRITICAL FIX: Build thread history from ALL messages in the conversation
+                  // Gmail shows the entire thread, not just one message
                   
                   // Log all messages for debugging
                   console.log(`[SequenceProcessor] Thread has ${threadMessages.length} messages:`)
@@ -375,96 +374,42 @@ ${fullHistory.textContent}`
                     console.log(`[SequenceProcessor]   Message ${idx}: From="${msg.from}", Subject="${msg.subject}", Date="${msg.date}"`)
                   })
                   
-                  // Search from most recent to oldest for a reply from the recipient
+                  // Build thread history from ALL previous messages (most recent first)
+                  let threadHistoryHtml = ''
+                  let threadHistoryText = ''
+                  
+                  // Process messages in reverse order (newest first) to build the thread
                   for (let i = threadMessages.length - 1; i >= 0; i--) {
                     const msg = threadMessages[i]
                     
-                    console.log(`[SequenceProcessor] Analyzing message ${i}:`)
-                    console.log(`[SequenceProcessor]   Raw from header: "${msg.from}"`)
+                    console.log(`[SequenceProcessor] Processing message ${i} for thread history:`)
+                    console.log(`[SequenceProcessor]   From: "${msg.from}"`)
+                    console.log(`[SequenceProcessor]   Subject: "${msg.subject}"`)
+                    console.log(`[SequenceProcessor]   Date: "${msg.date}"`)
                     
-                    // Extract email from various formats:
-                    // 1. "Name <email>" format
-                    // 2. Just "email" format  
-                    // 3. "email <email>" format (sometimes Gmail duplicates)
-                    let fromEmail = ''
+                    // Format the date for attribution
+                    const messageDate = new Date(msg.date)
+                    const formattedDate = messageDate.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                    const formattedTime = messageDate.toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })
                     
-                    // Try to extract email from angle brackets first
-                    const angleMatch = msg.from.match(/<([^>]+)>/)
-                    if (angleMatch && angleMatch[1]) {
-                      fromEmail = angleMatch[1].trim().toLowerCase()
-                      console.log(`[SequenceProcessor]   Extracted from angle brackets: ${fromEmail}`)
-                    } else if (msg.from.includes('@')) {
-                      // No angle brackets, might be plain email
-                      // Remove any quotes and trim
-                      fromEmail = msg.from.replace(/['"]/g, '').trim().toLowerCase()
-                      console.log(`[SequenceProcessor]   Using plain email: ${fromEmail}`)
-                    } else {
-                      console.log(`[SequenceProcessor]   WARNING: Could not extract email from: "${msg.from}"`)
-                      continue
-                    }
+                    // Build Gmail-style attribution with email address
+                    const attribution = `On ${formattedDate} at ${formattedTime} ${msg.from} wrote:`
                     
-                    // Normalize contact email for comparison
-                    const contactEmailNormalized = contact.email.trim().toLowerCase()
+                    // Use the actual HTML content if available, otherwise use text
+                    const quotedContent = msg.htmlBody || 
+                      msg.textBody.replace(/\n/g, '<br>')
                     
-                    console.log(`[SequenceProcessor]   Comparing: "${fromEmail}" vs contact "${contactEmailNormalized}"`)
-                    
-                    // Check if this message is from the recipient
-                    // Also check if it's NOT from our own email (sometimes we see our sent messages)
-                    const isFromRecipient = fromEmail === contactEmailNormalized
-                    const userEmail = user.email?.toLowerCase() || ''
-                    const gmailTokenEmail = user.gmailToken?.email?.toLowerCase() || ''
-                    const isOurOwnEmail = fromEmail === userEmail || fromEmail === gmailTokenEmail
-                    
-                    if (isOurOwnEmail) {
-                      console.log(`[SequenceProcessor]   Skipping our own email: ${fromEmail}`)
-                      continue
-                    }
-                    
-                    if (isFromRecipient) {
-                      recipientReply = msg
-                      console.log(`[SequenceProcessor] ✅ FOUND RECIPIENT'S REPLY from ${fromEmail}!`)
-                      console.log(`[SequenceProcessor]   Subject: ${msg.subject}`)
-                      console.log(`[SequenceProcessor]   Date: ${msg.date}`)
-                      const bodyPreview = (msg.textBody || msg.htmlBody || '').substring(0, 200)
-                      console.log(`[SequenceProcessor]   Body preview: ${bodyPreview}`)
-                      break
-                    } else {
-                      console.log(`[SequenceProcessor]   Not a match (${fromEmail} !== ${contactEmailNormalized})`)
-                    }
-                  }
-                  
-                  // If we didn't find a reply from recipient, use the last message as fallback
-                  const messageToQuote = recipientReply || threadMessages[threadMessages.length - 1]
-                  
-                  console.log(`[SequenceProcessor] Using message for thread history:`)
-                  console.log(`[SequenceProcessor]   From: ${messageToQuote.from}`)
-                  console.log(`[SequenceProcessor]   Subject: ${messageToQuote.subject}`)
-                  console.log(`[SequenceProcessor]   Date: ${messageToQuote.date}`)
-                  console.log(`[SequenceProcessor]   Is recipient's reply: ${!!recipientReply}`)
-                  
-                  // Format the date for attribution
-                  const messageDate = new Date(messageToQuote.date)
-                  const formattedDate = messageDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })
-                  const formattedTime = messageDate.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })
-                  
-                  // Build Gmail-style attribution with email address
-                  const attribution = `On ${formattedDate} at ${formattedTime} ${messageToQuote.from} wrote:`
-                  
-                  // Use the actual HTML content if available, otherwise use text
-                  const quotedContent = messageToQuote.htmlBody || 
-                    messageToQuote.textBody.replace(/\n/g, '<br>')
-                  
-                  // Build thread history HTML with proper Gmail quote formatting
-                  const threadHistoryHtml = `
+                    // Add this message to the thread history
+                    threadHistoryHtml += `
 <br>
 <div class="gmail_quote gmail_quote_container">
   <div dir="ltr" class="gmail_attr">${attribution}</div>
@@ -472,9 +417,15 @@ ${fullHistory.textContent}`
     ${quotedContent}
   </blockquote>
 </div>`
+                    
+                    threadHistoryText += `\n\n${attribution}\n> ${msg.textBody.replace(/\n/g, '\n> ')}`
+                    
+                    // Log what we're including
+                    const bodyPreview = (msg.textBody || msg.htmlBody || '').substring(0, 100)
+                    console.log(`[SequenceProcessor]   Including in thread history: ${bodyPreview}...`)
+                  }
                   
-                  // Build thread history text
-                  const threadHistoryText = `\n\n${attribution}\n> ${messageToQuote.textBody.replace(/\n/g, '\n> ')}`
+                  console.log(`[SequenceProcessor] Built complete thread history with ${threadMessages.length} messages`)
                   
                   // Combine with new content
                   finalHtmlContent = `<div dir="ltr">${content}</div>${threadHistoryHtml}`
